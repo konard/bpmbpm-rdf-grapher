@@ -1,5 +1,5 @@
 ### RDF Grapher ver1
-RDF Grapher — сервис для парсинга RDF данных и их визуализации в виде графа. Этот сервис является подобием [LDF RDF Grapher](https://www.ldf.fi/service/rdf-grapher).  
+RDF Grapher — сервис для парсинга RDF данных и их визуализации в виде графа. Этот сервис является аналогом  [LDF RDF Grapher](https://www.ldf.fi/service/rdf-grapher).  
 Введите RDF данные в текстовое поле ниже, выберите входной и выходной форматы, и нажмите кнопку "Визуализировать" для генерации графа.
 Запуск: 
 https://bpmbpm.github.io/rdf-grapher/ver1/  
