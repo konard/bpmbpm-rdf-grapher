@@ -971,88 +971,123 @@ ex:organizations {
 
         /**
          * Открывает визуализацию в новом окне через GitHub Pages (без внешнего сервиса)
-         * Использует текущий SVG граф, созданный локально через Viz.js
+         * Формирует URL с параметрами: rdf=данные&from=формат&to=формат
+         * Аналогично работе LDF сервиса
          */
         function openInNewWindowGitHub() {
-            // Проверяем, что граф был сгенерирован
-            if (!currentSvgElement) {
-                alert('Сначала визуализируйте RDF данные');
+            // Получаем входные данные
+            const rdfInput = document.getElementById('rdf-input').value.trim();
+            const inputFormat = document.getElementById('input-format').value;
+            const outputFormat = document.getElementById('output-format').value;
+
+            // Проверяем, что данные введены
+            if (!rdfInput) {
+                alert('Пожалуйста, введите RDF данные');
                 return;
             }
 
-            // Получаем SVG код
-            const svgData = new XMLSerializer().serializeToString(currentSvgElement);
+            // Получаем формат для параметра URL
+            const fromFormat = formatMapping[inputFormat] || 'ttl';
 
-            // Создаем HTML страницу с SVG графом
-            const htmlContent = `<!DOCTYPE html>
-<html lang="ru">
-<head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>RDF Graph - GitHub Pages</title>
-    <style>
-        body {
-            margin: 0;
-            padding: 20px;
-            display: flex;
-            justify-content: center;
-            align-items: center;
-            min-height: 100vh;
-            background-color: #f5f5f5;
-            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
-        }
-        .container {
-            background-color: white;
-            padding: 20px;
-            border-radius: 8px;
-            box-shadow: 0 2px 10px rgba(0,0,0,0.1);
-            max-width: 100%;
-            overflow: auto;
-        }
-        svg {
-            max-width: 100%;
-            height: auto;
-        }
-        h1 {
-            text-align: center;
-            color: #333;
-            margin-bottom: 20px;
-        }
-        .footer {
-            text-align: center;
-            margin-top: 20px;
-            color: #666;
-            font-size: 14px;
-        }
-    </style>
-</head>
-<body>
-    <div class="container">
-        <h1>RDF Graph</h1>
-        ${svgData}
-        <div class="footer">
-            Сгенерировано с помощью <a href="https://bpmbpm.github.io/rdf-grapher/ver1/">RDF Grapher</a> (GitHub Pages)
-        </div>
-    </div>
-</body>
-</html>`;
+            // Кодируем RDF данные для URL
+            // Заменяем пробелы на + для совместимости (аналогично LDF сервису)
+            const encodedRdf = encodeURIComponent(rdfInput).replace(/%20/g, '+');
 
-            // Открываем новое окно и записываем в него HTML
-            const newWindow = window.open('', '_blank');
-            if (newWindow) {
-                newWindow.document.write(htmlContent);
-                newWindow.document.close();
+            // Определяем базовый URL для GitHub Pages
+            // Используем текущий URL или дефолтный путь
+            let baseUrl;
+            if (window.location.hostname === 'bpmbpm.github.io') {
+                baseUrl = 'https://bpmbpm.github.io/rdf-grapher/ver1/';
             } else {
-                alert('Не удалось открыть новое окно. Возможно, браузер заблокировал всплывающее окно.');
+                // Для локального тестирования используем текущий путь
+                baseUrl = window.location.origin + window.location.pathname;
             }
+
+            // Формируем URL с параметрами
+            const serviceUrl = `${baseUrl}?rdf=${encodedRdf}&from=${fromFormat}&to=${outputFormat}`;
+
+            // Открываем в новом окне
+            window.open(serviceUrl, '_blank');
+        }
+
+        /**
+         * Парсит URL параметры и возвращает объект с параметрами
+         * Поддерживаемые параметры:
+         * - rdf: RDF данные (URL-encoded)
+         * - from: входной формат (ttl, nt, nq, trig)
+         * - to: выходной формат (svg, png)
+         *
+         * @returns {Object} - Объект с параметрами
+         */
+        function parseUrlParams() {
+            const urlParams = new URLSearchParams(window.location.search);
+            const params = {};
+
+            // Получаем RDF данные из параметра
+            if (urlParams.has('rdf')) {
+                params.rdf = urlParams.get('rdf');
+            }
+
+            // Получаем входной формат
+            if (urlParams.has('from')) {
+                const fromParam = urlParams.get('from');
+                // Маппинг обратный: параметры URL -> внутренние форматы
+                const reverseFormatMapping = {
+                    'ttl': 'turtle',
+                    'turtle': 'turtle',
+                    'nt': 'n-triples',
+                    'n-triples': 'n-triples',
+                    'nq': 'n-quads',
+                    'n-quads': 'n-quads',
+                    'trig': 'trig'
+                };
+                params.from = reverseFormatMapping[fromParam] || 'turtle';
+            }
+
+            // Получаем выходной формат
+            if (urlParams.has('to')) {
+                const toParam = urlParams.get('to');
+                if (toParam === 'png' || toParam === 'svg') {
+                    params.to = toParam;
+                }
+            }
+
+            return params;
         }
 
         /**
          * Инициализация при загрузке страницы
+         * Проверяет URL параметры и автоматически визуализирует данные, если они переданы
          */
         document.addEventListener('DOMContentLoaded', function() {
             console.log('RDF Grapher загружен');
             console.log('Используемые библиотеки: N3.js, Viz.js');
+
+            // Парсим URL параметры
+            const params = parseUrlParams();
+
+            // Если есть RDF данные в URL, заполняем форму и визуализируем
+            if (params.rdf) {
+                console.log('Обнаружены RDF данные в URL, загружаем...');
+
+                // Заполняем текстовое поле RDF данными
+                document.getElementById('rdf-input').value = params.rdf;
+
+                // Устанавливаем входной формат, если указан
+                if (params.from) {
+                    document.getElementById('input-format').value = params.from;
+                }
+
+                // Устанавливаем выходной формат, если указан
+                if (params.to) {
+                    document.getElementById('output-format').value = params.to;
+                }
+
+                // Небольшая задержка для уверенности, что все элементы загружены
+                setTimeout(function() {
+                    visualize();
+                }, 100);
+            }
         });
     </script>
 </body>
