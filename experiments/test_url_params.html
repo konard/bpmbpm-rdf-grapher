@@ -1,0 +1,28 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>Test URL Parameters</title>
+</head>
+<body>
+    <h1>Test URL Parameters for RDF Grapher</h1>
+    <p>This page tests the URL parameter functionality.</p>
+
+    <h2>Test Links</h2>
+    <ul>
+        <li><a href="../ver1/index.html?rdf=%40prefix+foaf%3A+%3Chttp%3A%2F%2Fxmlns.com%2Ffoaf%2F0.1%2F%3E+.%0A%40prefix+ex%3A+%3Chttp%3A%2F%2Fexample.org%2F%3E+.%0Aex%3Ajohn+a+foaf%3APerson+.&from=ttl&to=svg">Simple Turtle Example (SVG)</a></li>
+        <li><a href="../ver1/index.html?rdf=%40prefix+foaf%3A+%3Chttp%3A%2F%2Fxmlns.com%2Ffoaf%2F0.1%2F%3E+.%0A%40prefix+ex%3A+%3Chttp%3A%2F%2Fexample.org%2F%3E+.%0Aex%3Ajohn+a+foaf%3APerson+%3B%0A++++foaf%3Aname+%22John%22+.&from=ttl&to=png">Turtle with Name (PNG)</a></li>
+        <li><a href="../ver1/index.html?rdf=%3Chttp%3A%2F%2Fexample.org%2Fjohn%3E+%3Chttp%3A%2F%2Fwww.w3.org%2F1999%2F02%2F22-rdf-syntax-ns%23type%3E+%3Chttp%3A%2F%2Fxmlns.com%2Ffoaf%2F0.1%2FPerson%3E+.&from=nt&to=svg">N-Triples Example</a></li>
+    </ul>
+
+    <h2>URL Structure</h2>
+    <pre>
+https://bpmbpm.github.io/rdf-grapher/ver1/?rdf=&lt;URL_ENCODED_RDF&gt;&amp;from=&lt;FORMAT&gt;&amp;to=&lt;OUTPUT&gt;
+
+Parameters:
+- rdf: URL-encoded RDF data
+- from: Input format (ttl, nt, nq, trig)
+- to: Output format (svg, png)
+    </pre>
+</body>
+</html>
