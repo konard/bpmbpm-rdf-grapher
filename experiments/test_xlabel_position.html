@@ -1,0 +1,172 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Test xlabel positioning below CDS nodes</title>
+    <script src="https://unpkg.com/@viz-js/viz@3.4.0/lib/viz-standalone.js"></script>
+</head>
+<body>
+    <h1>Testing xlabel positioning below CDS nodes</h1>
+
+    <h2>Test 1: xlabel with HTML format (BR tags) - default position</h2>
+    <div id="test1"></div>
+
+    <h2>Test 2: xlabel with xlp attribute for positioning</h2>
+    <div id="test2"></div>
+
+    <h2>Test 3: Using separate invisible node below for label</h2>
+    <div id="test3"></div>
+
+    <h2>Test 4: Using xlabel with labelloc=b on node</h2>
+    <div id="test4"></div>
+
+    <h2>Test 5: HTML label inside CDS with BR (executors inside node)</h2>
+    <div id="test5"></div>
+
+    <h2>Test 6: Using rank=same to position xlabel nodes below</h2>
+    <div id="test6"></div>
+
+    <h2>Test 7: xlabel with south compass point</h2>
+    <div id="test7"></div>
+
+    <script>
+        async function runTests() {
+            const viz = await Viz.instance();
+
+            // Test 1: xlabel with HTML BR tags
+            const dot1 = `
+digraph G {
+    rankdir=LR;
+    forcelabels=true;
+    node [fontname="Arial"];
+    splines=ortho;
+    A [label=<<B>Процесс 1</B>> shape="cds" height="0.9" width="2.0" color="#2E7D32" fillcolor="#A5D6A7" style="filled" fontsize="11" xlabel=<Исполнитель 1,<BR/>Исполнитель 2>];
+    B [label=<<B>Процесс 2</B>> shape="cds" height="0.9" width="2.0" color="#2E7D32" fillcolor="#A5D6A7" style="filled" fontsize="11" xlabel=<Исполнитель 3>];
+    A -> B [color="#2E7D32" penwidth="2" arrowhead="vee" tailport="e" headport="w"];
+}`;
+            try {
+                document.getElementById('test1').innerHTML = viz.renderSVGElement(dot1).outerHTML;
+            } catch(e) {
+                document.getElementById('test1').innerHTML = '<pre style="color:red">' + e + '</pre>';
+            }
+            document.getElementById('test1').innerHTML += '<pre>' + dot1 + '</pre>';
+
+            // Test 2: xlabel with xlp attribute
+            const dot2 = `
+digraph G {
+    rankdir=LR;
+    forcelabels=true;
+    node [fontname="Arial"];
+    A [label=<<B>Процесс 1</B>> shape="cds" height="0.9" width="2.0" color="#2E7D32" fillcolor="#A5D6A7" style="filled" fontsize="11" xlabel=<Исполнитель 1,<BR/>Исполнитель 2> xlp="0,100"];
+}`;
+            try {
+                document.getElementById('test2').innerHTML = viz.renderSVGElement(dot2).outerHTML;
+            } catch(e) {
+                document.getElementById('test2').innerHTML = '<pre style="color:red">' + e + '</pre>';
+            }
+            document.getElementById('test2').innerHTML += '<pre>' + dot2 + '</pre>';
+
+            // Test 3: Using a separate subgraph/invisible node for label below
+            const dot3 = `
+digraph G {
+    rankdir=LR;
+    forcelabels=true;
+    node [fontname="Arial"];
+    splines=ortho;
+
+    subgraph cluster_A {
+        style=invis;
+        A [label=<<B>Процесс 1</B>> shape="cds" height="0.9" width="2.0" color="#2E7D32" fillcolor="#A5D6A7" style="filled" fontsize="11"];
+        A_label [label="Исполнитель 1,\\nИсполнитель 2" shape="none" fontsize="9"];
+        A -> A_label [style=invis];
+    }
+}`;
+            try {
+                document.getElementById('test3').innerHTML = viz.renderSVGElement(dot3).outerHTML;
+            } catch(e) {
+                document.getElementById('test3').innerHTML = '<pre style="color:red">' + e + '</pre>';
+            }
+            document.getElementById('test3').innerHTML += '<pre>' + dot3 + '</pre>';
+
+            // Test 4: labelloc=b
+            const dot4 = `
+digraph G {
+    rankdir=LR;
+    forcelabels=true;
+    node [fontname="Arial" labelloc="b"];
+    splines=ortho;
+    A [label=<<B>Процесс 1</B>> shape="cds" height="0.9" width="2.0" color="#2E7D32" fillcolor="#A5D6A7" style="filled" fontsize="11" xlabel=<Исполнитель 1,<BR/>Исполнитель 2>];
+}`;
+            try {
+                document.getElementById('test4').innerHTML = viz.renderSVGElement(dot4).outerHTML;
+            } catch(e) {
+                document.getElementById('test4').innerHTML = '<pre style="color:red">' + e + '</pre>';
+            }
+            document.getElementById('test4').innerHTML += '<pre>' + dot4 + '</pre>';
+
+            // Test 5: All content inside the CDS label using HTML
+            const dot5 = `
+digraph G {
+    rankdir=LR;
+    node [fontname="Arial"];
+    splines=ortho;
+    A [label=<<B>Процесс 1</B><BR/><FONT POINT-SIZE="9">Исполнитель 1,<BR/>Исполнитель 2</FONT>> shape="cds" height="1.2" width="2.5" color="#2E7D32" fillcolor="#A5D6A7" style="filled" fontsize="11"];
+    B [label=<<B>Процесс 2</B><BR/><FONT POINT-SIZE="9">Исполнитель 3</FONT>> shape="cds" height="1.0" width="2.0" color="#2E7D32" fillcolor="#A5D6A7" style="filled" fontsize="11"];
+    A -> B [color="#2E7D32" penwidth="2" arrowhead="vee" tailport="e" headport="w"];
+}`;
+            try {
+                document.getElementById('test5').innerHTML = viz.renderSVGElement(dot5).outerHTML;
+            } catch(e) {
+                document.getElementById('test5').innerHTML = '<pre style="color:red">' + e + '</pre>';
+            }
+            document.getElementById('test5').innerHTML += '<pre>' + dot5 + '</pre>';
+
+            // Test 6: Using record-like structure
+            const dot6 = `
+digraph G {
+    rankdir=LR;
+    node [fontname="Arial"];
+    splines=ortho;
+
+    A [label=<<TABLE BORDER="0" CELLBORDER="0" CELLSPACING="0">
+        <TR><TD><B>Процесс 1</B></TD></TR>
+        <TR><TD><FONT POINT-SIZE="9">Исполнитель 1,<BR/>Исполнитель 2</FONT></TD></TR>
+    </TABLE>> shape="cds" color="#2E7D32" fillcolor="#A5D6A7" style="filled"];
+
+    B [label=<<TABLE BORDER="0" CELLBORDER="0" CELLSPACING="0">
+        <TR><TD><B>Процесс 2</B></TD></TR>
+        <TR><TD><FONT POINT-SIZE="9">Исполнитель 3</FONT></TD></TR>
+    </TABLE>> shape="cds" color="#2E7D32" fillcolor="#A5D6A7" style="filled"];
+
+    A -> B [color="#2E7D32" penwidth="2" arrowhead="vee" tailport="e" headport="w"];
+}`;
+            try {
+                document.getElementById('test6').innerHTML = viz.renderSVGElement(dot6).outerHTML;
+            } catch(e) {
+                document.getElementById('test6').innerHTML = '<pre style="color:red">' + e + '</pre>';
+            }
+            document.getElementById('test6').innerHTML += '<pre>' + dot6 + '</pre>';
+
+            // Test 7: xlabel with compass point
+            const dot7 = `
+digraph G {
+    rankdir=LR;
+    forcelabels=true;
+    node [fontname="Arial"];
+    splines=ortho;
+    A [label=<<B>Процесс 1</B>> shape="cds" height="0.9" width="2.0" color="#2E7D32" fillcolor="#A5D6A7" style="filled" fontsize="11" xlabel=<Исполнитель 1,<BR/>Исполнитель 2>];
+    B [label=<<B>Процесс 2</B>> shape="cds" height="0.9" width="2.0" color="#2E7D32" fillcolor="#A5D6A7" style="filled" fontsize="11"];
+    A:s -> A:s [style=invis weight=0];
+    A -> B [color="#2E7D32" penwidth="2" arrowhead="vee" tailport="e" headport="w"];
+}`;
+            try {
+                document.getElementById('test7').innerHTML = viz.renderSVGElement(dot7).outerHTML;
+            } catch(e) {
+                document.getElementById('test7').innerHTML = '<pre style="color:red">' + e + '</pre>';
+            }
+            document.getElementById('test7').innerHTML += '<pre>' + dot7 + '</pre>';
+        }
+
+        runTests();
+    </script>
+</body>
+</html>
