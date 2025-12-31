@@ -1,4 +1,7 @@
 ### RDF Grapher ver2
+Запуск:  
+https://bpmbpm.github.io/rdf-grapher/ver2/  
+
 New
 - добавить окно SPARQL
 - легенду для типов и настройку dot для каждого типа. JSON переменной должны быть заданы:
