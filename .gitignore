@@ -1,0 +1,17 @@
+# Playwright MCP temporary files
+.playwright-mcp/
+
+# Node modules
+node_modules/
+
+# IDE
+.vscode/
+.idea/
+
+# OS files
+.DS_Store
+Thumbs.db
+
+# Temporary files
+*.tmp
+*.log
