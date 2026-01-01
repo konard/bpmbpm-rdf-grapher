@@ -15,3 +15,6 @@
 ## doc
 - https://graphviz.org/docs/attrs/label/
 - https://lib.custis.ru/Graphviz
+
+## label
+http://grep.cs.msu.ru/dkhramov/opisanie-grafov-na-iazyke-dot/
