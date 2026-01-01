@@ -2179,7 +2179,6 @@ ex:organizations {
             let dot = 'digraph VADGraph {\n';
             dot += '    // VAD (Value Added Chain Diagram)\n';
             dot += '    rankdir=LR;\n';
-            dot += '    forcelabels=true;\n';  // Обеспечивает отображение xlabel
             dot += '    node [fontname="Arial"];\n';
             dot += '    edge [fontname="Arial", fontsize=10];\n';
             dot += '    splines=ortho;\n';  // Ортогональные линии для VAD
@@ -2205,7 +2204,7 @@ ex:organizations {
                 const nodeId = generateNodeId(uri);
                 const processName = processInfo.name || processInfo.label;
 
-                // Получаем список исполнителей для подписи под узлом
+                // Получаем список исполнителей для подписи под именем процесса
                 let executorsList = '';
                 if (processInfo.executorGroup && executorGroups.has(processInfo.executorGroup)) {
                     const group = executorGroups.get(processInfo.executorGroup);
@@ -2215,19 +2214,33 @@ ex:organizations {
                     executorsList = executorNamesList.join(', ');
                 }
 
-                // Формируем HTML-like label: только имя процесса (исполнители выносятся в xlabel)
-                const htmlLabel = `<<B>${escapeHtmlLabel(processName)}</B>>`;
+                // Формируем HTML-like label с переносом строк
+                // Имя процесса с переносом по словам
+                const wrappedProcessName = wrapTextByWords(processName, currentMaxLabelLength);
+                let htmlLabel = '<';
 
-                // cds shape с зеленой заливкой
-                let nodeStyle = 'shape="cds" height="0.9" width="2.0" color="#2E7D32" fillcolor="#A5D6A7" fontname="Arial" fontsize="11" style="filled"';
+                // Добавляем имя процесса (жирным шрифтом)
+                for (let i = 0; i < wrappedProcessName.length; i++) {
+                    if (i > 0) htmlLabel += '<BR/>';
+                    htmlLabel += `<B>${escapeHtmlLabel(wrappedProcessName[i])}</B>`;
+                }
 
-                // Если есть исполнители, добавляем их как xlabel (внешняя подпись под узлом)
+                // Если есть исполнители, добавляем их под именем процесса
                 // Применяем перенос строки при длинных подписях
                 if (executorsList) {
-                    const wrappedLines = wrapTextByWords(executorsList, currentMaxLabelLength);
-                    const wrappedExecutors = wrappedLines.join('\\n');
-                    nodeStyle += ` xlabel="${escapeDotString(wrappedExecutors)}" fontsize="9" forcelabels="true"`;
+                    const wrappedExecutors = wrapTextByWords(executorsList, currentMaxLabelLength);
+                    htmlLabel += '<BR/>';
+                    for (let i = 0; i < wrappedExecutors.length; i++) {
+                        if (i > 0) htmlLabel += '<BR/>';
+                        htmlLabel += `<FONT POINT-SIZE="9">${escapeHtmlLabel(wrappedExecutors[i])}</FONT>`;
+                    }
                 }
+
+                htmlLabel += '>';
+
+                // cds shape с зеленой заливкой
+                // Убираем фиксированные размеры, чтобы узел мог адаптироваться под содержимое
+                let nodeStyle = 'shape="cds" color="#2E7D32" fillcolor="#A5D6A7" fontname="Arial" fontsize="11" style="filled"';
 
                 dot += `    ${nodeId} [label=${htmlLabel} ${nodeStyle}];\n`;
                 nodeLabelToUri[processInfo.label] = { uri: uri, dotId: nodeId };

@@ -1,0 +1,101 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Test xlabel and label formatting in DOT</title>
+    <script src="https://unpkg.com/@viz-js/viz@3.4.0/lib/viz-standalone.js"></script>
+</head>
+<body>
+    <h1>Testing DOT label/xlabel formatting</h1>
+
+    <h2>Test 1: xlabel with literal \n (current broken behavior)</h2>
+    <div id="test1"></div>
+
+    <h2>Test 2: xlabel with actual newline character</h2>
+    <div id="test2"></div>
+
+    <h2>Test 3: Using labelloc="b" for label below node</h2>
+    <div id="test3"></div>
+
+    <h2>Test 4: HTML label with BR tags inside CDS</h2>
+    <div id="test4"></div>
+
+    <h2>Test 5: Multi-line label with fixedsize=false</h2>
+    <div id="test5"></div>
+
+    <h2>Test 6: Two labels - main and executor (using record shape alternative)</h2>
+    <div id="test6"></div>
+
+    <script>
+        async function runTests() {
+            const viz = await Viz.instance();
+
+            // Test 1: Current broken behavior - shows literal \n
+            const dot1 = `
+digraph G {
+    rankdir=LR;
+    forcelabels=true;
+    node [fontname="Arial"];
+    A [label=<<B>Process Name</B>> shape="cds" height="0.9" width="2.0" color="#2E7D32" fillcolor="#A5D6A7" style="filled" xlabel="Executor 1,\\nExecutor 2" fontsize="9"];
+}`;
+            document.getElementById('test1').innerHTML = viz.renderSVGElement(dot1).outerHTML;
+            document.getElementById('test1').innerHTML += '<pre>' + dot1 + '</pre>';
+
+            // Test 2: Using actual newline in xlabel
+            const dot2 = `
+digraph G {
+    rankdir=LR;
+    forcelabels=true;
+    node [fontname="Arial"];
+    A [label=<<B>Process Name</B>> shape="cds" height="0.9" width="2.0" color="#2E7D32" fillcolor="#A5D6A7" style="filled" xlabel="Executor 1,\nExecutor 2" fontsize="9"];
+}`;
+            document.getElementById('test2').innerHTML = viz.renderSVGElement(dot2).outerHTML;
+            document.getElementById('test2').innerHTML += '<pre>' + dot2 + '</pre>';
+
+            // Test 3: Using labelloc for positioning (doesn't work with xlabel)
+            const dot3 = `
+digraph G {
+    rankdir=LR;
+    forcelabels=true;
+    node [fontname="Arial" labelloc="b"];
+    A [label=<<B>Process Name</B><BR/><FONT POINT-SIZE="9">Executor 1, Executor 2</FONT>> shape="cds" height="0.9" width="2.0" color="#2E7D32" fillcolor="#A5D6A7" style="filled"];
+}`;
+            document.getElementById('test3').innerHTML = viz.renderSVGElement(dot3).outerHTML;
+            document.getElementById('test3').innerHTML += '<pre>' + dot3 + '</pre>';
+
+            // Test 4: HTML label with BR tags inside CDS
+            const dot4 = `
+digraph G {
+    rankdir=LR;
+    node [fontname="Arial"];
+    A [label=<<B>Process Name</B><BR/><FONT POINT-SIZE="8">Executor 1,<BR/>Executor 2</FONT>> shape="cds" height="1.2" width="2.5" color="#2E7D32" fillcolor="#A5D6A7" style="filled" fontsize="11"];
+}`;
+            document.getElementById('test4').innerHTML = viz.renderSVGElement(dot4).outerHTML;
+            document.getElementById('test4').innerHTML += '<pre>' + dot4 + '</pre>';
+
+            // Test 5: Multi-line with fixedsize
+            const dot5 = `
+digraph G {
+    rankdir=LR;
+    node [fontname="Arial"];
+    A [label=<<TABLE BORDER="0" CELLPADDING="2"><TR><TD><B>Long Process Name Here</B></TD></TR><TR><TD><FONT POINT-SIZE="8">Executor 1, Executor 2,<BR/>Executor 3, Executor 4</FONT></TD></TR></TABLE>> shape="cds" color="#2E7D32" fillcolor="#A5D6A7" style="filled"];
+}`;
+            document.getElementById('test5').innerHTML = viz.renderSVGElement(dot5).outerHTML;
+            document.getElementById('test5').innerHTML += '<pre>' + dot5 + '</pre>';
+
+            // Test 6: CDS with xlabel correctly positioned below
+            const dot6 = `
+digraph G {
+    rankdir=LR;
+    forcelabels=true;
+    node [fontname="Arial"];
+    splines=ortho;
+    A [label=<<B>Process Name</B>> shape="cds" height="0.9" width="2.0" color="#2E7D32" fillcolor="#A5D6A7" style="filled" fontsize="11" xlabel=<Executor 1,<BR/>Executor 2> xlp="0,-50"];
+}`;
+            document.getElementById('test6').innerHTML = viz.renderSVGElement(dot6).outerHTML;
+            document.getElementById('test6').innerHTML += '<pre>' + dot6 + '</pre>';
+        }
+
+        runTests();
+    </script>
+</body>
+</html>
