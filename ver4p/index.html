@@ -2459,16 +2459,19 @@ ex:organizations {
 
             // Добавляем невидимые ребра между строками для правильного разделения рядов
             // Это необходимо для того, чтобы Graphviz разместил строки одну под другой
-            dot += '\n    // Невидимые ребра между строками для разделения рядов\n';
+            // FIX issue #60: Связываем ПЕРВЫЙ CDS текущей строки с ПЕРВЫМ CDS следующей строки
+            // для выравнивания всех строк по левому краю (как требуется в issue #60)
+            dot += '\n    // Невидимые ребра между строками для разделения рядов и выравнивания по левому краю\n';
             for (let rowIndex = 0; rowIndex < rows.length - 1; rowIndex++) {
-                const currentRowExecIds = execRows[rowIndex];
+                const currentRowCdsIds = rows[rowIndex];
                 const nextRowCdsIds = rows[rowIndex + 1];
 
-                if (currentRowExecIds.length > 0 && nextRowCdsIds.length > 0) {
-                    // Связываем последний executor текущей строки с первым CDS следующей строки
-                    const lastExecId = currentRowExecIds[currentRowExecIds.length - 1];
+                if (currentRowCdsIds.length > 0 && nextRowCdsIds.length > 0) {
+                    // Связываем ПЕРВЫЙ CDS текущей строки с ПЕРВЫМ CDS следующей строки
+                    // Это выравнивает все строки по левому краю (issue #60)
+                    const firstCurrentCdsId = currentRowCdsIds[0];
                     const firstNextCdsId = nextRowCdsIds[0];
-                    dot += `    ${lastExecId} -> ${firstNextCdsId} [style=invis weight=100];\n`;
+                    dot += `    ${firstCurrentCdsId} -> ${firstNextCdsId} [style=invis weight=100 minlen=2];\n`;
                 }
             }
             dot += '\n';
