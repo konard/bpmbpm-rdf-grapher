@@ -1219,9 +1219,9 @@ WHERE {
             },
             'HasExecutorStyle': {
                 predicates: ['vad:hasExecutor', 'http://example.org/vad#hasExecutor'],
-                dot: 'color="#1565C0" penwidth="1" style="dashed" arrowhead="normal"',
+                dot: 'color="#1565C0" penwidth="1" style="dashed" arrowhead="none"',
                 label: 'Исполнитель (vad:hasExecutor)',
-                description: 'Связь процесса с группой исполнителей'
+                description: 'Связь процесса с группой исполнителей (ненаправленная)'
             },
             'IncludesStyle': {
                 predicates: ['vad:includes', 'http://example.org/vad#includes'],
@@ -2248,7 +2248,7 @@ ex:organizations {
             dot += '    rankdir=TB;\n';  // Top-to-bottom позволяет горизонтальное выравнивание через rank=same
             dot += '    node [fontname="Arial"];\n';
             dot += '    edge [fontname="Arial", fontsize=10];\n';
-            dot += '    splines=ortho;\n';  // Прямоугольные линии лучше работают с TB направлением
+            dot += '    splines=curved;\n';  // Изогнутые линии для лучшего отображения hasNext связей
             dot += '    nodesep=0.8;\n';  // Расстояние между узлами
             dot += '    ranksep=0.5;\n';  // Расстояние между рангами (CDS и ExecutorGroup)
             dot += '\n';
@@ -2369,8 +2369,8 @@ ex:organizations {
 
                 if (hasExecutorGroup) {
                     const executorNodeId = `${nodeId}_exec`;
-                    // Видимая связь vad:hasExecutor (синяя пунктирная)
-                    dot += `    ${nodeId} -> ${executorNodeId} [color="#1565C0" penwidth="1" style="dashed" arrowhead="normal" weight=10];\n`;
+                    // Видимая связь vad:hasExecutor (синяя пунктирная, ненаправленная)
+                    dot += `    ${nodeId} -> ${executorNodeId} [color="#1565C0" penwidth="1" style="dashed" arrowhead="none" weight=10];\n`;
                 }
             });
 
