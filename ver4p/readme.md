@@ -13,3 +13,4 @@ https://dreampuf.github.io/GraphvizOnline/?engine=dot#digraph%20G%20%7B%0A%0A%20
 - https://habr.com/ru/articles/682346/
 - https://github.com/ppareit/graphviz-dot-mode/tree/master
 - https://hackage-content.haskell.org/package/graphviz-2999.20.2.1/docs/Data-GraphViz-Attributes.html
+- https://lib.custis.ru/Graphviz
