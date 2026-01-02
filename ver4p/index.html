@@ -812,6 +812,14 @@
                     Перенос по словам при превышении
                 </div>
             </div>
+
+            <div class="form-group" id="max-vad-row-length-group" style="display: none;">
+                <label for="max-vad-row-length">Макс. длина VAD:</label>
+                <input type="number" id="max-vad-row-length" value="8" min="2" max="20" style="width: 100%; padding: 10px; border: 1px solid #ddd; border-radius: 4px; font-size: 14px;">
+                <div class="mode-description" id="max-vad-row-length-description">
+                    Количество CDS в строке до переноса
+                </div>
+            </div>
         </div>
 
         <button id="visualize-btn" onclick="visualize()">Визуализировать</button>
@@ -967,6 +975,10 @@ WHERE {
         const MaxAggregationParams = 5;
         const DEFAULT_MAX_LABEL_LENGTH = 25;
         let currentMaxLabelLength = DEFAULT_MAX_LABEL_LENGTH;
+
+        // Максимальное количество VAD элементов (CDS) в одной горизонтальной строке
+        const DEFAULT_MAX_VAD_ROW_LENGTH = 8;
+        let currentMaxVadRowLength = DEFAULT_MAX_VAD_ROW_LENGTH;
 
         // ============================================================================
         // КОНФИГУРАЦИЯ VAD (Value Added Chain Diagram)
@@ -2248,9 +2260,9 @@ ex:organizations {
             dot += '    rankdir=TB;\n';  // Top-to-bottom позволяет горизонтальное выравнивание через rank=same
             dot += '    node [fontname="Arial"];\n';
             dot += '    edge [fontname="Arial", fontsize=10];\n';
-            dot += '    splines=curved;\n';  // Изогнутые линии для лучшего отображения hasNext связей
+            dot += '    splines=spline;\n';  // spline для лучшей маршрутизации skip-ребер
             dot += '    nodesep=0.8;\n';  // Расстояние между узлами
-            dot += '    ranksep=0.5;\n';  // Расстояние между рангами (CDS и ExecutorGroup)
+            dot += '    ranksep=0.3;\n';  // Минимальное расстояние между рангами (CDS и ExecutorGroup)
             dot += '\n';
 
             // Фильтруем процессы - показываем только те, которые не являются материнскими
@@ -2264,6 +2276,62 @@ ex:organizations {
                 if (hasOutgoingNext || hasIncomingNext) {
                     visibleProcesses.set(uri, processInfo);
                 }
+            });
+
+            // Строим порядок процессов для определения skip-ребер (ребер, которые пропускают промежуточные узлы)
+            // Топологическая сортировка процессов по hasNext для определения их порядка
+            const processOrder = [];
+            const visited = new Set();
+            const processUris = [...visibleProcesses.keys()];
+
+            // Найти начальный процесс (процесс без входящих hasNext)
+            const incomingCount = new Map();
+            processUris.forEach(uri => incomingCount.set(uri, 0));
+            hasNextEdges.forEach(edge => {
+                if (visibleProcesses.has(edge.to)) {
+                    incomingCount.set(edge.to, (incomingCount.get(edge.to) || 0) + 1);
+                }
+            });
+
+            // Топологическая сортировка (BFS)
+            const queue = [];
+            processUris.forEach(uri => {
+                if (incomingCount.get(uri) === 0) {
+                    queue.push(uri);
+                }
+            });
+
+            while (queue.length > 0) {
+                const uri = queue.shift();
+                if (!visited.has(uri)) {
+                    visited.add(uri);
+                    processOrder.push(uri);
+                    const processInfo = visibleProcesses.get(uri);
+                    if (processInfo) {
+                        processInfo.hasNext.forEach(nextUri => {
+                            if (visibleProcesses.has(nextUri)) {
+                                const count = incomingCount.get(nextUri) - 1;
+                                incomingCount.set(nextUri, count);
+                                if (count === 0 && !visited.has(nextUri)) {
+                                    queue.push(nextUri);
+                                }
+                            }
+                        });
+                    }
+                }
+            }
+
+            // Добавляем оставшиеся процессы (на случай циклов или изолированных)
+            processUris.forEach(uri => {
+                if (!visited.has(uri)) {
+                    processOrder.push(uri);
+                }
+            });
+
+            // Создаем индекс позиции процесса для определения skip-ребер
+            const processPositionIndex = new Map();
+            processOrder.forEach((uri, index) => {
+                processPositionIndex.set(uri, index);
             });
 
             // Добавляем узлы процессов (CDS) и ExecutorGroup как отдельные узлы
@@ -2333,28 +2401,77 @@ ex:organizations {
 
             dot += '\n';
 
-            // Собираем ID узлов для rank constraints
+            // Собираем ID узлов для rank constraints, используя порядок из topological sort
             const cdsNodeIds = [];
             const execNodeIds = [];
-            visibleProcesses.forEach((processInfo, uri) => {
-                const nodeId = generateNodeId(uri);
-                cdsNodeIds.push(nodeId);
+            const nodeIdToUri = new Map();  // Обратное отображение для быстрого поиска
 
-                if (processInfo.executorGroup && executorGroups.has(processInfo.executorGroup)) {
-                    const group = executorGroups.get(processInfo.executorGroup);
-                    if (group.executors.length > 0) {
-                        execNodeIds.push(`${nodeId}_exec`);
+            // Используем отсортированный порядок процессов
+            processOrder.forEach(uri => {
+                if (visibleProcesses.has(uri)) {
+                    const processInfo = visibleProcesses.get(uri);
+                    const nodeId = generateNodeId(uri);
+                    cdsNodeIds.push(nodeId);
+                    nodeIdToUri.set(nodeId, uri);
+
+                    if (processInfo.executorGroup && executorGroups.has(processInfo.executorGroup)) {
+                        const group = executorGroups.get(processInfo.executorGroup);
+                        if (group.executors.length > 0) {
+                            execNodeIds.push(`${nodeId}_exec`);
+                        }
                     }
                 }
             });
 
-            // В режиме rankdir=TB, rank=same группирует узлы горизонтально
-            // ExecutorGroup узлы располагаются на следующем ранге (ниже CDS)
-            if (execNodeIds.length > 0) {
-                dot += '    // Все ExecutorGroup на одном уровне ниже (rank=same)\n';
-                dot += `    { rank=same; ${execNodeIds.join('; ')}; }\n`;
-                dot += '\n';
+            // Разбиваем процессы на строки по currentMaxVadRowLength
+            const rows = [];
+            for (let i = 0; i < cdsNodeIds.length; i += currentMaxVadRowLength) {
+                rows.push(cdsNodeIds.slice(i, i + currentMaxVadRowLength));
             }
+
+            // Собираем соответствующие execNodeIds для каждой строки
+            // Важно: execNodeIds должны соответствовать позициям cdsNodeIds
+            const execRows = [];
+            rows.forEach((rowCdsIds, rowIndex) => {
+                const rowExecIds = [];
+                rowCdsIds.forEach(cdsId => {
+                    const execId = `${cdsId}_exec`;
+                    if (execNodeIds.includes(execId)) {
+                        rowExecIds.push(execId);
+                    }
+                });
+                execRows.push(rowExecIds);
+            });
+
+            // Генерация rank constraints для каждой строки
+            dot += '    // Rank constraints для CDS строк и ExecutorGroup строк\n';
+            rows.forEach((rowCdsIds, rowIndex) => {
+                // CDS строка
+                dot += `    { rank=same; ${rowCdsIds.join('; ')}; }\n`;
+            });
+
+            // Генерация rank constraints для ExecutorGroup строк
+            execRows.forEach((rowExecIds, rowIndex) => {
+                if (rowExecIds.length > 0) {
+                    dot += `    { rank=same; ${rowExecIds.join('; ')}; }\n`;
+                }
+            });
+
+            // Добавляем невидимые ребра между строками для правильного разделения рядов
+            // Это необходимо для того, чтобы Graphviz разместил строки одну под другой
+            dot += '\n    // Невидимые ребра между строками для разделения рядов\n';
+            for (let rowIndex = 0; rowIndex < rows.length - 1; rowIndex++) {
+                const currentRowExecIds = execRows[rowIndex];
+                const nextRowCdsIds = rows[rowIndex + 1];
+
+                if (currentRowExecIds.length > 0 && nextRowCdsIds.length > 0) {
+                    // Связываем последний executor текущей строки с первым CDS следующей строки
+                    const lastExecId = currentRowExecIds[currentRowExecIds.length - 1];
+                    const firstNextCdsId = nextRowCdsIds[0];
+                    dot += `    ${lastExecId} -> ${firstNextCdsId} [style=invis weight=100];\n`;
+                }
+            }
+            dot += '\n';
 
             // Добавляем видимые связи vad:hasExecutor между CDS и ExecutorGroup
             dot += '    // Связи vad:hasExecutor - видимые ребра от процессов к группам исполнителей\n';
@@ -2377,32 +2494,68 @@ ex:organizations {
             dot += '\n';
 
             // Добавляем ребра hasNext между процессами
-            // В режиме rankdir=TB, горизонтальные связи создаются через rank=same subgraph
+            // Используем north порты для skip-ребер (ребер, которые пропускают промежуточные узлы в одной строке)
             dot += '    // Связи hasNext - горизонтальный поток процессов\n';
-            dot += '    { rank=same;\n';
 
-            // Сначала перечисляем все узлы CDS в subgraph с rank=same
-            cdsNodeIds.forEach(nodeId => {
-                dot += `        ${nodeId};\n`;
-            });
+            // Функция для определения, является ли ребро skip-ребром в пределах одной строки
+            function isSkipEdgeInSameRow(fromUri, toUri) {
+                const fromPos = processPositionIndex.get(fromUri);
+                const toPos = processPositionIndex.get(toUri);
+                if (fromPos === undefined || toPos === undefined) return false;
 
-            // Затем добавляем связи hasNext внутри этого subgraph
-            // Правило: исходящие линии из левой стороны CDS (east), входящие в правую сторону (west)
-            // Примечание: CDS shape направлена вправо (как стрелка), поэтому:
-            // - Левая сторона CDS = восток (east, :e) — откуда выходят стрелки
-            // - Правая сторона CDS = запад (west, :w) — куда входят стрелки
+                // Определяем строки для обоих процессов
+                const fromRowIndex = Math.floor(fromPos / currentMaxVadRowLength);
+                const toRowIndex = Math.floor(toPos / currentMaxVadRowLength);
+
+                // Skip-ребро только если оба процесса в одной строке и между ними есть промежуточные
+                if (fromRowIndex !== toRowIndex) return false;
+
+                // Проверяем, есть ли промежуточные процессы между from и to
+                const fromPosInRow = fromPos % currentMaxVadRowLength;
+                const toPosInRow = toPos % currentMaxVadRowLength;
+
+                return Math.abs(toPosInRow - fromPosInRow) > 1;
+            }
+
+            // Функция для определения, пересекает ли ребро границу строки
+            function crossesRowBoundary(fromUri, toUri) {
+                const fromPos = processPositionIndex.get(fromUri);
+                const toPos = processPositionIndex.get(toUri);
+                if (fromPos === undefined || toPos === undefined) return false;
+
+                const fromRowIndex = Math.floor(fromPos / currentMaxVadRowLength);
+                const toRowIndex = Math.floor(toPos / currentMaxVadRowLength);
+
+                return fromRowIndex !== toRowIndex;
+            }
+
+            // Сначала добавляем все ребра hasNext
             hasNextEdges.forEach(edge => {
                 // Проверяем, что оба процесса видимы
                 if (visibleProcesses.has(edge.from) && visibleProcesses.has(edge.to)) {
                     const fromId = generateNodeId(edge.from);
                     const toId = generateNodeId(edge.to);
 
-                    // Используем порты: выход из востока (правый край CDS), вход на запад (левый край CDS)
-                    dot += `        ${fromId}:e -> ${toId}:w [color="#2E7D32" penwidth="1" style="solid" arrowhead="vee"];\n`;
+                    if (crossesRowBoundary(edge.from, edge.to)) {
+                        // Ребро пересекает границу строки - используем специальные порты
+                        // Выход из правого края последнего узла строки, вход в левый край первого узла следующей строки
+                        const fromPos = processPositionIndex.get(edge.from);
+                        const toPos = processPositionIndex.get(edge.to);
+                        const fromPosInRow = fromPos % currentMaxVadRowLength;
+                        const toPosInRow = toPos % currentMaxVadRowLength;
+
+                        // Если from в конце строки и to в начале следующей, используем south/north порты
+                        // В противном случае используем обычную маршрутизацию
+                        dot += `    ${fromId}:s -> ${toId}:n [color="#2E7D32" penwidth="1" style="solid" arrowhead="vee"];\n`;
+                    } else if (isSkipEdgeInSameRow(edge.from, edge.to)) {
+                        // Skip-ребро в одной строке - маршрутизируем через north порты (сверху)
+                        dot += `    ${fromId}:n -> ${toId}:n [color="#2E7D32" penwidth="1" style="solid" arrowhead="vee"];\n`;
+                    } else {
+                        // Обычное ребро - выход из east, вход на west
+                        dot += `    ${fromId}:e -> ${toId}:w [color="#2E7D32" penwidth="1" style="solid" arrowhead="vee"];\n`;
+                    }
                 }
             });
-
-            dot += '    }\n';
 
             dot += '}\n';
 
@@ -2776,6 +2929,7 @@ ex:organizations {
         function updateModeDescription() {
             const mode = document.getElementById('visualization-mode').value;
             const description = document.getElementById('mode-description');
+            const maxVadRowLengthGroup = document.getElementById('max-vad-row-length-group');
 
             const descriptions = {
                 'notation': 'С выделением типов объектов и предикатов цветом и формами',
@@ -2785,6 +2939,13 @@ ex:organizations {
             };
 
             description.textContent = descriptions[mode] || '';
+
+            // Показываем/скрываем параметр "Макс. длина VAD" только для режима VAD
+            if (mode === 'vad') {
+                maxVadRowLengthGroup.style.display = 'block';
+            } else {
+                maxVadRowLengthGroup.style.display = 'none';
+            }
         }
 
         function toggleSparqlPanel() {
@@ -2816,6 +2977,16 @@ ex:organizations {
             } else {
                 currentMaxLabelLength = DEFAULT_MAX_LABEL_LENGTH;
                 maxLabelLengthInput.value = DEFAULT_MAX_LABEL_LENGTH;
+            }
+
+            // Чтение параметра "Макс. длина VAD" для режима VAD
+            const maxVadRowLengthInput = document.getElementById('max-vad-row-length');
+            const maxVadRowLengthValue = parseInt(maxVadRowLengthInput.value, 10);
+            if (!isNaN(maxVadRowLengthValue) && maxVadRowLengthValue >= 2 && maxVadRowLengthValue <= 20) {
+                currentMaxVadRowLength = maxVadRowLengthValue;
+            } else {
+                currentMaxVadRowLength = DEFAULT_MAX_VAD_ROW_LENGTH;
+                maxVadRowLengthInput.value = DEFAULT_MAX_VAD_ROW_LENGTH;
             }
 
             currentMode = visualizationMode;
