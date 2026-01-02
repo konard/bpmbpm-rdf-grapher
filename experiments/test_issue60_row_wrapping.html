@@ -1,0 +1,392 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Test Issue 60 - Row Wrapping Left Alignment</title>
+    <script src="https://unpkg.com/@viz-js/viz@3.4.0/lib/viz-standalone.js"></script>
+    <style>
+        body { font-family: Arial, sans-serif; padding: 20px; }
+        .test { margin: 20px 0; border: 1px solid #ccc; padding: 15px; }
+        h2 { color: #333; }
+        pre { background: #f5f5f5; padding: 10px; overflow: auto; font-size: 11px; }
+        .issue { color: red; }
+        .fix { color: green; }
+    </style>
+</head>
+<body>
+    <h1>Issue 60 - Row Wrapping Left Alignment</h1>
+    <p>Testing solutions for issue #60 requirements:</p>
+    <ul>
+        <li>When row wrapping, next CDS should start from the LEFT EDGE (like the first CDS in row 1)</li>
+        <li>Connecting edges between rows should use East->West ports</li>
+        <li>With max VAD length = 3, "Process 4" should NOT be below "Process 3" but at the LEFT side</li>
+    </ul>
+
+    <div class="test">
+        <h2>Test 1: Current Issue - Process 4 appears below Process 3 (P4 positioned after P3)</h2>
+        <p class="issue">With max VAD length = 3, P4 is in same position as P3 would be in row 1</p>
+        <div id="test1"></div>
+    </div>
+
+    <div class="test">
+        <h2>Test 2: FIX - Use invisible anchor node to force left alignment</h2>
+        <p class="fix">Add invisible anchor to left of each row to force left alignment</p>
+        <div id="test2"></div>
+    </div>
+
+    <div class="test">
+        <h2>Test 3: Alternative FIX - Use subgraph with left-to-right ordering</h2>
+        <p class="fix">Using subgraph ordering attribute</p>
+        <div id="test3"></div>
+    </div>
+
+    <div class="test">
+        <h2>Test 4: Better FIX - Invisible edges from first row left to second row left</h2>
+        <p class="fix">Connect P1 to P4 invisibly to maintain left alignment</p>
+        <div id="test4"></div>
+    </div>
+
+    <script>
+        async function runTests() {
+            const viz = await Viz.instance();
+
+            // Test 1: Current Issue - nodes in second row not aligned to left
+            const dot1 = `
+digraph VADGraph {
+    rankdir=TB;
+    node [fontname="Arial"];
+    edge [fontname="Arial", fontsize=10];
+    splines=spline;
+    nodesep=0.8;
+    ranksep=0.3;
+
+    // Row 1 (max 3 per row)
+    P1 [label=<Процесс 1> shape="cds" color="#2E7D32" fillcolor="#A5D6A7" fontsize="11" style="filled"];
+    P2 [label=<Процесс 2> shape="cds" color="#2E7D32" fillcolor="#A5D6A7" fontsize="11" style="filled"];
+    P3 [label=<Процесс 3> shape="cds" color="#2E7D32" fillcolor="#A5D6A7" fontsize="11" style="filled"];
+
+    // Row 2
+    P4 [label=<Процесс 4> shape="cds" color="#2E7D32" fillcolor="#A5D6A7" fontsize="11" style="filled"];
+    P5 [label=<Процесс 5> shape="cds" color="#2E7D32" fillcolor="#A5D6A7" fontsize="11" style="filled"];
+    P6 [label=<Процесс 6> shape="cds" color="#2E7D32" fillcolor="#A5D6A7" fontsize="11" style="filled"];
+
+    // Row 3
+    P7 [label=<Процесс 7> shape="cds" color="#2E7D32" fillcolor="#A5D6A7" fontsize="11" style="filled"];
+    P8 [label=<Процесс 8> shape="cds" color="#2E7D32" fillcolor="#A5D6A7" fontsize="11" style="filled"];
+
+    // Executors Row 1
+    E1 [label=<<FONT POINT-SIZE="9">Исп. 1</FONT>> shape="ellipse" color="#B8860B" fillcolor="#FFFFCC" style="filled"];
+    E2 [label=<<FONT POINT-SIZE="9">Исп. 2</FONT>> shape="ellipse" color="#B8860B" fillcolor="#FFFFCC" style="filled"];
+    E3 [label=<<FONT POINT-SIZE="9">Исп. 3</FONT>> shape="ellipse" color="#B8860B" fillcolor="#FFFFCC" style="filled"];
+
+    // Executors Row 2
+    E4 [label=<<FONT POINT-SIZE="9">Исп. 4</FONT>> shape="ellipse" color="#B8860B" fillcolor="#FFFFCC" style="filled"];
+    E5 [label=<<FONT POINT-SIZE="9">Исп. 5</FONT>> shape="ellipse" color="#B8860B" fillcolor="#FFFFCC" style="filled"];
+    E6 [label=<<FONT POINT-SIZE="9">Исп. 6</FONT>> shape="ellipse" color="#B8860B" fillcolor="#FFFFCC" style="filled"];
+
+    // Executors Row 3
+    E7 [label=<<FONT POINT-SIZE="9">Исп. 7</FONT>> shape="ellipse" color="#B8860B" fillcolor="#FFFFCC" style="filled"];
+    E8 [label=<<FONT POINT-SIZE="9">Исп. 8</FONT>> shape="ellipse" color="#B8860B" fillcolor="#FFFFCC" style="filled"];
+
+    { rank=same; P1; P2; P3; }
+    { rank=same; E1; E2; E3; }
+    { rank=same; P4; P5; P6; }
+    { rank=same; E4; E5; E6; }
+    { rank=same; P7; P8; }
+    { rank=same; E7; E8; }
+
+    // Row separation
+    E3 -> P4 [style=invis weight=100];
+    E6 -> P7 [style=invis weight=100];
+
+    P1 -> E1 [color="#1565C0" style="dashed" arrowhead="none" weight=10];
+    P2 -> E2 [color="#1565C0" style="dashed" arrowhead="none" weight=10];
+    P3 -> E3 [color="#1565C0" style="dashed" arrowhead="none" weight=10];
+    P4 -> E4 [color="#1565C0" style="dashed" arrowhead="none" weight=10];
+    P5 -> E5 [color="#1565C0" style="dashed" arrowhead="none" weight=10];
+    P6 -> E6 [color="#1565C0" style="dashed" arrowhead="none" weight=10];
+    P7 -> E7 [color="#1565C0" style="dashed" arrowhead="none" weight=10];
+    P8 -> E8 [color="#1565C0" style="dashed" arrowhead="none" weight=10];
+
+    // Row 1 flow
+    P1:e -> P2:w [color="#2E7D32" penwidth="1" arrowhead="vee"];
+    P2:e -> P3:w [color="#2E7D32" penwidth="1" arrowhead="vee"];
+
+    // Row transition P3 -> P4
+    P3:e -> P4:w [color="#2E7D32" penwidth="1" arrowhead="vee"];
+
+    // Row 2 flow
+    P4:e -> P5:w [color="#2E7D32" penwidth="1" arrowhead="vee"];
+    P5:e -> P6:w [color="#2E7D32" penwidth="1" arrowhead="vee"];
+
+    // Row transition P6 -> P7
+    P6:e -> P7:w [color="#2E7D32" penwidth="1" arrowhead="vee"];
+
+    // Row 3 flow
+    P7:e -> P8:w [color="#2E7D32" penwidth="1" arrowhead="vee"];
+}`;
+
+            renderTest('test1', viz, dot1);
+
+            // Test 2: FIX - Use invisible anchor node for left alignment
+            const dot2 = `
+digraph VADGraph {
+    rankdir=TB;
+    node [fontname="Arial"];
+    edge [fontname="Arial", fontsize=10];
+    splines=spline;
+    nodesep=0.8;
+    ranksep=0.3;
+
+    // Invisible anchor nodes for left alignment
+    anchor1 [style=invis width=0 height=0];
+    anchor2 [style=invis width=0 height=0];
+    anchor3 [style=invis width=0 height=0];
+
+    // Row 1 (max 3 per row)
+    P1 [label=<Процесс 1> shape="cds" color="#2E7D32" fillcolor="#A5D6A7" fontsize="11" style="filled"];
+    P2 [label=<Процесс 2> shape="cds" color="#2E7D32" fillcolor="#A5D6A7" fontsize="11" style="filled"];
+    P3 [label=<Процесс 3> shape="cds" color="#2E7D32" fillcolor="#A5D6A7" fontsize="11" style="filled"];
+
+    // Row 2
+    P4 [label=<Процесс 4> shape="cds" color="#2E7D32" fillcolor="#A5D6A7" fontsize="11" style="filled"];
+    P5 [label=<Процесс 5> shape="cds" color="#2E7D32" fillcolor="#A5D6A7" fontsize="11" style="filled"];
+    P6 [label=<Процесс 6> shape="cds" color="#2E7D32" fillcolor="#A5D6A7" fontsize="11" style="filled"];
+
+    // Row 3
+    P7 [label=<Процесс 7> shape="cds" color="#2E7D32" fillcolor="#A5D6A7" fontsize="11" style="filled"];
+    P8 [label=<Процесс 8> shape="cds" color="#2E7D32" fillcolor="#A5D6A7" fontsize="11" style="filled"];
+
+    // Executors Row 1
+    E1 [label=<<FONT POINT-SIZE="9">Исп. 1</FONT>> shape="ellipse" color="#B8860B" fillcolor="#FFFFCC" style="filled"];
+    E2 [label=<<FONT POINT-SIZE="9">Исп. 2</FONT>> shape="ellipse" color="#B8860B" fillcolor="#FFFFCC" style="filled"];
+    E3 [label=<<FONT POINT-SIZE="9">Исп. 3</FONT>> shape="ellipse" color="#B8860B" fillcolor="#FFFFCC" style="filled"];
+
+    // Executors Row 2
+    E4 [label=<<FONT POINT-SIZE="9">Исп. 4</FONT>> shape="ellipse" color="#B8860B" fillcolor="#FFFFCC" style="filled"];
+    E5 [label=<<FONT POINT-SIZE="9">Исп. 5</FONT>> shape="ellipse" color="#B8860B" fillcolor="#FFFFCC" style="filled"];
+    E6 [label=<<FONT POINT-SIZE="9">Исп. 6</FONT>> shape="ellipse" color="#B8860B" fillcolor="#FFFFCC" style="filled"];
+
+    // Executors Row 3
+    E7 [label=<<FONT POINT-SIZE="9">Исп. 7</FONT>> shape="ellipse" color="#B8860B" fillcolor="#FFFFCC" style="filled"];
+    E8 [label=<<FONT POINT-SIZE="9">Исп. 8</FONT>> shape="ellipse" color="#B8860B" fillcolor="#FFFFCC" style="filled"];
+
+    { rank=same; anchor1; P1; P2; P3; }
+    { rank=same; E1; E2; E3; }
+    { rank=same; anchor2; P4; P5; P6; }
+    { rank=same; E4; E5; E6; }
+    { rank=same; anchor3; P7; P8; }
+    { rank=same; E7; E8; }
+
+    // Vertical anchor chain to maintain left alignment
+    anchor1 -> anchor2 [style=invis weight=1000];
+    anchor2 -> anchor3 [style=invis weight=1000];
+
+    // Row separation
+    E3 -> P4 [style=invis weight=100];
+    E6 -> P7 [style=invis weight=100];
+
+    P1 -> E1 [color="#1565C0" style="dashed" arrowhead="none" weight=10];
+    P2 -> E2 [color="#1565C0" style="dashed" arrowhead="none" weight=10];
+    P3 -> E3 [color="#1565C0" style="dashed" arrowhead="none" weight=10];
+    P4 -> E4 [color="#1565C0" style="dashed" arrowhead="none" weight=10];
+    P5 -> E5 [color="#1565C0" style="dashed" arrowhead="none" weight=10];
+    P6 -> E6 [color="#1565C0" style="dashed" arrowhead="none" weight=10];
+    P7 -> E7 [color="#1565C0" style="dashed" arrowhead="none" weight=10];
+    P8 -> E8 [color="#1565C0" style="dashed" arrowhead="none" weight=10];
+
+    // Row 1 flow
+    P1:e -> P2:w [color="#2E7D32" penwidth="1" arrowhead="vee"];
+    P2:e -> P3:w [color="#2E7D32" penwidth="1" arrowhead="vee"];
+
+    // Row transition P3 -> P4
+    P3:e -> P4:w [color="#2E7D32" penwidth="1" arrowhead="vee"];
+
+    // Row 2 flow
+    P4:e -> P5:w [color="#2E7D32" penwidth="1" arrowhead="vee"];
+    P5:e -> P6:w [color="#2E7D32" penwidth="1" arrowhead="vee"];
+
+    // Row transition P6 -> P7
+    P6:e -> P7:w [color="#2E7D32" penwidth="1" arrowhead="vee"];
+
+    // Row 3 flow
+    P7:e -> P8:w [color="#2E7D32" penwidth="1" arrowhead="vee"];
+}`;
+
+            renderTest('test2', viz, dot2);
+
+            // Test 3: Alternative - Use subgraph with ordering
+            const dot3 = `
+digraph VADGraph {
+    rankdir=TB;
+    node [fontname="Arial"];
+    edge [fontname="Arial", fontsize=10];
+    splines=spline;
+    nodesep=0.8;
+    ranksep=0.3;
+    ordering=out;
+
+    // Row 1 (max 3 per row)
+    P1 [label=<Процесс 1> shape="cds" color="#2E7D32" fillcolor="#A5D6A7" fontsize="11" style="filled"];
+    P2 [label=<Процесс 2> shape="cds" color="#2E7D32" fillcolor="#A5D6A7" fontsize="11" style="filled"];
+    P3 [label=<Процесс 3> shape="cds" color="#2E7D32" fillcolor="#A5D6A7" fontsize="11" style="filled"];
+
+    // Row 2
+    P4 [label=<Процесс 4> shape="cds" color="#2E7D32" fillcolor="#A5D6A7" fontsize="11" style="filled"];
+    P5 [label=<Процесс 5> shape="cds" color="#2E7D32" fillcolor="#A5D6A7" fontsize="11" style="filled"];
+    P6 [label=<Процесс 6> shape="cds" color="#2E7D32" fillcolor="#A5D6A7" fontsize="11" style="filled"];
+
+    // Row 3
+    P7 [label=<Процесс 7> shape="cds" color="#2E7D32" fillcolor="#A5D6A7" fontsize="11" style="filled"];
+    P8 [label=<Процесс 8> shape="cds" color="#2E7D32" fillcolor="#A5D6A7" fontsize="11" style="filled"];
+
+    // Executors Row 1
+    E1 [label=<<FONT POINT-SIZE="9">Исп. 1</FONT>> shape="ellipse" color="#B8860B" fillcolor="#FFFFCC" style="filled"];
+    E2 [label=<<FONT POINT-SIZE="9">Исп. 2</FONT>> shape="ellipse" color="#B8860B" fillcolor="#FFFFCC" style="filled"];
+    E3 [label=<<FONT POINT-SIZE="9">Исп. 3</FONT>> shape="ellipse" color="#B8860B" fillcolor="#FFFFCC" style="filled"];
+
+    // Executors Row 2
+    E4 [label=<<FONT POINT-SIZE="9">Исп. 4</FONT>> shape="ellipse" color="#B8860B" fillcolor="#FFFFCC" style="filled"];
+    E5 [label=<<FONT POINT-SIZE="9">Исп. 5</FONT>> shape="ellipse" color="#B8860B" fillcolor="#FFFFCC" style="filled"];
+    E6 [label=<<FONT POINT-SIZE="9">Исп. 6</FONT>> shape="ellipse" color="#B8860B" fillcolor="#FFFFCC" style="filled"];
+
+    // Executors Row 3
+    E7 [label=<<FONT POINT-SIZE="9">Исп. 7</FONT>> shape="ellipse" color="#B8860B" fillcolor="#FFFFCC" style="filled"];
+    E8 [label=<<FONT POINT-SIZE="9">Исп. 8</FONT>> shape="ellipse" color="#B8860B" fillcolor="#FFFFCC" style="filled"];
+
+    { rank=same; P1; P2; P3; }
+    { rank=same; E1; E2; E3; }
+    { rank=same; P4; P5; P6; }
+    { rank=same; E4; E5; E6; }
+    { rank=same; P7; P8; }
+    { rank=same; E7; E8; }
+
+    // Add invisible edges from first node of row 1 to first nodes of other rows
+    P1 -> P4 [style=invis weight=100 minlen=2];
+    P4 -> P7 [style=invis weight=100 minlen=2];
+
+    // Row separation
+    E3 -> P4 [style=invis weight=100];
+    E6 -> P7 [style=invis weight=100];
+
+    P1 -> E1 [color="#1565C0" style="dashed" arrowhead="none" weight=10];
+    P2 -> E2 [color="#1565C0" style="dashed" arrowhead="none" weight=10];
+    P3 -> E3 [color="#1565C0" style="dashed" arrowhead="none" weight=10];
+    P4 -> E4 [color="#1565C0" style="dashed" arrowhead="none" weight=10];
+    P5 -> E5 [color="#1565C0" style="dashed" arrowhead="none" weight=10];
+    P6 -> E6 [color="#1565C0" style="dashed" arrowhead="none" weight=10];
+    P7 -> E7 [color="#1565C0" style="dashed" arrowhead="none" weight=10];
+    P8 -> E8 [color="#1565C0" style="dashed" arrowhead="none" weight=10];
+
+    // Row 1 flow
+    P1:e -> P2:w [color="#2E7D32" penwidth="1" arrowhead="vee"];
+    P2:e -> P3:w [color="#2E7D32" penwidth="1" arrowhead="vee"];
+
+    // Row transition P3 -> P4
+    P3:e -> P4:w [color="#2E7D32" penwidth="1" arrowhead="vee"];
+
+    // Row 2 flow
+    P4:e -> P5:w [color="#2E7D32" penwidth="1" arrowhead="vee"];
+    P5:e -> P6:w [color="#2E7D32" penwidth="1" arrowhead="vee"];
+
+    // Row transition P6 -> P7
+    P6:e -> P7:w [color="#2E7D32" penwidth="1" arrowhead="vee"];
+
+    // Row 3 flow
+    P7:e -> P8:w [color="#2E7D32" penwidth="1" arrowhead="vee"];
+}`;
+
+            renderTest('test3', viz, dot3);
+
+            // Test 4: Better FIX - Invisible edges from first row to align all rows left
+            const dot4 = `
+digraph VADGraph {
+    rankdir=TB;
+    node [fontname="Arial"];
+    edge [fontname="Arial", fontsize=10];
+    splines=spline;
+    nodesep=0.8;
+    ranksep=0.3;
+
+    // Row 1 (max 3 per row)
+    P1 [label=<Процесс 1> shape="cds" color="#2E7D32" fillcolor="#A5D6A7" fontsize="11" style="filled"];
+    P2 [label=<Процесс 2> shape="cds" color="#2E7D32" fillcolor="#A5D6A7" fontsize="11" style="filled"];
+    P3 [label=<Процесс 3> shape="cds" color="#2E7D32" fillcolor="#A5D6A7" fontsize="11" style="filled"];
+
+    // Row 2
+    P4 [label=<Процесс 4> shape="cds" color="#2E7D32" fillcolor="#A5D6A7" fontsize="11" style="filled"];
+    P5 [label=<Процесс 5> shape="cds" color="#2E7D32" fillcolor="#A5D6A7" fontsize="11" style="filled"];
+    P6 [label=<Процесс 6> shape="cds" color="#2E7D32" fillcolor="#A5D6A7" fontsize="11" style="filled"];
+
+    // Row 3
+    P7 [label=<Процесс 7> shape="cds" color="#2E7D32" fillcolor="#A5D6A7" fontsize="11" style="filled"];
+    P8 [label=<Процесс 8> shape="cds" color="#2E7D32" fillcolor="#A5D6A7" fontsize="11" style="filled"];
+
+    // Executors Row 1
+    E1 [label=<<FONT POINT-SIZE="9">Исп. 1</FONT>> shape="ellipse" color="#B8860B" fillcolor="#FFFFCC" style="filled"];
+    E2 [label=<<FONT POINT-SIZE="9">Исп. 2</FONT>> shape="ellipse" color="#B8860B" fillcolor="#FFFFCC" style="filled"];
+    E3 [label=<<FONT POINT-SIZE="9">Исп. 3</FONT>> shape="ellipse" color="#B8860B" fillcolor="#FFFFCC" style="filled"];
+
+    // Executors Row 2
+    E4 [label=<<FONT POINT-SIZE="9">Исп. 4</FONT>> shape="ellipse" color="#B8860B" fillcolor="#FFFFCC" style="filled"];
+    E5 [label=<<FONT POINT-SIZE="9">Исп. 5</FONT>> shape="ellipse" color="#B8860B" fillcolor="#FFFFCC" style="filled"];
+    E6 [label=<<FONT POINT-SIZE="9">Исп. 6</FONT>> shape="ellipse" color="#B8860B" fillcolor="#FFFFCC" style="filled"];
+
+    // Executors Row 3
+    E7 [label=<<FONT POINT-SIZE="9">Исп. 7</FONT>> shape="ellipse" color="#B8860B" fillcolor="#FFFFCC" style="filled"];
+    E8 [label=<<FONT POINT-SIZE="9">Исп. 8</FONT>> shape="ellipse" color="#B8860B" fillcolor="#FFFFCC" style="filled"];
+
+    { rank=same; P1; P2; P3; }
+    { rank=same; E1; E2; E3; }
+    { rank=same; P4; P5; P6; }
+    { rank=same; E4; E5; E6; }
+    { rank=same; P7; P8; }
+    { rank=same; E7; E8; }
+
+    // KEY FIX: Connect first executor of row 1 to first CDS of row 2
+    // This ensures P4 aligns with P1 (leftmost position)
+    E1 -> P4 [style=invis weight=100];
+    E4 -> P7 [style=invis weight=100];
+
+    P1 -> E1 [color="#1565C0" style="dashed" arrowhead="none" weight=10];
+    P2 -> E2 [color="#1565C0" style="dashed" arrowhead="none" weight=10];
+    P3 -> E3 [color="#1565C0" style="dashed" arrowhead="none" weight=10];
+    P4 -> E4 [color="#1565C0" style="dashed" arrowhead="none" weight=10];
+    P5 -> E5 [color="#1565C0" style="dashed" arrowhead="none" weight=10];
+    P6 -> E6 [color="#1565C0" style="dashed" arrowhead="none" weight=10];
+    P7 -> E7 [color="#1565C0" style="dashed" arrowhead="none" weight=10];
+    P8 -> E8 [color="#1565C0" style="dashed" arrowhead="none" weight=10];
+
+    // Row 1 flow
+    P1:e -> P2:w [color="#2E7D32" penwidth="1" arrowhead="vee"];
+    P2:e -> P3:w [color="#2E7D32" penwidth="1" arrowhead="vee"];
+
+    // Row transition P3 -> P4
+    P3:e -> P4:w [color="#2E7D32" penwidth="1" arrowhead="vee"];
+
+    // Row 2 flow
+    P4:e -> P5:w [color="#2E7D32" penwidth="1" arrowhead="vee"];
+    P5:e -> P6:w [color="#2E7D32" penwidth="1" arrowhead="vee"];
+
+    // Row transition P6 -> P7
+    P6:e -> P7:w [color="#2E7D32" penwidth="1" arrowhead="vee"];
+
+    // Row 3 flow
+    P7:e -> P8:w [color="#2E7D32" penwidth="1" arrowhead="vee"];
+}`;
+
+            renderTest('test4', viz, dot4);
+        }
+
+        function renderTest(id, viz, dot) {
+            try {
+                document.getElementById(id).innerHTML = viz.renderSVGElement(dot).outerHTML;
+            } catch(e) {
+                document.getElementById(id).innerHTML = '<pre style="color:red">' + e + '</pre>';
+            }
+            document.getElementById(id).innerHTML += '<pre>' + dot + '</pre>';
+        }
+
+        runTests();
+    </script>
+</body>
+</html>
