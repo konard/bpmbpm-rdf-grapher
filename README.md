@@ -12,8 +12,8 @@ https://github.com/bpmbpm/rdf-grapher/tree/main/ver3
 
 ### ver 4p
 https://github.com/bpmbpm/rdf-grapher/tree/main/ver4p  
-p = Process, VAD  
-
+p = Process, VAD   
+info: https://bpmbpm.github.io/rdf-grapher/ver4p/old/index4fin1.html
 ### info
 Используемые технологии:
 - N3.js — JavaScript библиотека для парсинга RDF — GitHub
