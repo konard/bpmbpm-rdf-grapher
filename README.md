@@ -15,7 +15,7 @@ https://github.com/bpmbpm/rdf-grapher/tree/main/ver4p
 ранее (более подробный):  
 info: https://bpmbpm.github.io/rdf-grapher/ver4p/old/index4fin1.html
 
-### ver 5е, е = TriG
+### ver 5t, t = TriG (VAD)
 TriG данные с именованным графом 
 
 ### info
