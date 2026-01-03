@@ -23,8 +23,4 @@ https://dreampuf.github.io/GraphvizOnline/?engine=dot#digraph%20G%20%7B%0A%0A%20
 - https://hackage-content.haskell.org/package/graphviz-2999.20.2.1/docs/Data-GraphViz-Attributes.html
 - https://lib.custis.ru/Graphviz
 
-### info
-Используемые технологии:
-- N3.js — JavaScript библиотека для парсинга RDF — GitHub
-- Viz.js — WebAssembly версия Graphviz для браузера — GitHub  
-Этот сервис работает полностью на стороне клиента (в браузере) и не требует серверной части, что позволяет размещать его на GitHub Pages.
+
