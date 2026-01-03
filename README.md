@@ -19,8 +19,10 @@ https://bpmbpm.github.io/rdf-grapher/ver4p/old/index4fin1.html
 TriG данные с именованным графом. Добавлены два окна: treeview и свойства TriG (
 
 https://bpmbpm.github.io/rdf-grapher/ver5t/
+
 ---
-### info
+
+## info
 - Робот- программист: https://github.com/link-assistant/hive-mind
 
 Используемые технологии:
