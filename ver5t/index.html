@@ -821,11 +821,13 @@
         .trig-tree-item.selected {
             background-color: #c8e6c9;
             border-left: 3px solid #4CAF50;
+            box-shadow: 0 0 8px rgba(76, 175, 80, 0.6);
         }
 
         .trig-tree-item.active {
             background-color: #a5d6a7;
             font-weight: bold;
+            box-shadow: 0 0 12px rgba(76, 175, 80, 0.8);
         }
 
         .trig-tree-children {
@@ -2101,8 +2103,23 @@ WHERE {
          */
         function toggleVADTriGPanels(show) {
             const vadTrigContainer = document.getElementById('vad-trig-container');
+            const regularZoomContainer = document.getElementById('zoom-container');
+            const regularZoomControls = document.getElementById('zoom-controls');
+            const regularOutput = document.getElementById('output');
+
             if (vadTrigContainer) {
                 vadTrigContainer.style.display = show ? 'flex' : 'none';
+            }
+
+            // Hide regular zoom container and clear output when showing VAD TriG panels
+            if (regularZoomContainer) {
+                regularZoomContainer.style.display = show ? 'none' : 'block';
+            }
+            if (regularZoomControls && show) {
+                regularZoomControls.style.display = 'none';
+            }
+            if (regularOutput && show) {
+                regularOutput.innerHTML = '';
             }
         }
 
