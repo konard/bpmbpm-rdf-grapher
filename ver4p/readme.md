@@ -1,5 +1,13 @@
 ### ver4 Process
 
+RDF Grapher ver4p — сервис для парсинга RDF данных и их визуализации в виде графа с поддержкой режима VAD (Value Added Chain Diagram). Этот сервис является расширенным аналогом LDF RDF Grapher.
+
+Новые возможности ver4p:
+- Режим VAD: визуализация цепочки добавленной стоимости с процессами и исполнителями
+- Процессы отображаются как cds-фигуры (chevron) с зеленой заливкой
+- Исполнители процессов показываются как подписи под процессами
+- Валидация данных на соответствие схеме VAD
+
 ### dot
 - https://graphviz.org/doc/info/shapes.html
 
@@ -14,3 +22,9 @@ https://dreampuf.github.io/GraphvizOnline/?engine=dot#digraph%20G%20%7B%0A%0A%20
 - https://github.com/ppareit/graphviz-dot-mode/tree/master
 - https://hackage-content.haskell.org/package/graphviz-2999.20.2.1/docs/Data-GraphViz-Attributes.html
 - https://lib.custis.ru/Graphviz
+
+### info
+Используемые технологии:
+- N3.js — JavaScript библиотека для парсинга RDF — GitHub
+- Viz.js — WebAssembly версия Graphviz для браузера — GitHub  
+Этот сервис работает полностью на стороне клиента (в браузере) и не требует серверной части, что позволяет размещать его на GitHub Pages.
