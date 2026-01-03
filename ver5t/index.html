@@ -1614,9 +1614,26 @@ WHERE {
 }`;
 
         /**
+         * Генерирует SPARQL PREFIX декларации из объекта префиксов
+         * @param {Object} prefixes - Объект с префиксами {prefix: uri}
+         * @returns {string} - Строка с PREFIX декларациями
+         */
+        function generateSparqlPrefixes(prefixes) {
+            if (!prefixes || Object.keys(prefixes).length === 0) {
+                return '';
+            }
+
+            let prefixLines = [];
+            for (const [prefix, uri] of Object.entries(prefixes)) {
+                prefixLines.push(`PREFIX ${prefix}: <${uri}>`);
+            }
+            return prefixLines.join('\n') + '\n\n';
+        }
+
+        /**
          * Генерирует SPARQL запрос с GRAPH clause для указанного TriG
          * @param {string} trigUri - URI TriG для фильтрации
-         * @returns {string} - SPARQL запрос с GRAPH clause
+         * @returns {string} - SPARQL запрос с GRAPH clause и PREFIX декларациями
          */
         function getSparqlQueryForTriG(trigUri) {
             if (!trigUri) return defaultSparqlQuery;
@@ -1627,7 +1644,10 @@ WHERE {
                 ? prefixedUri
                 : `<${trigUri}>`;
 
-            return `SELECT ?s ?p ?o
+            // Генерируем PREFIX декларации для SPARQL запроса
+            const prefixDeclarations = generateSparqlPrefixes(currentPrefixes);
+
+            return `${prefixDeclarations}SELECT ?s ?p ?o
 WHERE {
     GRAPH ${graphRef} {
         ?s ?p ?o .
