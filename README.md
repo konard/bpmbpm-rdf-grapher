@@ -11,6 +11,11 @@ https://github.com/bpmbpm/rdf-grapher/tree/main/ver2
 https://github.com/bpmbpm/rdf-grapher/tree/main/ver3
 
 ### ver 4p
-Process
+https://github.com/bpmbpm/rdf-grapher/tree/main/ver4p  
+p = Process, VAD  
 
-
+### info
+Используемые технологии:
+- N3.js — JavaScript библиотека для парсинга RDF — GitHub
+- Viz.js — WebAssembly версия Graphviz для браузера — GitHub  
+Этот сервис работает полностью на стороне клиента (в браузере) и не требует серверной части, что позволяет размещать его на GitHub Pages.
