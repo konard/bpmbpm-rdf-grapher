@@ -16,7 +16,8 @@ https://github.com/bpmbpm/rdf-grapher/tree/main/ver4p run: https://bpmbpm.github
 https://bpmbpm.github.io/rdf-grapher/ver4p/old/index4fin1.html
 
 ### ver 5t, t = TriG (VAD)
-TriG данные с именованным графом. Добавлены два окна: treeview и свойства TriG (
+TriG данные с именованным графом. Добавлены два окна: treeview и свойства TriG  
+Выбираем пример **Trig VADv2**
 
 https://bpmbpm.github.io/rdf-grapher/ver5t/
 
