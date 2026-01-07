@@ -2620,6 +2620,7 @@ WHERE {
                 const nodes = svg.querySelectorAll('.node');
                 nodes.forEach(node => {
                     node.addEventListener('click', handleNodeClick);
+                    node.addEventListener('dblclick', handleNodeDoubleClick);
                 });
             });
         }
@@ -2654,6 +2655,56 @@ WHERE {
             selectedNodeElement = nodeElement;
 
             showNodeProperties(nodeUri, nodeLabel);
+        }
+
+        /**
+         * Обработчик двойного клика по узлу диаграммы
+         * Для процессов с подтипом "Детализированный" (vad:Detailed) открывает соответствующую схему TriG
+         * @param {Event} event - Событие двойного клика
+         */
+        function handleNodeDoubleClick(event) {
+            event.preventDefault();
+            event.stopPropagation();
+
+            const nodeElement = event.currentTarget;
+            const titleElement = nodeElement.querySelector('title');
+            if (!titleElement) return;
+
+            const dotId = titleElement.textContent;
+
+            let nodeUri = null;
+            let nodeLabel = null;
+
+            for (const [label, info] of Object.entries(nodeLabelToUri)) {
+                if (info.dotId === dotId) {
+                    nodeUri = info.uri;
+                    nodeLabel = label;
+                    break;
+                }
+            }
+
+            if (!nodeUri) return;
+
+            // Ищем свойство vad:hasTrig для данного узла
+            const hasTrigPredicate = 'http://example.org/vad#hasTrig';
+            let targetTrigUri = null;
+
+            // Проверяем все квады из текущего графа или всех графов
+            const quadsToCheck = selectedTrigUri && trigHierarchy[selectedTrigUri]
+                ? trigHierarchy[selectedTrigUri].quads
+                : currentQuads;
+
+            for (const quad of quadsToCheck) {
+                if (quad.subject.value === nodeUri && quad.predicate.value === hasTrigPredicate) {
+                    targetTrigUri = quad.object.value;
+                    break;
+                }
+            }
+
+            // Если найден связанный TriG, открываем его
+            if (targetTrigUri && trigHierarchy[targetTrigUri]) {
+                selectTriG(targetTrigUri);
+            }
         }
 
         /**
@@ -3183,6 +3234,8 @@ vad:Trig1 {
         function loadExampleTrigVADv2() {
             const exampleTrigVADv2 = `# Пример TriG VADv2 (Value Added Chain Diagram с иерархией TriG)
 # Демонстрация иерархии TriG графов через hasParent
+# Процесс p1 имеет подтип "Детализированный" и ссылку на vad:t1.1
+# Остальные процессы имеют подтип "Базовый"
 
 @prefix rdf: <http://www.w3.org/1999/02/22-rdf-syntax-ns#> .
 @prefix rdfs: <http://www.w3.org/2000/01/rdf-schema#> .
@@ -3198,73 +3251,69 @@ vad:t1 {
 vad:t1 rdfs:label "Схема процесса TriG1" ;
     vad:hasParent vad:root .
 
-    # Материнский процесс (не отображается в VAD режиме)
-   # vad:Process0 rdf:type vad:Process ;
-   #     rdfs:label "Процесс 0" ;
-   #     dcterms:description "Материнский процесс для всей цепочки" .
-
-    # Процесс 1
+    # Процесс 1 - Детализированный (имеет ссылку на дочерний TriG)
     vad:p1 rdf:type vad:Process ;
         rdfs:label "p1 Процесс 1" ;
         dcterms:description "Первый процесс в цепочке добавленной стоимости" ;
         vad:hasExecutor vad:ExecutorGroup1 ;
-        vad:hasParent vad:Process0 ;
+        vad:processSubtype vad:Detailed ;
+        vad:hasTrig vad:t1.1 ;
         vad:hasNext vad:Process2 .
 
-    # Процесс 2
+    # Процесс 2 - Базовый
     vad:Process2 rdf:type vad:Process ;
         rdfs:label "Процесс 2" ;
         dcterms:description "Второй процесс, выполняется после Процесса 1" ;
         vad:hasExecutor vad:ExecutorGroup2 ;
-        vad:hasParent vad:Process0 ;
+        vad:processSubtype vad:Basic ;
         vad:hasNext vad:Process3, vad:Process4 .
 
-    # Процесс 3
+    # Процесс 3 - Базовый
     vad:Process3 rdf:type vad:Process ;
         rdfs:label "Процесс 3" ;
         dcterms:description "Третий процесс в цепочке" ;
         vad:hasExecutor vad:ExecutorGroup3 ;
-        vad:hasParent vad:Process0 ;
+        vad:processSubtype vad:Basic ;
         vad:hasNext vad:Process4 .
 
-    # Процесс 4
+    # Процесс 4 - Базовый
     vad:Process4 rdf:type vad:Process ;
         rdfs:label "Процесс 4" ;
         dcterms:description "Четвёртый процесс в цепочке" ;
         vad:hasExecutor vad:ExecutorGroup4 ;
-        vad:hasParent vad:Process0 ;
+        vad:processSubtype vad:Basic ;
         vad:hasNext vad:Process5 .
 
-    # Процесс 5
+    # Процесс 5 - Базовый
     vad:Process5 rdf:type vad:Process ;
         rdfs:label "Процесс 5" ;
         dcterms:description "Пятый процесс в цепочке" ;
         vad:hasExecutor vad:ExecutorGroup5 ;
-        vad:hasParent vad:Process0 ;
+        vad:processSubtype vad:Basic ;
         vad:hasNext vad:Process6 .
 
-    # Процесс 6
+    # Процесс 6 - Базовый
     vad:Process6 rdf:type vad:Process ;
         rdfs:label "Процесс 6" ;
         dcterms:description "Шестой процесс в цепочке" ;
         vad:hasExecutor vad:ExecutorGroup6 ;
-        vad:hasParent vad:Process0 ;
+        vad:processSubtype vad:Basic ;
         vad:hasNext vad:Process7 .
 
-    # Процесс 7
+    # Процесс 7 - Базовый
     vad:Process7 rdf:type vad:Process ;
         rdfs:label "Процесс 7" ;
         dcterms:description "Седьмой процесс в цепочке" ;
         vad:hasExecutor vad:ExecutorGroup7 ;
-        vad:hasParent vad:Process0 ;
+        vad:processSubtype vad:Basic ;
         vad:hasNext vad:Process8 .
 
-    # Процесс 8
+    # Процесс 8 - Базовый
     vad:Process8 rdf:type vad:Process ;
         rdfs:label "Процесс 8" ;
         dcterms:description "Заключительный процесс в цепочке" ;
         vad:hasExecutor vad:ExecutorGroup8 ;
-        vad:hasParent vad:Process0 .
+        vad:processSubtype vad:Basic .
 
     # Группы исполнителей
     vad:ExecutorGroup1 rdf:type vad:ExecutorGroup ;
@@ -3326,7 +3375,8 @@ vad:t1 rdfs:label "Схема процесса TriG1" ;
 }
 
 # ============================================================================
-# Дочерний TriG граф: Trig11 (hasParent = Trig1)
+# Дочерний TriG граф: Trig1.1 (hasParent = t1)
+# Это детализация процесса p1 из родительского графа t1
 # Все объекты имеют префикс 2 в номерах (Process21, Исполнитель 21 и т.д.)
 # ============================================================================
 
@@ -3334,73 +3384,68 @@ vad:t1.1 {
 vad:t1.1 rdfs:label "Схема процесса TriG1.1" ;
     vad:hasParent vad:t1 .
 
-    # Материнский процесс (не отображается в VAD режиме)
-    vad:Process20 rdf:type vad:Process ;
-        rdfs:label "Процесс 20" ;
-        dcterms:description "Материнский процесс для цепочки TriG1.1" .
-
-    # Процесс 21
+    # Процесс 21 - Базовый
     vad:Process21 rdf:type vad:Process ;
         rdfs:label "Процесс 21" ;
         dcterms:description "Первый процесс в цепочке TriG1.1" ;
         vad:hasExecutor vad:ExecutorGroup21 ;
-        vad:hasParent vad:Process20 ;
+        vad:processSubtype vad:Basic ;
         vad:hasNext vad:Process22 .
 
-    # Процесс 22
+    # Процесс 22 - Базовый
     vad:Process22 rdf:type vad:Process ;
         rdfs:label "Процесс 22" ;
         dcterms:description "Второй процесс в цепочке TriG1.1" ;
         vad:hasExecutor vad:ExecutorGroup22 ;
-        vad:hasParent vad:Process20 ;
+        vad:processSubtype vad:Basic ;
         vad:hasNext vad:Process23, vad:Process24 .
 
-    # Процесс 23
+    # Процесс 23 - Базовый
     vad:Process23 rdf:type vad:Process ;
         rdfs:label "Процесс 23" ;
         dcterms:description "Третий процесс в цепочке TriG1.1" ;
         vad:hasExecutor vad:ExecutorGroup23 ;
-        vad:hasParent vad:Process20 ;
+        vad:processSubtype vad:Basic ;
         vad:hasNext vad:Process24 .
 
-    # Процесс 24
+    # Процесс 24 - Базовый
     vad:Process24 rdf:type vad:Process ;
         rdfs:label "Процесс 24" ;
         dcterms:description "Четвёртый процесс в цепочке TriG1.1" ;
         vad:hasExecutor vad:ExecutorGroup24 ;
-        vad:hasParent vad:Process20 ;
+        vad:processSubtype vad:Basic ;
         vad:hasNext vad:Process25 .
 
-    # Процесс 25
+    # Процесс 25 - Базовый
     vad:Process25 rdf:type vad:Process ;
         rdfs:label "Процесс 25" ;
         dcterms:description "Пятый процесс в цепочке TriG1.1" ;
         vad:hasExecutor vad:ExecutorGroup25 ;
-        vad:hasParent vad:Process20 ;
+        vad:processSubtype vad:Basic ;
         vad:hasNext vad:Process26 .
 
-    # Процесс 26
+    # Процесс 26 - Базовый
     vad:Process26 rdf:type vad:Process ;
         rdfs:label "Процесс 26" ;
         dcterms:description "Шестой процесс в цепочке TriG1.1" ;
         vad:hasExecutor vad:ExecutorGroup26 ;
-        vad:hasParent vad:Process20 ;
+        vad:processSubtype vad:Basic ;
         vad:hasNext vad:Process27 .
 
-    # Процесс 27
+    # Процесс 27 - Базовый
     vad:Process27 rdf:type vad:Process ;
         rdfs:label "Процесс 27" ;
         dcterms:description "Седьмой процесс в цепочке TriG1.1" ;
         vad:hasExecutor vad:ExecutorGroup27 ;
-        vad:hasParent vad:Process20 ;
+        vad:processSubtype vad:Basic ;
         vad:hasNext vad:Process28 .
 
-    # Процесс 28
+    # Процесс 28 - Базовый
     vad:Process28 rdf:type vad:Process ;
         rdfs:label "Процесс 28" ;
         dcterms:description "Заключительный процесс в цепочке TriG1.1" ;
         vad:hasExecutor vad:ExecutorGroup28 ;
-        vad:hasParent vad:Process20 .
+        vad:processSubtype vad:Basic .
 
     # Группы исполнителей для TriG11
     vad:ExecutorGroup21 rdf:type vad:ExecutorGroup ;
