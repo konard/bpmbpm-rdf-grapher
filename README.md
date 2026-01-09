@@ -1,6 +1,10 @@
 # rdf-grapher
 RDF grapher is a web service for parsing RDF data and visualizing it as a graph
 
+Ранее использовал финский on-line сервис: https://www.ldf.fi/service/rdf-grapher    
+В него «кидаем» URL-параметром RDF-данные и смотрим сгенерированную по этим данным схему (RDF Viewer).  
+ver1 - ver2 - ver3 - это замена ldf.fi  
+
 ### ver1 basic functions 
 https://github.com/bpmbpm/rdf-grapher/tree/main/ver1 run: https://bpmbpm.github.io/rdf-grapher/ver1
 
