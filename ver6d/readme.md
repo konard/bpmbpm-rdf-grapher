@@ -31,4 +31,7 @@ vad:t1.1 {
 vad:t1.1 rdfs:label "Схема процесса TriG1.1" ;
     vad:hasParent vad:t1 .
 ```
-    
+
+### general directions
+Общее направление:
+- https://github.com/terryvel/essential-open-one-page-editor Value Stream но в VAD (Value-Added Chain) 
