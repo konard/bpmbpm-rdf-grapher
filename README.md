@@ -28,6 +28,7 @@ https://bpmbpm.github.io/rdf-grapher/ver5t/
 ### ver6d d = Detailed (VAD)
 https://bpmbpm.github.io/rdf-grapher/ver6d/
 Выбираем пример **Trig VADv2**
+
 ---
 ## doc
 - [НеОсознанный вайб-кодинг (с примером RDF Grapher)](https://habr.com/ru/articles/982634/)
