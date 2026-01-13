@@ -14,6 +14,8 @@ https://github.com/bpmbpm/rdf-grapher/tree/main/ver2 run: https://bpmbpm.github.
 ### ver3 literals aggregation
 https://github.com/bpmbpm/rdf-grapher/tree/main/ver3 run: https://bpmbpm.github.io/rdf-grapher/ver3
 
+---
+Процессная тема:
 ### ver 4p, p = Process (VAD)   
 https://github.com/bpmbpm/rdf-grapher/tree/main/ver4p run: https://bpmbpm.github.io/rdf-grapher/ver4p   
 ранее (более подробный):   
