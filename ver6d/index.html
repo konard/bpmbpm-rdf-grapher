@@ -4000,8 +4000,22 @@ vad:t1.1 rdfs:label "Схема процесса TriG1.1" ;
                 }
                 htmlLabel += '>';
 
-                // cds shape с зеленой заливкой
-                let nodeStyle = 'shape="cds" color="#2E7D32" fillcolor="#A5D6A7" fontname="Arial" fontsize="11" style="filled"';
+                // Определяем стиль узла на основе vad:processSubtype
+                // Проверяем nodeSubtypesCache для определения типа процесса (Detailed или Basic)
+                const nodeSubtypes = nodeSubtypesCache[uri] || [];
+                const isDetailed = nodeSubtypes.some(subtype =>
+                    subtype === 'vad:Detailed' || subtype === 'http://example.org/vad#Detailed'
+                );
+
+                // Выбираем стиль: голубой для Detailed, зеленый для Basic (по умолчанию)
+                let nodeStyle;
+                if (isDetailed) {
+                    // ProcessStyleDetailed: голубая заливка для детализированного типа
+                    nodeStyle = 'shape="cds" height="0.8" width="1.5" color="#1565C0" fillcolor="#90CAF9" fontname="Arial" fontsize="11" style="filled"';
+                } else {
+                    // ProcessStyleBasic: зеленая заливка для базового типа (по умолчанию)
+                    nodeStyle = 'shape="cds" height="0.8" width="1.5" color="#2E7D32" fillcolor="#A5D6A7" fontname="Arial" fontsize="11" style="filled"';
+                }
                 dot += `    ${nodeId} [label=${htmlLabel} ${nodeStyle}];\n`;
 
                 nodeLabelToUri[processInfo.label] = { uri: uri, dotId: nodeId };
@@ -4973,7 +4987,7 @@ vad:t1.1 rdfs:label "Схема процесса TriG1.1" ;
             // Определяем базовый URL для GitHub Pages
             let baseUrl;
             if (window.location.hostname === 'bpmbpm.github.io') {
-                baseUrl = 'https://bpmbpm.github.io/rdf-grapher/ver4p/';
+                baseUrl = 'https://bpmbpm.github.io/rdf-grapher/ver6d/';
             } else {
                 // Для локального тестирования используем текущий путь
                 baseUrl = window.location.origin + window.location.pathname;
