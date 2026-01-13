@@ -34,4 +34,4 @@ vad:t1.1 rdfs:label "Схема процесса TriG1.1" ;
 
 ### general directions
 Общее направление:
-- https://github.com/terryvel/essential-open-one-page-editor Value Stream но в VAD (Value-Added Chain) 
+- https://github.com/terryvel/essential-open-one-page-editor Value Stream но в VAD [Value-Added Chain](https://studopedia.ru/9_24437_model-protsessa-dobavlennoy-stoimosti-VAD.html) 
