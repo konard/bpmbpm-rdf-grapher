@@ -8,3 +8,6 @@ https://bpmbpm.github.io/rdf-grapher/ver6d/
 ```
 выбрать (choose): **Trig VADv2**  
 Нажать кнопку (press the button) **Визуализировать**
+
+Выбор режима:  "SPARQL Smart Design"
+ 
