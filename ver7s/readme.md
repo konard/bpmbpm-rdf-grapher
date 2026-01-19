@@ -2,7 +2,7 @@
 в работе
 
 ### run
-https://bpmbpm.github.io/rdf-grapher/ver6d/
+https://bpmbpm.github.io/rdf-grapher/ver7s/
 ```
 Загрузить пример RDF данных:
 ```
