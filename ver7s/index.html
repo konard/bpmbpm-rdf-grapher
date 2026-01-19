@@ -1215,6 +1215,158 @@
             border: 1px solid #90CAF9;
         }
 
+        /* Стили для кнопки "New TriG" */
+        .new-trig-btn {
+            background-color: #FF9800 !important;
+            margin-right: 10px;
+        }
+
+        .new-trig-btn:hover {
+            background-color: #F57C00 !important;
+        }
+
+        /* Стили для модального окна New TriG */
+        .new-trig-modal {
+            display: none;
+            position: fixed;
+            z-index: 2000;
+            left: 0;
+            top: 0;
+            width: 100%;
+            height: 100%;
+            background-color: rgba(0,0,0,0.5);
+        }
+
+        .new-trig-modal-content {
+            background-color: white;
+            margin: 10% auto;
+            padding: 20px;
+            border-radius: 8px;
+            width: 90%;
+            max-width: 500px;
+            box-shadow: 0 4px 20px rgba(0,0,0,0.3);
+        }
+
+        .new-trig-modal-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 20px;
+            padding-bottom: 10px;
+            border-bottom: 2px solid #FF9800;
+        }
+
+        .new-trig-modal-header h3 {
+            margin: 0;
+            color: #333;
+        }
+
+        .new-trig-modal-close {
+            background: none;
+            border: none;
+            font-size: 28px;
+            cursor: pointer;
+            color: #666;
+            padding: 0;
+            line-height: 1;
+        }
+
+        .new-trig-modal-close:hover {
+            color: #333;
+        }
+
+        .new-trig-modal-body {
+            display: flex;
+            flex-direction: column;
+            gap: 15px;
+        }
+
+        .new-trig-field {
+            display: flex;
+            flex-direction: column;
+            gap: 5px;
+        }
+
+        .new-trig-field label {
+            font-weight: bold;
+            color: #555;
+            font-size: 14px;
+        }
+
+        .new-trig-field input,
+        .new-trig-field select {
+            padding: 10px;
+            border: 1px solid #ddd;
+            border-radius: 4px;
+            font-size: 14px;
+        }
+
+        .new-trig-field input:focus,
+        .new-trig-field select:focus {
+            outline: none;
+            border-color: #FF9800;
+            box-shadow: 0 0 5px rgba(255, 152, 0, 0.3);
+        }
+
+        .new-trig-modal-buttons {
+            display: flex;
+            gap: 10px;
+            justify-content: flex-end;
+            margin-top: 20px;
+            padding-top: 15px;
+            border-top: 1px solid #eee;
+        }
+
+        .new-trig-modal-buttons button {
+            padding: 10px 20px;
+            border: none;
+            border-radius: 4px;
+            cursor: pointer;
+            font-size: 14px;
+            margin-top: 0;
+        }
+
+        .new-trig-cancel-btn {
+            background-color: #9e9e9e;
+            color: white;
+        }
+
+        .new-trig-cancel-btn:hover {
+            background-color: #757575;
+        }
+
+        .new-trig-create-btn {
+            background-color: #FF9800;
+            color: white;
+        }
+
+        .new-trig-create-btn:hover {
+            background-color: #F57C00;
+        }
+
+        /* Стили для кнопки "Показать в отдельном окне" */
+        .show-in-window-btn {
+            background-color: #2196F3;
+            padding: 8px 15px !important;
+            font-size: 13px !important;
+            margin-left: 10px;
+            vertical-align: middle;
+        }
+
+        .show-in-window-btn:hover {
+            background-color: #1976D2;
+        }
+
+        .rdf-input-header {
+            display: flex;
+            align-items: center;
+            margin-bottom: 5px;
+        }
+
+        .rdf-input-header label {
+            margin-bottom: 0;
+        }
+
         @media (max-width: 800px) {
             .smart-design-fields {
                 grid-template-columns: repeat(2, 1fr);
@@ -1246,7 +1398,10 @@
     </div>
 
     <div class="container">
-        <label for="rdf-input">RDF данные или URI:</label>
+        <div class="rdf-input-header">
+            <label for="rdf-input">RDF данные или URI:</label>
+            <button class="show-in-window-btn" onclick="showRdfInSeparateWindow()">Показать в отдельном окне</button>
+        </div>
         <textarea id="rdf-input" placeholder="Введите RDF данные в формате Turtle, N-Triples, N-Quads или TriG..."></textarea>
 
         <div class="format-selectors">
@@ -1357,6 +1512,7 @@
                 </div>
             </div>
             <div class="smart-design-buttons">
+                <button class="new-trig-btn" onclick="openNewTrigModal()">New TriG</button>
                 <button onclick="smartDesignCreate()">Создать</button>
                 <button class="delete-btn" onclick="smartDesignDelete()">Удалить</button>
                 <button class="clear-btn" onclick="smartDesignClear()">Очистить</button>
@@ -1368,6 +1524,40 @@
         <div class="result-sparql-panel">
             <h3>Result in SPARQL</h3>
             <textarea class="result-sparql-textarea" id="result-sparql-query" placeholder="Здесь будет сгенерированный SPARQL запрос..." readonly></textarea>
+        </div>
+    </div>
+
+    <!-- Модальное окно для создания нового TriG -->
+    <div id="new-trig-modal" class="new-trig-modal">
+        <div class="new-trig-modal-content">
+            <div class="new-trig-modal-header">
+                <h3>Создание нового TriG контейнера</h3>
+                <button class="new-trig-modal-close" onclick="closeNewTrigModal()">&times;</button>
+            </div>
+            <div class="new-trig-modal-body">
+                <div class="new-trig-field">
+                    <label for="new-trig-id">ID нового TriG:</label>
+                    <input type="text" id="new-trig-id" placeholder="Введите ID (например: myNewGraph)">
+                </div>
+                <div class="new-trig-field">
+                    <label for="new-trig-label">rdfs:label (название):</label>
+                    <input type="text" id="new-trig-label" placeholder="Введите название">
+                </div>
+                <div class="new-trig-field">
+                    <label for="new-trig-parent">vad:hasParent (родитель):</label>
+                    <select id="new-trig-parent">
+                        <option value="">-- Выберите родителя --</option>
+                    </select>
+                </div>
+                <div class="new-trig-field">
+                    <label for="new-trig-type">vad:typeOfScheme (тип схемы):</label>
+                    <input type="text" id="new-trig-type" placeholder="Введите тип схемы">
+                </div>
+            </div>
+            <div class="new-trig-modal-buttons">
+                <button class="new-trig-cancel-btn" onclick="closeNewTrigModal()">Отмена</button>
+                <button class="new-trig-create-btn" onclick="createNewTrig()">Применить SPARQL</button>
+            </div>
         </div>
     </div>
 
@@ -4942,14 +5132,16 @@ vad:t1.1 rdfs:label "Схема процесса TriG1.1" ;
 
             if (!trigSelect || !subjectSelect || !predicateSelect || !objectSelect) return;
 
-            // Очищаем и заполняем TriG
+            // Очищаем и заполняем TriG (без опции "New" - для создания новых TriG есть отдельная кнопка)
             trigSelect.innerHTML = '<option value="">-- Выберите TriG --</option>';
-            trigSelect.innerHTML += '<option value="__NEW__">New (создать новый)</option>';
             const trigs = getAllTriGs();
             trigs.forEach(t => {
                 const option = document.createElement('option');
                 option.value = t.uri;
-                option.textContent = t.label;
+                // Отображаем id с label в скобках (при наличии)
+                const id = getPrefixedName(t.uri, currentPrefixes);
+                const displayText = t.label && t.label !== id ? `${id} (${t.label})` : id;
+                option.textContent = displayText;
                 trigSelect.appendChild(option);
             });
 
@@ -4977,7 +5169,7 @@ vad:t1.1 rdfs:label "Схема процесса TriG1.1" ;
 
             // Очищаем и заполняем Object (без литералов)
             objectSelect.innerHTML = '<option value="">-- Выберите Object --</option>';
-            objectSelect.innerHTML += '<option value="__NEW__">New (создать новый)</option>';
+            objectSelect.innerHTML += '<option value="__NEW__">New (создать новый литерал)</option>';
             const objects = getAllObjects();
             objects.forEach(o => {
                 const option = document.createElement('option');
@@ -4985,6 +5177,37 @@ vad:t1.1 rdfs:label "Схема процесса TriG1.1" ;
                 option.textContent = o.label;
                 objectSelect.appendChild(option);
             });
+
+            // Деактивируем Subject/Predicate/Object поля до выбора TriG
+            updateSmartDesignFieldsState();
+        }
+
+        /**
+         * Обновляет состояние полей Subject/Predicate/Object (активные только после выбора TriG)
+         */
+        function updateSmartDesignFieldsState() {
+            const trigSelect = document.getElementById('smart-design-trig');
+            const subjectSelect = document.getElementById('smart-design-subject');
+            const predicateSelect = document.getElementById('smart-design-predicate');
+            const objectSelect = document.getElementById('smart-design-object');
+
+            if (!trigSelect || !subjectSelect || !predicateSelect || !objectSelect) return;
+
+            const trigSelected = trigSelect.value && trigSelect.value !== '';
+            const newTrigActive = document.getElementById('new-trig-modal')?.style.display === 'block';
+
+            // Если активно окно New TriG, деактивируем все поля
+            if (newTrigActive) {
+                trigSelect.disabled = true;
+                subjectSelect.disabled = true;
+                predicateSelect.disabled = true;
+                objectSelect.disabled = true;
+            } else {
+                trigSelect.disabled = false;
+                subjectSelect.disabled = !trigSelected;
+                predicateSelect.disabled = !trigSelected;
+                objectSelect.disabled = !trigSelected;
+            }
         }
 
         /**
@@ -5044,7 +5267,8 @@ vad:t1.1 rdfs:label "Схема процесса TriG1.1" ;
 
             if (trigSelect) {
                 trigSelect.addEventListener('change', function() {
-                    handleSelectChange(this, 'TriG', trigExists, false);
+                    // TriG теперь не имеет опции __NEW__, просто обновляем состояние полей
+                    updateSmartDesignFieldsState();
                 });
             }
 
@@ -5062,7 +5286,7 @@ vad:t1.1 rdfs:label "Схема процесса TriG1.1" ;
 
             if (objectSelect) {
                 objectSelect.addEventListener('change', function() {
-                    // Для Object дополнительных проверок не производится
+                    // Для Object разрешаем дубликаты, новые значения - литералы
                     handleSelectChange(this, 'Object', () => false, true);
                 });
             }
@@ -5087,13 +5311,33 @@ vad:t1.1 rdfs:label "Схема процесса TriG1.1" ;
         }
 
         /**
+         * Проверяет, является ли значение в выпадающем списке кастомным (новым литералом)
+         * @param {string} selectId - ID элемента select
+         * @returns {boolean} - true если это кастомное значение
+         */
+        function isSmartDesignValueCustom(selectId) {
+            const select = document.getElementById(selectId);
+            if (!select || !select.value) {
+                return false;
+            }
+            return select.value.startsWith('__CUSTOM__:');
+        }
+
+        /**
          * Форматирует URI или значение для SPARQL запроса
          * @param {string} value - Значение для форматирования
-         * @param {boolean} isCustom - Является ли значение кастомным
+         * @param {boolean} isLiteral - Является ли значение литералом (для новых Object)
          * @returns {string} - Форматированное значение
          */
-        function formatForSparql(value, isCustom = false) {
+        function formatForSparql(value, isLiteral = false) {
             if (!value) return '';
+
+            // Если это литерал, заключаем в кавычки
+            if (isLiteral) {
+                // Экранируем специальные символы в строке
+                const escaped = value.replace(/\\/g, '\\\\').replace(/"/g, '\\"');
+                return `"${escaped}"`;
+            }
 
             // Если это полный URI
             if (value.startsWith('http://') || value.startsWith('https://')) {
@@ -5138,14 +5382,15 @@ vad:t1.1 rdfs:label "Схема процесса TriG1.1" ;
          * @param {string} subjectUri - URI субъекта
          * @param {string} predicateUri - URI предиката
          * @param {string} objectUri - URI объекта
+         * @param {boolean} isObjectLiteral - Является ли Object литералом
          * @returns {string} - SPARQL INSERT запрос
          */
-        function generateInsertSparql(trigUri, subjectUri, predicateUri, objectUri) {
+        function generateInsertSparql(trigUri, subjectUri, predicateUri, objectUri, isObjectLiteral = false) {
             const prefixDeclarations = generateSparqlPrefixes(currentPrefixes);
 
             const subject = formatForSparql(subjectUri);
             const predicate = formatForSparql(predicateUri);
-            const object = formatForSparql(objectUri);
+            const object = formatForSparql(objectUri, isObjectLiteral);
             const graph = formatForSparql(trigUri);
 
             return `${prefixDeclarations}INSERT DATA {
@@ -5161,14 +5406,15 @@ vad:t1.1 rdfs:label "Схема процесса TriG1.1" ;
          * @param {string} subjectUri - URI субъекта
          * @param {string} predicateUri - URI предиката
          * @param {string} objectUri - URI объекта
+         * @param {boolean} isObjectLiteral - Является ли Object литералом
          * @returns {string} - SPARQL DELETE запрос
          */
-        function generateDeleteSparql(trigUri, subjectUri, predicateUri, objectUri) {
+        function generateDeleteSparql(trigUri, subjectUri, predicateUri, objectUri, isObjectLiteral = false) {
             const prefixDeclarations = generateSparqlPrefixes(currentPrefixes);
 
             const subject = formatForSparql(subjectUri);
             const predicate = formatForSparql(predicateUri);
-            const object = formatForSparql(objectUri);
+            const object = formatForSparql(objectUri, isObjectLiteral);
             const graph = formatForSparql(trigUri);
 
             return `${prefixDeclarations}DELETE DATA {
@@ -5188,13 +5434,14 @@ vad:t1.1 rdfs:label "Схема процесса TriG1.1" ;
             const subjectValue = getSmartDesignValue('smart-design-subject');
             const predicateValue = getSmartDesignValue('smart-design-predicate');
             const objectValue = getSmartDesignValue('smart-design-object');
+            const isObjectLiteral = isSmartDesignValueCustom('smart-design-object');
 
             if (!trigValue || !subjectValue || !predicateValue || !objectValue) {
                 showSmartDesignMessage('Ошибка: Заполните все четыре поля (TriG, Subject, Predicate, Object)', 'error');
                 return;
             }
 
-            const sparqlQuery = generateInsertSparql(trigValue, subjectValue, predicateValue, objectValue);
+            const sparqlQuery = generateInsertSparql(trigValue, subjectValue, predicateValue, objectValue, isObjectLiteral);
 
             const resultTextarea = document.getElementById('result-sparql-query');
             if (resultTextarea) {
@@ -5214,6 +5461,7 @@ vad:t1.1 rdfs:label "Схема процесса TriG1.1" ;
             const subjectValue = getSmartDesignValue('smart-design-subject');
             const predicateValue = getSmartDesignValue('smart-design-predicate');
             const objectValue = getSmartDesignValue('smart-design-object');
+            const isObjectLiteral = isSmartDesignValueCustom('smart-design-object');
 
             if (!trigValue || !subjectValue || !predicateValue || !objectValue) {
                 showSmartDesignMessage('Ошибка: Заполните все четыре поля (TriG, Subject, Predicate, Object)', 'error');
@@ -5251,7 +5499,7 @@ vad:t1.1 rdfs:label "Схема процесса TriG1.1" ;
                 return;
             }
 
-            const sparqlQuery = generateDeleteSparql(trigValue, subjectValue, predicateValue, objectValue);
+            const sparqlQuery = generateDeleteSparql(trigValue, subjectValue, predicateValue, objectValue, isObjectLiteral);
 
             const resultTextarea = document.getElementById('result-sparql-query');
             if (resultTextarea) {
@@ -5341,20 +5589,21 @@ vad:t1.1 rdfs:label "Схема процесса TriG1.1" ;
 
             if (isInsert) {
                 // Добавляем триплет в соответствующий граф
-                // Ищем секцию графа и добавляем туда триплет (пробуем и полный URI, и префиксную форму)
-                let graphPattern = new RegExp(`(${escapeRegex(graphPrefixed)}\\s*\\{)`, 's');
-                let graphMatch = currentRdfText.match(graphPattern);
+                // Ищем секцию графа и добавляем триплет В КОНЕЦ блока (перед закрывающей скобкой)
+                // Используем паттерн, который захватывает содержимое графа и закрывающую скобку
+                let graphEndPattern = new RegExp(`(${escapeRegex(graphPrefixed)}\\s*\\{[^}]*)(\\s*\\})`, 's');
+                let graphMatch = currentRdfText.match(graphEndPattern);
 
                 if (!graphMatch) {
                     // Попробуем найти по полному URI
-                    graphPattern = new RegExp(`(${escapeRegex(graphRef)}\\s*\\{)`, 's');
-                    graphMatch = currentRdfText.match(graphPattern);
+                    graphEndPattern = new RegExp(`(${escapeRegex(graphRef)}\\s*\\{[^}]*)(\\s*\\})`, 's');
+                    graphMatch = currentRdfText.match(graphEndPattern);
                 }
 
                 if (graphMatch) {
-                    // Добавляем триплет в существующий граф (используем префиксную форму)
+                    // Добавляем триплет в КОНЕЦ существующего графа (перед закрывающей скобкой)
                     const newTriple = `\n    ${subjectPrefixed} ${predicatePrefixed} ${objectPrefixed} .`;
-                    currentRdfText = currentRdfText.replace(graphPattern, `$1${newTriple}`);
+                    currentRdfText = currentRdfText.replace(graphEndPattern, `$1${newTriple}$2`);
                 } else {
                     // Создаем новый граф с триплетом
                     const newGraph = `\n\n${graphPrefixed} {\n    ${subjectPrefixed} ${predicatePrefixed} ${objectPrefixed} .\n}`;
@@ -5397,6 +5646,187 @@ vad:t1.1 rdfs:label "Схема процесса TriG1.1" ;
         function escapeRegex(str) {
             return str.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
         }
+
+        /**
+         * Открывает модальное окно для создания нового TriG
+         */
+        function openNewTrigModal() {
+            const modal = document.getElementById('new-trig-modal');
+            const parentSelect = document.getElementById('new-trig-parent');
+
+            // Заполняем список родителей существующими TriG
+            parentSelect.innerHTML = '<option value="">-- Выберите родителя (опционально) --</option>';
+            const trigs = getAllTriGs();
+            trigs.forEach(t => {
+                const option = document.createElement('option');
+                option.value = t.uri;
+                const id = getPrefixedName(t.uri, currentPrefixes);
+                const displayText = t.label && t.label !== id ? `${id} (${t.label})` : id;
+                option.textContent = displayText;
+                parentSelect.appendChild(option);
+            });
+
+            // Очищаем поля ввода
+            document.getElementById('new-trig-id').value = '';
+            document.getElementById('new-trig-label').value = '';
+            document.getElementById('new-trig-type').value = '';
+
+            modal.style.display = 'block';
+
+            // Деактивируем основные поля Smart Design
+            updateSmartDesignFieldsState();
+        }
+
+        /**
+         * Закрывает модальное окно создания нового TriG
+         */
+        function closeNewTrigModal() {
+            const modal = document.getElementById('new-trig-modal');
+            modal.style.display = 'none';
+
+            // Активируем основные поля Smart Design
+            updateSmartDesignFieldsState();
+        }
+
+        /**
+         * Создает новый TriG контейнер и генерирует SPARQL запрос
+         */
+        function createNewTrig() {
+            const trigId = document.getElementById('new-trig-id').value.trim();
+            const label = document.getElementById('new-trig-label').value.trim();
+            const parentUri = document.getElementById('new-trig-parent').value;
+            const typeOfScheme = document.getElementById('new-trig-type').value.trim();
+
+            if (!trigId) {
+                alert('Ошибка: Введите ID для нового TriG');
+                return;
+            }
+
+            // Проверяем, не существует ли уже такой TriG
+            if (trigExists(trigId)) {
+                alert('Ошибка: TriG с таким ID уже существует');
+                return;
+            }
+
+            // Формируем URI нового TriG
+            let trigUri;
+            if (currentPrefixes['vad']) {
+                trigUri = `vad:${trigId}`;
+            } else {
+                trigUri = `<http://example.org/vad#${trigId}>`;
+            }
+
+            // Генерируем SPARQL для создания TriG с нужными предикатами
+            const prefixDeclarations = generateSparqlPrefixes(currentPrefixes);
+
+            let triples = [];
+
+            // Всегда добавляем rdf:type
+            triples.push(`        ${trigUri} rdf:type vad:TriG .`);
+
+            // rdfs:label (обязательно)
+            if (label) {
+                const escapedLabel = label.replace(/\\/g, '\\\\').replace(/"/g, '\\"');
+                triples.push(`        ${trigUri} rdfs:label "${escapedLabel}" .`);
+            }
+
+            // vad:hasParent (опционально)
+            if (parentUri) {
+                const parentFormatted = formatForSparql(parentUri);
+                triples.push(`        ${trigUri} vad:hasParent ${parentFormatted} .`);
+            }
+
+            // vad:typeOfScheme (опционально)
+            if (typeOfScheme) {
+                const escapedType = typeOfScheme.replace(/\\/g, '\\\\').replace(/"/g, '\\"');
+                triples.push(`        ${trigUri} vad:typeOfScheme "${escapedType}" .`);
+            }
+
+            const sparqlQuery = `${prefixDeclarations}INSERT DATA {
+    GRAPH ${trigUri} {
+${triples.join('\n')}
+    }
+}`;
+
+            // Записываем SPARQL в поле результата
+            const resultTextarea = document.getElementById('result-sparql-query');
+            if (resultTextarea) {
+                resultTextarea.value = sparqlQuery;
+            }
+
+            closeNewTrigModal();
+            showSmartDesignMessage('SPARQL запрос для создания нового TriG сгенерирован. Нажмите "Применить SPARQL" для добавления в RDF данные.', 'success');
+        }
+
+        /**
+         * Открывает RDF данные в отдельном окне браузера
+         */
+        function showRdfInSeparateWindow() {
+            const rdfInput = document.getElementById('rdf-input');
+            if (!rdfInput) return;
+
+            const rdfContent = rdfInput.value;
+
+            // Создаем новое окно
+            const newWindow = window.open('', '_blank', 'width=800,height=600,scrollbars=yes,resizable=yes');
+
+            if (newWindow) {
+                // Формируем HTML для нового окна
+                const htmlContent = '<!DOCTYPE html>' +
+                    '<html><head><title>RDF данные</title>' +
+                    '<style>' +
+                    'body { font-family: Consolas, Monaco, monospace; padding: 20px; background-color: #f5f5f5; margin: 0; }' +
+                    '.container { background-color: white; padding: 20px; border-radius: 8px; box-shadow: 0 2px 4px rgba(0,0,0,0.1); }' +
+                    'h1 { color: #333; font-size: 18px; margin-top: 0; border-bottom: 2px solid #4CAF50; padding-bottom: 10px; }' +
+                    'pre { white-space: pre-wrap; word-wrap: break-word; font-size: 13px; line-height: 1.5; margin: 0; color: #333; }' +
+                    '.copy-btn { background-color: #4CAF50; color: white; border: none; padding: 8px 16px; border-radius: 4px; cursor: pointer; margin-bottom: 15px; }' +
+                    '.copy-btn:hover { background-color: #45a049; }' +
+                    '</style></head>' +
+                    '<body><div class="container">' +
+                    '<h1>RDF данные</h1>' +
+                    '<button class="copy-btn" id="copy-btn">Копировать в буфер</button>' +
+                    '<pre id="rdf-content"></pre>' +
+                    '</div></body></html>';
+
+                newWindow.document.write(htmlContent);
+                newWindow.document.close();
+
+                // Заполняем содержимое после записи документа
+                const preElement = newWindow.document.getElementById('rdf-content');
+                if (preElement) {
+                    preElement.textContent = rdfContent;
+                }
+
+                // Добавляем обработчик для кнопки копирования
+                const copyBtn = newWindow.document.getElementById('copy-btn');
+                if (copyBtn) {
+                    copyBtn.onclick = function() {
+                        newWindow.navigator.clipboard.writeText(rdfContent).then(function() {
+                            newWindow.alert('Скопировано в буфер обмена');
+                        }).catch(function() {
+                            // Fallback для старых браузеров
+                            const textarea = newWindow.document.createElement('textarea');
+                            textarea.value = rdfContent;
+                            newWindow.document.body.appendChild(textarea);
+                            textarea.select();
+                            newWindow.document.execCommand('copy');
+                            newWindow.document.body.removeChild(textarea);
+                            newWindow.alert('Скопировано в буфер обмена');
+                        });
+                    };
+                }
+            } else {
+                alert('Не удалось открыть новое окно. Проверьте настройки блокировки всплывающих окон.');
+            }
+        }
+
+        // Закрытие модального окна при клике вне его
+        window.addEventListener('click', function(event) {
+            const modal = document.getElementById('new-trig-modal');
+            if (event.target === modal) {
+                closeNewTrigModal();
+            }
+        });
 
         function updateModeDescription() {
             const mode = document.getElementById('visualization-mode').value;
@@ -5644,6 +6074,11 @@ vad:t1.1 rdfs:label "Схема процесса TriG1.1" ;
 
                     // Обновляем SPARQL запрос для выбранного TriG
                     updateSparqlQueryForTriG();
+
+                    // Обновляем выпадающие списки Smart Design, если режим активен
+                    if (document.getElementById('sparql-mode').value === 'smart-design') {
+                        populateSmartDesignDropdowns();
+                    }
 
                     console.log(`VAD TriG: Обработано ${quads.length} триплетов, отображается граф ${getPrefixedName(selectedTrigUri, prefixes)}`);
 
