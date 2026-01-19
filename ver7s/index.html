@@ -1057,6 +1057,175 @@
         .copy-id-btn.copied {
             background-color: #4CAF50;
         }
+
+        /* ============================================================================
+           СТИЛИ ДЛЯ РЕЖИМА SPARQL SMART DESIGN
+           ============================================================================ */
+
+        .smart-design-container {
+            margin-top: 20px;
+            display: none;
+        }
+
+        .smart-design-container.visible {
+            display: block;
+        }
+
+        .smart-design-panel {
+            padding: 15px;
+            background-color: #e3f2fd;
+            border: 1px solid #2196F3;
+            border-radius: 8px;
+            margin-bottom: 15px;
+        }
+
+        .smart-design-panel h3 {
+            margin: 0 0 15px 0;
+            color: #1565C0;
+            font-size: 14px;
+        }
+
+        .smart-design-fields {
+            display: grid;
+            grid-template-columns: repeat(4, 1fr);
+            gap: 15px;
+            margin-bottom: 15px;
+        }
+
+        .smart-design-field {
+            display: flex;
+            flex-direction: column;
+        }
+
+        .smart-design-field label {
+            margin-bottom: 5px;
+            font-weight: bold;
+            color: #1565C0;
+            font-size: 13px;
+        }
+
+        .smart-design-field select {
+            padding: 8px;
+            border: 1px solid #90CAF9;
+            border-radius: 4px;
+            font-size: 13px;
+            background-color: white;
+        }
+
+        .smart-design-field select:focus {
+            outline: none;
+            border-color: #2196F3;
+            box-shadow: 0 0 5px rgba(33, 150, 243, 0.3);
+        }
+
+        .smart-design-buttons {
+            display: flex;
+            gap: 10px;
+            flex-wrap: wrap;
+        }
+
+        .smart-design-buttons button {
+            background-color: #2196F3;
+            margin-top: 0;
+            padding: 8px 16px;
+            font-size: 13px;
+        }
+
+        .smart-design-buttons button:hover {
+            background-color: #1976D2;
+        }
+
+        .smart-design-buttons button.delete-btn {
+            background-color: #f44336;
+        }
+
+        .smart-design-buttons button.delete-btn:hover {
+            background-color: #d32f2f;
+        }
+
+        .smart-design-buttons button.clear-btn {
+            background-color: #FF9800;
+        }
+
+        .smart-design-buttons button.clear-btn:hover {
+            background-color: #F57C00;
+        }
+
+        .smart-design-buttons button.apply-btn {
+            background-color: #4CAF50;
+        }
+
+        .smart-design-buttons button.apply-btn:hover {
+            background-color: #388E3C;
+        }
+
+        .result-sparql-panel {
+            padding: 15px;
+            background-color: #fff3e0;
+            border: 1px solid #FF9800;
+            border-radius: 8px;
+        }
+
+        .result-sparql-panel h3 {
+            margin: 0 0 10px 0;
+            color: #E65100;
+            font-size: 14px;
+        }
+
+        .result-sparql-textarea {
+            width: 100%;
+            height: 120px;
+            padding: 10px;
+            border: 1px solid #FFCC80;
+            border-radius: 4px;
+            font-family: 'Consolas', 'Monaco', monospace;
+            font-size: 13px;
+            resize: vertical;
+            background-color: white;
+        }
+
+        .result-sparql-textarea:focus {
+            outline: none;
+            border-color: #FF9800;
+            box-shadow: 0 0 5px rgba(255, 152, 0, 0.3);
+        }
+
+        .smart-design-message {
+            margin-top: 10px;
+            padding: 10px;
+            border-radius: 4px;
+            font-size: 13px;
+        }
+
+        .smart-design-message.error {
+            background-color: #ffebee;
+            color: #d32f2f;
+            border: 1px solid #ef9a9a;
+        }
+
+        .smart-design-message.success {
+            background-color: #e8f5e9;
+            color: #2e7d32;
+            border: 1px solid #a5d6a7;
+        }
+
+        .smart-design-message.info {
+            background-color: #e3f2fd;
+            color: #1565C0;
+            border: 1px solid #90CAF9;
+        }
+
+        @media (max-width: 800px) {
+            .smart-design-fields {
+                grid-template-columns: repeat(2, 1fr);
+            }
+        }
+
+        @media (max-width: 500px) {
+            .smart-design-fields {
+                grid-template-columns: 1fr;
+            }
+        }
     </style>
 </head>
 <body>
@@ -1129,6 +1298,7 @@
                 <select id="sparql-mode" onchange="toggleSparqlPanel()">
                     <option value="no" selected>No</option>
                     <option value="yes">Yes</option>
+                    <option value="smart-design">SPARQL Smart Design</option>
                 </select>
                 <div class="mode-description" id="sparql-mode-description">
                     Включите для выполнения SPARQL запросов к графу
@@ -1153,6 +1323,52 @@
         </div>
 
         <button id="visualize-btn" onclick="visualize()">Визуализировать</button>
+    </div>
+
+    <!-- Smart Design Container - отображается только при выборе "SPARQL Smart Design" в режиме VAD TriG -->
+    <div class="smart-design-container" id="smart-design-container">
+        <!-- Панель Smart Design -->
+        <div class="smart-design-panel">
+            <h3>Smart Design</h3>
+            <div class="smart-design-fields">
+                <div class="smart-design-field">
+                    <label for="smart-design-trig">TriG:</label>
+                    <select id="smart-design-trig">
+                        <option value="">-- Выберите TriG --</option>
+                    </select>
+                </div>
+                <div class="smart-design-field">
+                    <label for="smart-design-subject">Subject:</label>
+                    <select id="smart-design-subject">
+                        <option value="">-- Выберите Subject --</option>
+                    </select>
+                </div>
+                <div class="smart-design-field">
+                    <label for="smart-design-predicate">Predicate:</label>
+                    <select id="smart-design-predicate">
+                        <option value="">-- Выберите Predicate --</option>
+                    </select>
+                </div>
+                <div class="smart-design-field">
+                    <label for="smart-design-object">Object:</label>
+                    <select id="smart-design-object">
+                        <option value="">-- Выберите Object --</option>
+                    </select>
+                </div>
+            </div>
+            <div class="smart-design-buttons">
+                <button onclick="smartDesignCreate()">Создать</button>
+                <button class="delete-btn" onclick="smartDesignDelete()">Удалить</button>
+                <button class="clear-btn" onclick="smartDesignClear()">Очистить</button>
+                <button class="apply-btn" onclick="smartDesignApply()">Применить SPARQL</button>
+            </div>
+            <div id="smart-design-message" class="smart-design-message" style="display: none;"></div>
+        </div>
+        <!-- Панель Result in SPARQL -->
+        <div class="result-sparql-panel">
+            <h3>Result in SPARQL</h3>
+            <textarea class="result-sparql-textarea" id="result-sparql-query" placeholder="Здесь будет сгенерированный SPARQL запрос..." readonly></textarea>
+        </div>
     </div>
 
     <div class="result-container" id="result-container">
@@ -4544,10 +4760,650 @@ vad:t1.1 rdfs:label "Схема процесса TriG1.1" ;
             legendPanel.style.display = 'block';
         }
 
+        // ============================================================================
+        // ФУНКЦИИ ДЛЯ SPARQL SMART DESIGN
+        // ============================================================================
+
+        /**
+         * Показывает сообщение в панели Smart Design
+         * @param {string} message - Текст сообщения
+         * @param {string} type - Тип сообщения: 'error', 'success', 'info'
+         */
+        function showSmartDesignMessage(message, type) {
+            const messageDiv = document.getElementById('smart-design-message');
+            if (messageDiv) {
+                messageDiv.textContent = message;
+                messageDiv.className = 'smart-design-message ' + type;
+                messageDiv.style.display = 'block';
+                // Автоматически скрываем через 5 секунд для success и info
+                if (type !== 'error') {
+                    setTimeout(() => {
+                        messageDiv.style.display = 'none';
+                    }, 5000);
+                }
+            }
+        }
+
+        /**
+         * Скрывает сообщение в панели Smart Design
+         */
+        function hideSmartDesignMessage() {
+            const messageDiv = document.getElementById('smart-design-message');
+            if (messageDiv) {
+                messageDiv.style.display = 'none';
+            }
+        }
+
+        /**
+         * Собирает все уникальные TriG графы из текущих данных
+         * @returns {Array} - Массив объектов {uri, label}
+         */
+        function getAllTriGs() {
+            const trigs = [];
+            const seen = new Set();
+
+            // Собираем из trigHierarchy (если есть)
+            for (const [uri, info] of Object.entries(trigHierarchy)) {
+                if (!seen.has(uri)) {
+                    seen.add(uri);
+                    const label = info.label || getPrefixedName(uri, currentPrefixes);
+                    trigs.push({ uri: uri, label: label });
+                }
+            }
+
+            // Также проверяем allTrigGraphs
+            for (const trigUri of allTrigGraphs) {
+                if (!seen.has(trigUri)) {
+                    seen.add(trigUri);
+                    const label = getPrefixedName(trigUri, currentPrefixes);
+                    trigs.push({ uri: trigUri, label: label });
+                }
+            }
+
+            return trigs.sort((a, b) => a.label.localeCompare(b.label));
+        }
+
+        /**
+         * Собирает все уникальные субъекты (объекты) из текущих RDF данных
+         * @returns {Array} - Массив объектов {uri, label}
+         */
+        function getAllSubjects() {
+            const subjects = [];
+            const seen = new Set();
+
+            currentQuads.forEach(quad => {
+                const uri = quad.subject.value;
+                if (!seen.has(uri)) {
+                    seen.add(uri);
+                    const label = getPrefixedName(uri, currentPrefixes);
+                    subjects.push({ uri: uri, label: label });
+                }
+            });
+
+            return subjects.sort((a, b) => a.label.localeCompare(b.label));
+        }
+
+        /**
+         * Собирает все уникальные предикаты из текущих RDF данных
+         * @returns {Array} - Массив объектов {uri, label}
+         */
+        function getAllPredicates() {
+            const predicates = [];
+            const seen = new Set();
+
+            currentQuads.forEach(quad => {
+                const uri = quad.predicate.value;
+                if (!seen.has(uri)) {
+                    seen.add(uri);
+                    const label = getPrefixedName(uri, currentPrefixes);
+                    predicates.push({ uri: uri, label: label });
+                }
+            });
+
+            return predicates.sort((a, b) => a.label.localeCompare(b.label));
+        }
+
+        /**
+         * Собирает все уникальные объекты (исключая литералы) из текущих RDF данных
+         * @returns {Array} - Массив объектов {uri, label}
+         */
+        function getAllObjects() {
+            const objects = [];
+            const seen = new Set();
+
+            currentQuads.forEach(quad => {
+                // Исключаем литералы согласно требованиям
+                if (quad.object.termType !== 'Literal') {
+                    const uri = quad.object.value;
+                    if (!seen.has(uri)) {
+                        seen.add(uri);
+                        const label = getPrefixedName(uri, currentPrefixes);
+                        objects.push({ uri: uri, label: label });
+                    }
+                }
+            });
+
+            return objects.sort((a, b) => a.label.localeCompare(b.label));
+        }
+
+        /**
+         * Проверяет, существует ли TriG с указанным именем в RDF данных
+         * @param {string} name - Имя TriG для проверки
+         * @returns {boolean}
+         */
+        function trigExists(name) {
+            const trigs = getAllTriGs();
+            const normalizedName = name.toLowerCase();
+            return trigs.some(t => {
+                const label = t.label.toLowerCase();
+                const localName = getLocalName(t.uri).toLowerCase();
+                return label === normalizedName || localName === normalizedName || t.uri === name;
+            });
+        }
+
+        /**
+         * Проверяет, существует ли субъект с указанным именем в RDF данных
+         * @param {string} name - Имя субъекта для проверки
+         * @returns {boolean}
+         */
+        function subjectExists(name) {
+            const subjects = getAllSubjects();
+            const normalizedName = name.toLowerCase();
+            return subjects.some(s => {
+                const label = s.label.toLowerCase();
+                const localName = getLocalName(s.uri).toLowerCase();
+                return label === normalizedName || localName === normalizedName || s.uri === name;
+            });
+        }
+
+        /**
+         * Проверяет, существует ли предикат с указанным именем в RDF данных
+         * @param {string} name - Имя предиката для проверки
+         * @returns {boolean}
+         */
+        function predicateExists(name) {
+            const predicates = getAllPredicates();
+            const normalizedName = name.toLowerCase();
+            return predicates.some(p => {
+                const label = p.label.toLowerCase();
+                const localName = getLocalName(p.uri).toLowerCase();
+                return label === normalizedName || localName === normalizedName || p.uri === name;
+            });
+        }
+
+        /**
+         * Заполняет выпадающие списки в панели Smart Design
+         */
+        function populateSmartDesignDropdowns() {
+            const trigSelect = document.getElementById('smart-design-trig');
+            const subjectSelect = document.getElementById('smart-design-subject');
+            const predicateSelect = document.getElementById('smart-design-predicate');
+            const objectSelect = document.getElementById('smart-design-object');
+
+            if (!trigSelect || !subjectSelect || !predicateSelect || !objectSelect) return;
+
+            // Очищаем и заполняем TriG
+            trigSelect.innerHTML = '<option value="">-- Выберите TriG --</option>';
+            trigSelect.innerHTML += '<option value="__NEW__">New (создать новый)</option>';
+            const trigs = getAllTriGs();
+            trigs.forEach(t => {
+                const option = document.createElement('option');
+                option.value = t.uri;
+                option.textContent = t.label;
+                trigSelect.appendChild(option);
+            });
+
+            // Очищаем и заполняем Subject
+            subjectSelect.innerHTML = '<option value="">-- Выберите Subject --</option>';
+            subjectSelect.innerHTML += '<option value="__NEW__">New (создать новый)</option>';
+            const subjects = getAllSubjects();
+            subjects.forEach(s => {
+                const option = document.createElement('option');
+                option.value = s.uri;
+                option.textContent = s.label;
+                subjectSelect.appendChild(option);
+            });
+
+            // Очищаем и заполняем Predicate
+            predicateSelect.innerHTML = '<option value="">-- Выберите Predicate --</option>';
+            predicateSelect.innerHTML += '<option value="__NEW__">New (создать новый)</option>';
+            const predicates = getAllPredicates();
+            predicates.forEach(p => {
+                const option = document.createElement('option');
+                option.value = p.uri;
+                option.textContent = p.label;
+                predicateSelect.appendChild(option);
+            });
+
+            // Очищаем и заполняем Object (без литералов)
+            objectSelect.innerHTML = '<option value="">-- Выберите Object --</option>';
+            objectSelect.innerHTML += '<option value="__NEW__">New (создать новый)</option>';
+            const objects = getAllObjects();
+            objects.forEach(o => {
+                const option = document.createElement('option');
+                option.value = o.uri;
+                option.textContent = o.label;
+                objectSelect.appendChild(option);
+            });
+        }
+
+        /**
+         * Запрашивает у пользователя новое имя и проверяет его уникальность
+         * @param {string} fieldName - Название поля (TriG, Subject, Predicate, Object)
+         * @param {Function} existsChecker - Функция проверки существования
+         * @param {boolean} allowDuplicate - Разрешить дубликаты (для Object)
+         * @returns {string|null} - Введенное имя или null если отменено
+         */
+        function promptForNewValue(fieldName, existsChecker, allowDuplicate = false) {
+            const name = prompt(`Введите имя для нового ${fieldName}:`);
+            if (!name || name.trim() === '') {
+                return null;
+            }
+
+            const trimmedName = name.trim();
+
+            if (!allowDuplicate && existsChecker(trimmedName)) {
+                showSmartDesignMessage(`Ошибка: ${fieldName} с именем "${trimmedName}" уже существует в RDF данных`, 'error');
+                return null;
+            }
+
+            return trimmedName;
+        }
+
+        /**
+         * Обработчик изменения выбора в выпадающем списке
+         * @param {HTMLSelectElement} selectElement - Элемент select
+         * @param {string} fieldName - Название поля
+         * @param {Function} existsChecker - Функция проверки существования
+         * @param {boolean} allowDuplicate - Разрешить дубликаты
+         */
+        function handleSelectChange(selectElement, fieldName, existsChecker, allowDuplicate = false) {
+            if (selectElement.value === '__NEW__') {
+                const newValue = promptForNewValue(fieldName, existsChecker, allowDuplicate);
+                if (newValue) {
+                    // Добавляем новый элемент в список и выбираем его
+                    const option = document.createElement('option');
+                    option.value = '__CUSTOM__:' + newValue;
+                    option.textContent = newValue + ' (новый)';
+                    selectElement.insertBefore(option, selectElement.options[2]); // После "New"
+                    selectElement.value = option.value;
+                    hideSmartDesignMessage();
+                } else {
+                    // Сбрасываем выбор
+                    selectElement.value = '';
+                }
+            }
+        }
+
+        // Добавляем обработчики событий для выпадающих списков Smart Design
+        document.addEventListener('DOMContentLoaded', function() {
+            const trigSelect = document.getElementById('smart-design-trig');
+            const subjectSelect = document.getElementById('smart-design-subject');
+            const predicateSelect = document.getElementById('smart-design-predicate');
+            const objectSelect = document.getElementById('smart-design-object');
+
+            if (trigSelect) {
+                trigSelect.addEventListener('change', function() {
+                    handleSelectChange(this, 'TriG', trigExists, false);
+                });
+            }
+
+            if (subjectSelect) {
+                subjectSelect.addEventListener('change', function() {
+                    handleSelectChange(this, 'Subject', subjectExists, false);
+                });
+            }
+
+            if (predicateSelect) {
+                predicateSelect.addEventListener('change', function() {
+                    handleSelectChange(this, 'Predicate', predicateExists, false);
+                });
+            }
+
+            if (objectSelect) {
+                objectSelect.addEventListener('change', function() {
+                    // Для Object дополнительных проверок не производится
+                    handleSelectChange(this, 'Object', () => false, true);
+                });
+            }
+        });
+
+        /**
+         * Получает значение из выпадающего списка (с учетом кастомных значений)
+         * @param {string} selectId - ID элемента select
+         * @returns {string|null} - URI или кастомное значение
+         */
+        function getSmartDesignValue(selectId) {
+            const select = document.getElementById(selectId);
+            if (!select || !select.value || select.value === '__NEW__') {
+                return null;
+            }
+
+            if (select.value.startsWith('__CUSTOM__:')) {
+                return select.value.substring('__CUSTOM__:'.length);
+            }
+
+            return select.value;
+        }
+
+        /**
+         * Форматирует URI или значение для SPARQL запроса
+         * @param {string} value - Значение для форматирования
+         * @param {boolean} isCustom - Является ли значение кастомным
+         * @returns {string} - Форматированное значение
+         */
+        function formatForSparql(value, isCustom = false) {
+            if (!value) return '';
+
+            // Если это полный URI
+            if (value.startsWith('http://') || value.startsWith('https://')) {
+                return `<${value}>`;
+            }
+
+            // Если это префиксированное имя
+            if (value.includes(':')) {
+                return value;
+            }
+
+            // Если это кастомное значение без префикса, пробуем использовать vad: префикс
+            if (currentPrefixes['vad']) {
+                return `vad:${value}`;
+            }
+
+            // В крайнем случае создаем URI
+            return `<http://example.org/vad#${value}>`;
+        }
+
+        /**
+         * Проверяет, существует ли триплет в RDF данных
+         * @param {string} subjectUri - URI субъекта
+         * @param {string} predicateUri - URI предиката
+         * @param {string} objectUri - URI объекта
+         * @param {string} graphUri - URI графа (опционально)
+         * @returns {boolean}
+         */
+        function tripleExists(subjectUri, predicateUri, objectUri, graphUri = null) {
+            return currentQuads.some(quad => {
+                const subjectMatch = quad.subject.value === subjectUri;
+                const predicateMatch = quad.predicate.value === predicateUri;
+                const objectMatch = quad.object.value === objectUri;
+                const graphMatch = !graphUri || (quad.graph && quad.graph.value === graphUri);
+                return subjectMatch && predicateMatch && objectMatch && graphMatch;
+            });
+        }
+
+        /**
+         * Генерирует SPARQL INSERT запрос
+         * @param {string} trigUri - URI TriG графа
+         * @param {string} subjectUri - URI субъекта
+         * @param {string} predicateUri - URI предиката
+         * @param {string} objectUri - URI объекта
+         * @returns {string} - SPARQL INSERT запрос
+         */
+        function generateInsertSparql(trigUri, subjectUri, predicateUri, objectUri) {
+            const prefixDeclarations = generateSparqlPrefixes(currentPrefixes);
+
+            const subject = formatForSparql(subjectUri);
+            const predicate = formatForSparql(predicateUri);
+            const object = formatForSparql(objectUri);
+            const graph = formatForSparql(trigUri);
+
+            return `${prefixDeclarations}INSERT DATA {
+    GRAPH ${graph} {
+        ${subject} ${predicate} ${object} .
+    }
+}`;
+        }
+
+        /**
+         * Генерирует SPARQL DELETE запрос
+         * @param {string} trigUri - URI TriG графа
+         * @param {string} subjectUri - URI субъекта
+         * @param {string} predicateUri - URI предиката
+         * @param {string} objectUri - URI объекта
+         * @returns {string} - SPARQL DELETE запрос
+         */
+        function generateDeleteSparql(trigUri, subjectUri, predicateUri, objectUri) {
+            const prefixDeclarations = generateSparqlPrefixes(currentPrefixes);
+
+            const subject = formatForSparql(subjectUri);
+            const predicate = formatForSparql(predicateUri);
+            const object = formatForSparql(objectUri);
+            const graph = formatForSparql(trigUri);
+
+            return `${prefixDeclarations}DELETE DATA {
+    GRAPH ${graph} {
+        ${subject} ${predicate} ${object} .
+    }
+}`;
+        }
+
+        /**
+         * Обработчик кнопки "Создать" - генерирует INSERT SPARQL запрос
+         */
+        function smartDesignCreate() {
+            hideSmartDesignMessage();
+
+            const trigValue = getSmartDesignValue('smart-design-trig');
+            const subjectValue = getSmartDesignValue('smart-design-subject');
+            const predicateValue = getSmartDesignValue('smart-design-predicate');
+            const objectValue = getSmartDesignValue('smart-design-object');
+
+            if (!trigValue || !subjectValue || !predicateValue || !objectValue) {
+                showSmartDesignMessage('Ошибка: Заполните все четыре поля (TriG, Subject, Predicate, Object)', 'error');
+                return;
+            }
+
+            const sparqlQuery = generateInsertSparql(trigValue, subjectValue, predicateValue, objectValue);
+
+            const resultTextarea = document.getElementById('result-sparql-query');
+            if (resultTextarea) {
+                resultTextarea.value = sparqlQuery;
+            }
+
+            showSmartDesignMessage('INSERT SPARQL запрос успешно сгенерирован', 'success');
+        }
+
+        /**
+         * Обработчик кнопки "Удалить" - генерирует DELETE SPARQL запрос с проверкой существования
+         */
+        function smartDesignDelete() {
+            hideSmartDesignMessage();
+
+            const trigValue = getSmartDesignValue('smart-design-trig');
+            const subjectValue = getSmartDesignValue('smart-design-subject');
+            const predicateValue = getSmartDesignValue('smart-design-predicate');
+            const objectValue = getSmartDesignValue('smart-design-object');
+
+            if (!trigValue || !subjectValue || !predicateValue || !objectValue) {
+                showSmartDesignMessage('Ошибка: Заполните все четыре поля (TriG, Subject, Predicate, Object)', 'error');
+                return;
+            }
+
+            // Проверяем существование триплета
+            // Нужно преобразовать значения в полные URI для проверки
+            let subjectUri = subjectValue;
+            let predicateUri = predicateValue;
+            let objectUri = objectValue;
+            let graphUri = trigValue;
+
+            // Если значение содержит префикс, преобразуем в полный URI
+            for (const [prefix, namespace] of Object.entries(currentPrefixes)) {
+                if (subjectValue.startsWith(prefix + ':')) {
+                    subjectUri = namespace + subjectValue.substring(prefix.length + 1);
+                }
+                if (predicateValue.startsWith(prefix + ':')) {
+                    predicateUri = namespace + predicateValue.substring(prefix.length + 1);
+                }
+                if (objectValue.startsWith(prefix + ':')) {
+                    objectUri = namespace + objectValue.substring(prefix.length + 1);
+                }
+                if (trigValue.startsWith(prefix + ':')) {
+                    graphUri = namespace + trigValue.substring(prefix.length + 1);
+                }
+            }
+
+            // Проверяем существование триплета в данных
+            const exists = tripleExists(subjectUri, predicateUri, objectUri, graphUri);
+
+            if (!exists) {
+                showSmartDesignMessage('Ошибка: Указанный триплет (утверждение) не найден в RDF данных', 'error');
+                return;
+            }
+
+            const sparqlQuery = generateDeleteSparql(trigValue, subjectValue, predicateValue, objectValue);
+
+            const resultTextarea = document.getElementById('result-sparql-query');
+            if (resultTextarea) {
+                resultTextarea.value = sparqlQuery;
+            }
+
+            showSmartDesignMessage('DELETE SPARQL запрос успешно сгенерирован', 'success');
+        }
+
+        /**
+         * Обработчик кнопки "Очистить" - очищает все поля
+         */
+        function smartDesignClear() {
+            hideSmartDesignMessage();
+
+            const trigSelect = document.getElementById('smart-design-trig');
+            const subjectSelect = document.getElementById('smart-design-subject');
+            const predicateSelect = document.getElementById('smart-design-predicate');
+            const objectSelect = document.getElementById('smart-design-object');
+            const resultTextarea = document.getElementById('result-sparql-query');
+
+            if (trigSelect) trigSelect.value = '';
+            if (subjectSelect) subjectSelect.value = '';
+            if (predicateSelect) predicateSelect.value = '';
+            if (objectSelect) objectSelect.value = '';
+            if (resultTextarea) resultTextarea.value = '';
+
+            // Перезаполняем выпадающие списки (удаляем добавленные кастомные значения)
+            populateSmartDesignDropdowns();
+
+            showSmartDesignMessage('Все поля очищены', 'info');
+        }
+
+        /**
+         * Обработчик кнопки "Применить SPARQL" - применяет запрос к RDF данным
+         */
+        function smartDesignApply() {
+            hideSmartDesignMessage();
+
+            const resultTextarea = document.getElementById('result-sparql-query');
+            if (!resultTextarea || !resultTextarea.value.trim()) {
+                showSmartDesignMessage('Ошибка: Сначала сгенерируйте SPARQL запрос (нажмите "Создать" или "Удалить")', 'error');
+                return;
+            }
+
+            const sparqlQuery = resultTextarea.value.trim();
+            const rdfInput = document.getElementById('rdf-input');
+
+            if (!rdfInput) {
+                showSmartDesignMessage('Ошибка: Не найдено поле RDF данных', 'error');
+                return;
+            }
+
+            // Определяем тип запроса (INSERT или DELETE)
+            const isInsert = sparqlQuery.includes('INSERT DATA');
+            const isDelete = sparqlQuery.includes('DELETE DATA');
+
+            if (!isInsert && !isDelete) {
+                showSmartDesignMessage('Ошибка: Неизвестный тип SPARQL запроса', 'error');
+                return;
+            }
+
+            // Извлекаем триплет из запроса (учитываем переносы строк в запросе)
+            const tripleMatch = sparqlQuery.match(/GRAPH\s+(<[^>]+>)\s*\{[\s\S]*?(<[^>]+>)\s+(<[^>]+>)\s+(<[^>]+>)\s*\.\s*\}/);
+
+            if (!tripleMatch) {
+                showSmartDesignMessage('Ошибка: Не удалось распознать триплет в SPARQL запросе', 'error');
+                return;
+            }
+
+            const [, graphRef, subjectRef, predicateRef, objectRef] = tripleMatch;
+
+            // Конвертируем полные URI в префиксную форму для поиска в RDF тексте
+            function uriToPrefixed(uri) {
+                // Убираем угловые скобки
+                const cleanUri = uri.replace(/^<|>$/g, '');
+                return getPrefixedName(cleanUri, currentPrefixes);
+            }
+
+            const graphPrefixed = uriToPrefixed(graphRef);
+            const subjectPrefixed = uriToPrefixed(subjectRef);
+            const predicatePrefixed = uriToPrefixed(predicateRef);
+            const objectPrefixed = uriToPrefixed(objectRef);
+
+            // Получаем текущий RDF текст
+            let currentRdfText = rdfInput.value;
+
+            if (isInsert) {
+                // Добавляем триплет в соответствующий граф
+                // Ищем секцию графа и добавляем туда триплет (пробуем и полный URI, и префиксную форму)
+                let graphPattern = new RegExp(`(${escapeRegex(graphPrefixed)}\\s*\\{)`, 's');
+                let graphMatch = currentRdfText.match(graphPattern);
+
+                if (!graphMatch) {
+                    // Попробуем найти по полному URI
+                    graphPattern = new RegExp(`(${escapeRegex(graphRef)}\\s*\\{)`, 's');
+                    graphMatch = currentRdfText.match(graphPattern);
+                }
+
+                if (graphMatch) {
+                    // Добавляем триплет в существующий граф (используем префиксную форму)
+                    const newTriple = `\n    ${subjectPrefixed} ${predicatePrefixed} ${objectPrefixed} .`;
+                    currentRdfText = currentRdfText.replace(graphPattern, `$1${newTriple}`);
+                } else {
+                    // Создаем новый граф с триплетом
+                    const newGraph = `\n\n${graphPrefixed} {\n    ${subjectPrefixed} ${predicatePrefixed} ${objectPrefixed} .\n}`;
+                    currentRdfText += newGraph;
+                }
+
+                rdfInput.value = currentRdfText;
+                showSmartDesignMessage('Триплет успешно добавлен в RDF данные. Нажмите "Визуализировать" для обновления графа.', 'success');
+
+            } else if (isDelete) {
+                // Удаляем триплет из RDF данных
+                // Пробуем найти и в префиксной форме
+                let triplePattern = new RegExp(`\\s*${escapeRegex(subjectPrefixed)}\\s+${escapeRegex(predicatePrefixed)}\\s+${escapeRegex(objectPrefixed)}\\s*[;.]`, 'g');
+
+                let newRdfText = currentRdfText.replace(triplePattern, '');
+
+                if (newRdfText === currentRdfText) {
+                    // Попробуем с полными URI
+                    triplePattern = new RegExp(`\\s*${escapeRegex(subjectRef)}\\s+${escapeRegex(predicateRef)}\\s+${escapeRegex(objectRef)}\\s*[;.]`, 'g');
+                    newRdfText = currentRdfText.replace(triplePattern, '');
+                }
+
+                if (newRdfText === currentRdfText) {
+                    showSmartDesignMessage('Предупреждение: Триплет не найден в текстовом представлении RDF данных', 'info');
+                } else {
+                    rdfInput.value = newRdfText;
+                    showSmartDesignMessage('Триплет успешно удален из RDF данных. Нажмите "Визуализировать" для обновления графа.', 'success');
+                }
+            }
+
+            // Очищаем поле результата после применения
+            resultTextarea.value = '';
+        }
+
+        /**
+         * Экранирует специальные символы регулярного выражения
+         * @param {string} str - Строка для экранирования
+         * @returns {string} - Экранированная строка
+         */
+        function escapeRegex(str) {
+            return str.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+        }
+
         function updateModeDescription() {
             const mode = document.getElementById('visualization-mode').value;
             const description = document.getElementById('mode-description');
             const maxVadRowLengthGroup = document.getElementById('max-vad-row-length-group');
+            const sparqlModeSelect = document.getElementById('sparql-mode');
+            const smartDesignOption = sparqlModeSelect ? sparqlModeSelect.querySelector('option[value="smart-design"]') : null;
 
             const descriptions = {
                 'notation': 'С выделением типов объектов и предикатов цветом и формами',
@@ -4565,16 +5421,46 @@ vad:t1.1 rdfs:label "Схема процесса TriG1.1" ;
             } else {
                 maxVadRowLengthGroup.style.display = 'none';
             }
+
+            // Показываем/скрываем опцию "SPARQL Smart Design" в зависимости от режима визуализации
+            if (smartDesignOption) {
+                if (mode === 'vad-trig') {
+                    smartDesignOption.style.display = '';
+                } else {
+                    smartDesignOption.style.display = 'none';
+                    // Если был выбран smart-design, сбрасываем на 'no'
+                    if (sparqlModeSelect.value === 'smart-design') {
+                        sparqlModeSelect.value = 'no';
+                    }
+                }
+            }
+
+            // Обновляем состояние SPARQL панели
+            toggleSparqlPanel();
         }
 
         function toggleSparqlPanel() {
             const sparqlMode = document.getElementById('sparql-mode').value;
+            const visualizationMode = document.getElementById('visualization-mode').value;
             const sparqlPanel = document.getElementById('sparql-panel');
+            const smartDesignContainer = document.getElementById('smart-design-container');
+
+            // Скрываем оба панели по умолчанию
+            sparqlPanel.classList.remove('visible');
+            smartDesignContainer.classList.remove('visible');
 
             if (sparqlMode === 'yes') {
                 sparqlPanel.classList.add('visible');
-            } else {
-                sparqlPanel.classList.remove('visible');
+            } else if (sparqlMode === 'smart-design') {
+                // SPARQL Smart Design отображается только в режиме VAD TriG
+                if (visualizationMode === 'vad-trig') {
+                    smartDesignContainer.classList.add('visible');
+                    // Заполняем выпадающие списки при активации Smart Design
+                    populateSmartDesignDropdowns();
+                } else {
+                    // Показываем сообщение, что Smart Design доступен только в VAD TriG
+                    showSmartDesignMessage('SPARQL Smart Design доступен только в режиме "Режим VAD TriG"', 'info');
+                }
             }
         }
 
