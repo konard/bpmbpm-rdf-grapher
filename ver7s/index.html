@@ -1513,17 +1513,19 @@
             </div>
             <div class="smart-design-buttons">
                 <button class="new-trig-btn" onclick="openNewTrigModal()">New TriG</button>
-                <button onclick="smartDesignCreate()">Создать</button>
+                <button onclick="smartDesignCreate()">Создать Simple Triples</button>
                 <button class="delete-btn" onclick="smartDesignDelete()">Удалить</button>
                 <button class="clear-btn" onclick="smartDesignClear()">Очистить</button>
-                <button class="apply-btn" onclick="smartDesignApply()">Применить SPARQL</button>
             </div>
             <div id="smart-design-message" class="smart-design-message" style="display: none;"></div>
         </div>
         <!-- Панель Result in SPARQL -->
         <div class="result-sparql-panel">
             <h3>Result in SPARQL</h3>
-            <textarea class="result-sparql-textarea" id="result-sparql-query" placeholder="Здесь будет сгенерированный SPARQL запрос..." readonly></textarea>
+            <textarea class="result-sparql-textarea" id="result-sparql-query" placeholder="Здесь будет сгенерированный SPARQL запрос..."></textarea>
+            <div class="smart-design-buttons" style="margin-top: 10px;">
+                <button class="apply-btn" onclick="smartDesignApply()">Применить SPARQL</button>
+            </div>
         </div>
     </div>
 
@@ -1556,7 +1558,7 @@
             </div>
             <div class="new-trig-modal-buttons">
                 <button class="new-trig-cancel-btn" onclick="closeNewTrigModal()">Отмена</button>
-                <button class="new-trig-create-btn" onclick="createNewTrig()">Применить SPARQL</button>
+                <button class="new-trig-create-btn" onclick="createNewTrig()">Создать запрос New TriG</button>
             </div>
         </div>
     </div>
@@ -5541,7 +5543,7 @@ vad:t1.1 rdfs:label "Схема процесса TriG1.1" ;
 
             const resultTextarea = document.getElementById('result-sparql-query');
             if (!resultTextarea || !resultTextarea.value.trim()) {
-                showSmartDesignMessage('Ошибка: Сначала сгенерируйте SPARQL запрос (нажмите "Создать" или "Удалить")', 'error');
+                showSmartDesignMessage('Ошибка: Сначала сгенерируйте SPARQL запрос (нажмите "Создать Simple Triples" или "Удалить")', 'error');
                 return;
             }
 
@@ -5562,75 +5564,117 @@ vad:t1.1 rdfs:label "Схема процесса TriG1.1" ;
                 return;
             }
 
-            // Извлекаем триплет из запроса (учитываем переносы строк в запросе)
-            const tripleMatch = sparqlQuery.match(/GRAPH\s+(<[^>]+>)\s*\{[\s\S]*?(<[^>]+>)\s+(<[^>]+>)\s+(<[^>]+>)\s*\.\s*\}/);
+            // Паттерн для извлечения URI/префиксного имени (поддерживает <uri> и prefix:name)
+            const uriPattern = '(?:<[^>]+>|[a-zA-Z_][a-zA-Z0-9_]*:[a-zA-Z0-9_-]+)';
+            // Паттерн для извлечения объекта (может быть URI, префиксное имя или литерал в кавычках)
+            const objectPattern = '(?:<[^>]+>|[a-zA-Z_][a-zA-Z0-9_]*:[a-zA-Z0-9_-]+|"[^"]*")';
 
-            if (!tripleMatch) {
-                showSmartDesignMessage('Ошибка: Не удалось распознать триплет в SPARQL запросе', 'error');
+            // Извлекаем GRAPH и триплеты из запроса
+            const graphMatch = sparqlQuery.match(new RegExp(`GRAPH\\s+(${uriPattern})\\s*\\{([\\s\\S]*?)\\}`, 'i'));
+
+            if (!graphMatch) {
+                showSmartDesignMessage('Ошибка: Не удалось распознать GRAPH в SPARQL запросе', 'error');
                 return;
             }
 
-            const [, graphRef, subjectRef, predicateRef, objectRef] = tripleMatch;
+            const graphRef = graphMatch[1];
+            const graphBody = graphMatch[2];
 
-            // Конвертируем полные URI в префиксную форму для поиска в RDF тексте
-            function uriToPrefixed(uri) {
-                // Убираем угловые скобки
-                const cleanUri = uri.replace(/^<|>$/g, '');
-                return getPrefixedName(cleanUri, currentPrefixes);
+            // Извлекаем триплеты из тела GRAPH
+            const triplePattern = new RegExp(`(${uriPattern})\\s+(${uriPattern})\\s+(${objectPattern})\\s*\\.`, 'g');
+            const triples = [];
+            let tripleMatch;
+            while ((tripleMatch = triplePattern.exec(graphBody)) !== null) {
+                triples.push({
+                    subject: tripleMatch[1],
+                    predicate: tripleMatch[2],
+                    object: tripleMatch[3]
+                });
             }
 
-            const graphPrefixed = uriToPrefixed(graphRef);
-            const subjectPrefixed = uriToPrefixed(subjectRef);
-            const predicatePrefixed = uriToPrefixed(predicateRef);
-            const objectPrefixed = uriToPrefixed(objectRef);
+            if (triples.length === 0) {
+                showSmartDesignMessage('Ошибка: Не удалось распознать триплеты в SPARQL запросе', 'error');
+                return;
+            }
+
+            // Конвертируем URI/префикс в префиксную форму для RDF текста
+            function toPrefixed(ref) {
+                if (ref.startsWith('<') && ref.endsWith('>')) {
+                    // Полный URI - конвертируем в префиксную форму
+                    const cleanUri = ref.slice(1, -1);
+                    return getPrefixedName(cleanUri, currentPrefixes);
+                }
+                // Уже в префиксной форме или литерал
+                return ref;
+            }
+
+            const graphPrefixed = toPrefixed(graphRef);
 
             // Получаем текущий RDF текст
             let currentRdfText = rdfInput.value;
 
             if (isInsert) {
-                // Добавляем триплет в соответствующий граф
-                // Ищем секцию графа и добавляем триплет В КОНЕЦ блока (перед закрывающей скобкой)
-                // Используем паттерн, который захватывает содержимое графа и закрывающую скобку
-                let graphEndPattern = new RegExp(`(${escapeRegex(graphPrefixed)}\\s*\\{[^}]*)(\\s*\\})`, 's');
-                let graphMatch = currentRdfText.match(graphEndPattern);
+                // Формируем триплеты для вставки
+                const triplesForInsert = triples.map(t => {
+                    const subjectPrefixed = toPrefixed(t.subject);
+                    const predicatePrefixed = toPrefixed(t.predicate);
+                    const objectPrefixed = toPrefixed(t.object);
+                    return `    ${subjectPrefixed} ${predicatePrefixed} ${objectPrefixed} .`;
+                }).join('\n');
 
-                if (!graphMatch) {
-                    // Попробуем найти по полному URI
+                // Ищем секцию графа и добавляем триплеты В КОНЕЦ блока (перед закрывающей скобкой)
+                let graphEndPattern = new RegExp(`(${escapeRegex(graphPrefixed)}\\s*\\{[^}]*)(\\s*\\})`, 's');
+                let graphTextMatch = currentRdfText.match(graphEndPattern);
+
+                if (!graphTextMatch) {
+                    // Попробуем найти по полному URI (если в RDF тексте используется полный URI)
                     graphEndPattern = new RegExp(`(${escapeRegex(graphRef)}\\s*\\{[^}]*)(\\s*\\})`, 's');
-                    graphMatch = currentRdfText.match(graphEndPattern);
+                    graphTextMatch = currentRdfText.match(graphEndPattern);
                 }
 
-                if (graphMatch) {
-                    // Добавляем триплет в КОНЕЦ существующего графа (перед закрывающей скобкой)
-                    const newTriple = `\n    ${subjectPrefixed} ${predicatePrefixed} ${objectPrefixed} .`;
-                    currentRdfText = currentRdfText.replace(graphEndPattern, `$1${newTriple}$2`);
+                if (graphTextMatch) {
+                    // Добавляем триплеты в КОНЕЦ существующего графа (перед закрывающей скобкой)
+                    currentRdfText = currentRdfText.replace(graphEndPattern, `$1\n${triplesForInsert}$2`);
                 } else {
-                    // Создаем новый граф с триплетом
-                    const newGraph = `\n\n${graphPrefixed} {\n    ${subjectPrefixed} ${predicatePrefixed} ${objectPrefixed} .\n}`;
+                    // Создаем новый граф с триплетами
+                    const newGraph = `\n\n${graphPrefixed} {\n${triplesForInsert}\n}`;
                     currentRdfText += newGraph;
                 }
 
                 rdfInput.value = currentRdfText;
-                showSmartDesignMessage('Триплет успешно добавлен в RDF данные. Нажмите "Визуализировать" для обновления графа.', 'success');
+                showSmartDesignMessage('Триплеты успешно добавлены в RDF данные. Нажмите "Визуализировать" для обновления графа.', 'success');
 
             } else if (isDelete) {
-                // Удаляем триплет из RDF данных
-                // Пробуем найти и в префиксной форме
-                let triplePattern = new RegExp(`\\s*${escapeRegex(subjectPrefixed)}\\s+${escapeRegex(predicatePrefixed)}\\s+${escapeRegex(objectPrefixed)}\\s*[;.]`, 'g');
+                // Удаляем триплеты из RDF данных
+                let wasDeleted = false;
+                let newRdfText = currentRdfText;
 
-                let newRdfText = currentRdfText.replace(triplePattern, '');
+                for (const triple of triples) {
+                    const subjectPrefixed = toPrefixed(triple.subject);
+                    const predicatePrefixed = toPrefixed(triple.predicate);
+                    const objectPrefixed = toPrefixed(triple.object);
 
-                if (newRdfText === currentRdfText) {
-                    // Попробуем с полными URI
-                    triplePattern = new RegExp(`\\s*${escapeRegex(subjectRef)}\\s+${escapeRegex(predicateRef)}\\s+${escapeRegex(objectRef)}\\s*[;.]`, 'g');
-                    newRdfText = currentRdfText.replace(triplePattern, '');
+                    // Пробуем найти и удалить в префиксной форме
+                    let deletePattern = new RegExp(`\\s*${escapeRegex(subjectPrefixed)}\\s+${escapeRegex(predicatePrefixed)}\\s+${escapeRegex(objectPrefixed)}\\s*[;.]`, 'g');
+                    const prevText = newRdfText;
+                    newRdfText = newRdfText.replace(deletePattern, '');
+
+                    if (newRdfText === prevText) {
+                        // Попробуем с исходными значениями (на случай, если в RDF текст попали полные URI)
+                        deletePattern = new RegExp(`\\s*${escapeRegex(triple.subject)}\\s+${escapeRegex(triple.predicate)}\\s+${escapeRegex(triple.object)}\\s*[;.]`, 'g');
+                        newRdfText = newRdfText.replace(deletePattern, '');
+                    }
+
+                    if (newRdfText !== prevText) {
+                        wasDeleted = true;
+                    }
                 }
 
-                if (newRdfText === currentRdfText) {
-                    showSmartDesignMessage('Предупреждение: Триплет не найден в текстовом представлении RDF данных', 'info');
+                if (!wasDeleted) {
+                    showSmartDesignMessage('Предупреждение: Триплеты не найдены в текстовом представлении RDF данных', 'info');
                 } else {
                     rdfInput.value = newRdfText;
-                    showSmartDesignMessage('Триплет успешно удален из RDF данных. Нажмите "Визуализировать" для обновления графа.', 'success');
+                    showSmartDesignMessage('Триплеты успешно удалены из RDF данных. Нажмите "Визуализировать" для обновления графа.', 'success');
                 }
             }
 
