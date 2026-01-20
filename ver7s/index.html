@@ -1485,6 +1485,9 @@
         <!-- Панель Smart Design -->
         <div class="smart-design-panel">
             <h3>Smart Design</h3>
+            <div class="smart-design-info" style="font-size: 12px; color: #666; margin-bottom: 10px; padding: 5px; background-color: #f5f5f5; border-radius: 4px;">
+                Создание SPARQL INSERT/DELETE запросов из выбранных значений (TriG, Subject, Predicate, Object)
+            </div>
             <div class="smart-design-fields">
                 <div class="smart-design-field">
                     <label for="smart-design-trig">TriG:</label>
@@ -1513,7 +1516,7 @@
             </div>
             <div class="smart-design-buttons">
                 <button class="new-trig-btn" onclick="openNewTrigModal()">New TriG</button>
-                <button onclick="smartDesignCreate()">Создать Simple Triples</button>
+                <button onclick="smartDesignCreate()">Создать SPARQL</button>
                 <button class="delete-btn" onclick="smartDesignDelete()">Удалить</button>
                 <button class="clear-btn" onclick="smartDesignClear()">Очистить</button>
             </div>
@@ -1522,10 +1525,15 @@
         <!-- Панель Result in SPARQL -->
         <div class="result-sparql-panel">
             <h3>Result in SPARQL</h3>
+            <div class="result-sparql-info" style="font-size: 12px; color: #666; margin-bottom: 10px; padding: 5px; background-color: #f5f5f5; border-radius: 4px;">
+                Simple Triple - добавление отдельной строки | Shorthand Triple - добавление через запятую (для литералов заменяет значение)
+            </div>
             <textarea class="result-sparql-textarea" id="result-sparql-query" placeholder="Здесь будет сгенерированный SPARQL запрос..."></textarea>
             <div class="smart-design-buttons" style="margin-top: 10px;">
-                <button class="apply-btn" onclick="smartDesignApply()">Применить SPARQL</button>
+                <button class="apply-btn" onclick="smartDesignApply()">Применить как Simple Triple</button>
+                <button class="apply-btn" onclick="smartDesignApplyShorthand()" style="background-color: #8E24AA;">Применить как Shorthand Triple</button>
             </div>
+            <div id="result-sparql-message" class="smart-design-message" style="display: none;"></div>
         </div>
     </div>
 
@@ -1786,6 +1794,8 @@ WHERE {
          * Остальные предикаты остаются в соответствующем TriG (схеме процесса)
          */
         const PTREE_PREDICATES = [
+            'rdf:type',
+            'http://www.w3.org/1999/02/22-rdf-syntax-ns#type',
             'rdfs:label',
             'http://www.w3.org/2000/01/rdf-schema#label',
             'dcterms:description',
@@ -1881,12 +1891,14 @@ WHERE {
          * @param {string} subjectValue - URI или prefixed name субъекта
          * @param {string} predicateValue - URI или prefixed name предиката
          * @param {string} originalTrigValue - Исходный выбранный граф
+         * @param {string} objectValue - URI или prefixed name объекта (опционально, для проверки rdf:type)
          * @returns {string} - URI графа для добавления триплета
          */
-        function determineTargetGraph(subjectValue, predicateValue, originalTrigValue) {
+        function determineTargetGraph(subjectValue, predicateValue, originalTrigValue, objectValue = null) {
             // Преобразуем prefixed names в полные URI
             let subjectUri = subjectValue;
             let predicateUri = predicateValue;
+            let objectUri = objectValue;
 
             for (const [prefix, namespace] of Object.entries(currentPrefixes)) {
                 if (subjectValue.startsWith(prefix + ':')) {
@@ -1895,6 +1907,18 @@ WHERE {
                 if (predicateValue.startsWith(prefix + ':')) {
                     predicateUri = namespace + predicateValue.substring(prefix.length + 1);
                 }
+                if (objectValue && objectValue.startsWith(prefix + ':')) {
+                    objectUri = namespace + objectValue.substring(prefix.length + 1);
+                }
+            }
+
+            // Специальный случай: добавление rdf:type vad:Process - всегда в ptree
+            const isRdfType = (predicateUri === 'http://www.w3.org/1999/02/22-rdf-syntax-ns#type' ||
+                              predicateValue === 'rdf:type');
+            const isProcessType = (objectUri === 'http://example.org/vad#Process' ||
+                                  objectValue === 'vad:Process');
+            if (isRdfType && isProcessType) {
+                return 'vad:ptree';
             }
 
             // Проверяем, является ли субъект типом vad:Process
@@ -3896,62 +3920,78 @@ vad:Trig1 {
 
 # ============================================================================
 # Дерево Процессов (ptree) - общий граф с метаданными всех процессов
-# Содержит rdfs:label, dcterms:description, vad:hasTrig для всех vad:Process
+# Содержит rdf:type, rdfs:label, dcterms:description, vad:hasTrig для всех vad:Process
 # ============================================================================
 
 vad:ptree {
 vad:ptree rdfs:label "Дерево Процессов (TriG)" ;
     vad:hasParent vad:root .
 
-    # Метаданные процессов из vad:t1
-    vad:p1 rdfs:label "p1 Процесс 1" ;
+    # Метаданные процессов из vad:t1 (rdf:type, rdfs:label, dcterms:description, vad:hasTrig)
+    vad:p1 rdf:type vad:Process ;
+        rdfs:label "p1 Процесс 1" ;
         dcterms:description "Первый процесс в цепочке добавленной стоимости" ;
         vad:hasTrig vad:t1.1 .
 
-    vad:Process2 rdfs:label "Процесс 2" ;
+    vad:Process2 rdf:type vad:Process ;
+        rdfs:label "Процесс 2" ;
         dcterms:description "Второй процесс, выполняется после Процесса 1" .
 
-    vad:Process3 rdfs:label "Процесс 3" ;
+    vad:Process3 rdf:type vad:Process ;
+        rdfs:label "Процесс 3" ;
         dcterms:description "Третий процесс в цепочке" .
 
-    vad:Process4 rdfs:label "Процесс 4" ;
+    vad:Process4 rdf:type vad:Process ;
+        rdfs:label "Процесс 4" ;
         dcterms:description "Четвёртый процесс в цепочке" .
 
-    vad:Process5 rdfs:label "Процесс 5" ;
+    vad:Process5 rdf:type vad:Process ;
+        rdfs:label "Процесс 5" ;
         dcterms:description "Пятый процесс в цепочке" .
 
-    vad:Process6 rdfs:label "Процесс 6" ;
+    vad:Process6 rdf:type vad:Process ;
+        rdfs:label "Процесс 6" ;
         dcterms:description "Шестой процесс в цепочке" .
 
-    vad:Process7 rdfs:label "Процесс 7" ;
+    vad:Process7 rdf:type vad:Process ;
+        rdfs:label "Процесс 7" ;
         dcterms:description "Седьмой процесс в цепочке" .
 
-    vad:Process8 rdfs:label "Процесс 8" ;
+    vad:Process8 rdf:type vad:Process ;
+        rdfs:label "Процесс 8" ;
         dcterms:description "Заключительный процесс в цепочке" .
 
-    # Метаданные процессов из vad:t1.1
-    vad:Process21 rdfs:label "Процесс 21" ;
+    # Метаданные процессов из vad:t1.1 (rdf:type, rdfs:label, dcterms:description)
+    vad:Process21 rdf:type vad:Process ;
+        rdfs:label "Процесс 21" ;
         dcterms:description "Первый процесс в цепочке TriG1.1" .
 
-    vad:Process22 rdfs:label "Процесс 22" ;
+    vad:Process22 rdf:type vad:Process ;
+        rdfs:label "Процесс 22" ;
         dcterms:description "Второй процесс в цепочке TriG1.1" .
 
-    vad:Process23 rdfs:label "Процесс 23" ;
+    vad:Process23 rdf:type vad:Process ;
+        rdfs:label "Процесс 23" ;
         dcterms:description "Третий процесс в цепочке TriG1.1" .
 
-    vad:Process24 rdfs:label "Процесс 24" ;
+    vad:Process24 rdf:type vad:Process ;
+        rdfs:label "Процесс 24" ;
         dcterms:description "Четвёртый процесс в цепочке TriG1.1" .
 
-    vad:Process25 rdfs:label "Процесс 25" ;
+    vad:Process25 rdf:type vad:Process ;
+        rdfs:label "Процесс 25" ;
         dcterms:description "Пятый процесс в цепочке TriG1.1" .
 
-    vad:Process26 rdfs:label "Процесс 26" ;
+    vad:Process26 rdf:type vad:Process ;
+        rdfs:label "Процесс 26" ;
         dcterms:description "Шестой процесс в цепочке TriG1.1" .
 
-    vad:Process27 rdfs:label "Процесс 27" ;
+    vad:Process27 rdf:type vad:Process ;
+        rdfs:label "Процесс 27" ;
         dcterms:description "Седьмой процесс в цепочке TriG1.1" .
 
-    vad:Process28 rdfs:label "Процесс 28" ;
+    vad:Process28 rdf:type vad:Process ;
+        rdfs:label "Процесс 28" ;
         dcterms:description "Заключительный процесс в цепочке TriG1.1" .
 }
 
@@ -3964,50 +4004,43 @@ vad:t1 rdfs:label "Схема процесса TriG1" ;
     vad:hasParent vad:root .
 
     # Процесс 1 - Детализированный (имеет ссылку на дочерний TriG)
-    vad:p1 rdf:type vad:Process ;
-        vad:hasExecutor vad:ExecutorGroup1 ;
+    # rdf:type находится в vad:ptree
+    vad:p1 vad:hasExecutor vad:ExecutorGroup1 ;
         vad:processSubtype vad:Detailed ;
         vad:hasNext vad:Process2 .
 
     # Процесс 2 - Базовый
-    vad:Process2 rdf:type vad:Process ;
-        vad:hasExecutor vad:ExecutorGroup2 ;
+    vad:Process2 vad:hasExecutor vad:ExecutorGroup2 ;
         vad:processSubtype vad:Basic ;
         vad:hasNext vad:Process3, vad:Process4 .
 
     # Процесс 3 - Базовый
-    vad:Process3 rdf:type vad:Process ;
-        vad:hasExecutor vad:ExecutorGroup3 ;
+    vad:Process3 vad:hasExecutor vad:ExecutorGroup3 ;
         vad:processSubtype vad:Basic ;
         vad:hasNext vad:Process4 .
 
     # Процесс 4 - Базовый
-    vad:Process4 rdf:type vad:Process ;
-        vad:hasExecutor vad:ExecutorGroup4 ;
+    vad:Process4 vad:hasExecutor vad:ExecutorGroup4 ;
         vad:processSubtype vad:Basic ;
         vad:hasNext vad:Process5 .
 
     # Процесс 5 - Базовый
-    vad:Process5 rdf:type vad:Process ;
-        vad:hasExecutor vad:ExecutorGroup5 ;
+    vad:Process5 vad:hasExecutor vad:ExecutorGroup5 ;
         vad:processSubtype vad:Basic ;
         vad:hasNext vad:Process6 .
 
     # Процесс 6 - Базовый
-    vad:Process6 rdf:type vad:Process ;
-        vad:hasExecutor vad:ExecutorGroup6 ;
+    vad:Process6 vad:hasExecutor vad:ExecutorGroup6 ;
         vad:processSubtype vad:Basic ;
         vad:hasNext vad:Process7 .
 
     # Процесс 7 - Базовый
-    vad:Process7 rdf:type vad:Process ;
-        vad:hasExecutor vad:ExecutorGroup7 ;
+    vad:Process7 vad:hasExecutor vad:ExecutorGroup7 ;
         vad:processSubtype vad:Basic ;
         vad:hasNext vad:Process8 .
 
     # Процесс 8 - Базовый
-    vad:Process8 rdf:type vad:Process ;
-        vad:hasExecutor vad:ExecutorGroup8 ;
+    vad:Process8 vad:hasExecutor vad:ExecutorGroup8 ;
         vad:processSubtype vad:Basic .
 
     # Группы исполнителей
@@ -4080,50 +4113,43 @@ vad:t1.1 rdfs:label "Схема процесса TriG1.1" ;
     vad:hasParent vad:t1 .
 
     # Процесс 21 - Базовый
-    vad:Process21 rdf:type vad:Process ;
-        vad:hasExecutor vad:ExecutorGroup21 ;
+    # rdf:type находится в vad:ptree
+    vad:Process21 vad:hasExecutor vad:ExecutorGroup21 ;
         vad:processSubtype vad:Basic ;
         vad:hasNext vad:Process22 .
 
     # Процесс 22 - Базовый
-    vad:Process22 rdf:type vad:Process ;
-        vad:hasExecutor vad:ExecutorGroup22 ;
+    vad:Process22 vad:hasExecutor vad:ExecutorGroup22 ;
         vad:processSubtype vad:Basic ;
         vad:hasNext vad:Process23, vad:Process24 .
 
     # Процесс 23 - Базовый
-    vad:Process23 rdf:type vad:Process ;
-        vad:hasExecutor vad:ExecutorGroup23 ;
+    vad:Process23 vad:hasExecutor vad:ExecutorGroup23 ;
         vad:processSubtype vad:Basic ;
         vad:hasNext vad:Process24 .
 
     # Процесс 24 - Базовый
-    vad:Process24 rdf:type vad:Process ;
-        vad:hasExecutor vad:ExecutorGroup24 ;
+    vad:Process24 vad:hasExecutor vad:ExecutorGroup24 ;
         vad:processSubtype vad:Basic ;
         vad:hasNext vad:Process25 .
 
     # Процесс 25 - Базовый
-    vad:Process25 rdf:type vad:Process ;
-        vad:hasExecutor vad:ExecutorGroup25 ;
+    vad:Process25 vad:hasExecutor vad:ExecutorGroup25 ;
         vad:processSubtype vad:Basic ;
         vad:hasNext vad:Process26 .
 
     # Процесс 26 - Базовый
-    vad:Process26 rdf:type vad:Process ;
-        vad:hasExecutor vad:ExecutorGroup26 ;
+    vad:Process26 vad:hasExecutor vad:ExecutorGroup26 ;
         vad:processSubtype vad:Basic ;
         vad:hasNext vad:Process27 .
 
     # Процесс 27 - Базовый
-    vad:Process27 rdf:type vad:Process ;
-        vad:hasExecutor vad:ExecutorGroup27 ;
+    vad:Process27 vad:hasExecutor vad:ExecutorGroup27 ;
         vad:processSubtype vad:Basic ;
         vad:hasNext vad:Process28 .
 
     # Процесс 28 - Базовый
-    vad:Process28 rdf:type vad:Process ;
-        vad:hasExecutor vad:ExecutorGroup28 ;
+    vad:Process28 vad:hasExecutor vad:ExecutorGroup28 ;
         vad:processSubtype vad:Basic .
 
     # Группы исполнителей для TriG11
@@ -5664,8 +5690,8 @@ vad:t1.1 rdfs:label "Схема процесса TriG1.1" ;
 
             // Определяем целевой граф на основе правил ptree
             // Если субъект является vad:Process и предикат в PTREE_PREDICATES,
-            // триплет будет добавлен в vad:ptree
-            const targetTrigValue = determineTargetGraph(subjectValue, predicateValue, trigValue);
+            // или если добавляется rdf:type vad:Process, триплет будет добавлен в vad:ptree
+            const targetTrigValue = determineTargetGraph(subjectValue, predicateValue, trigValue, objectValue);
 
             const sparqlQuery = generateInsertSparql(targetTrigValue, subjectValue, predicateValue, objectValue, isObjectLiteral);
 
@@ -5918,6 +5944,273 @@ vad:t1.1 rdfs:label "Схема процесса TriG1.1" ;
          */
         function escapeRegex(str) {
             return str.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+        }
+
+        /**
+         * LITERAL_PREDICATES - Предикаты, для которых объект должен быть литералом (единственное значение)
+         * При добавлении нового значения для этих предикатов, старое значение должно быть заменено
+         */
+        const LITERAL_PREDICATES = [
+            'rdfs:label',
+            'http://www.w3.org/2000/01/rdf-schema#label',
+            'dcterms:description',
+            'http://purl.org/dc/terms/description',
+            'dcterms:title',
+            'http://purl.org/dc/terms/title',
+            'rdfs:comment',
+            'http://www.w3.org/2000/01/rdf-schema#comment'
+        ];
+
+        /**
+         * Проверяет, является ли предикат литеральным (требующим единственного значения)
+         * @param {string} predicateUri - URI или prefixed name предиката
+         * @returns {boolean}
+         */
+        function isLiteralPredicate(predicateUri) {
+            return LITERAL_PREDICATES.some(allowed =>
+                predicateUri === allowed || predicateUri.endsWith('#' + allowed.split(':')[1])
+            );
+        }
+
+        /**
+         * Находит существующее значение литерального предиката для субъекта
+         * @param {string} subjectValue - URI или prefixed name субъекта
+         * @param {string} predicateValue - URI или prefixed name предиката
+         * @returns {Object|null} - { value: string, graphUri: string } если найдено, иначе null
+         */
+        function findExistingLiteralValue(subjectValue, predicateValue) {
+            // Преобразуем prefixed names в полные URI
+            let subjectUri = subjectValue;
+            let predicateUri = predicateValue;
+
+            for (const [prefix, namespace] of Object.entries(currentPrefixes)) {
+                if (subjectValue.startsWith(prefix + ':')) {
+                    subjectUri = namespace + subjectValue.substring(prefix.length + 1);
+                }
+                if (predicateValue.startsWith(prefix + ':')) {
+                    predicateUri = namespace + predicateValue.substring(prefix.length + 1);
+                }
+            }
+
+            const subjectPrefixed = getPrefixedName(subjectUri, currentPrefixes);
+            const predicatePrefixed = getPrefixedName(predicateUri, currentPrefixes);
+
+            for (const quad of currentQuads) {
+                const qSubjectUri = quad.subject.value;
+                const qPredicateUri = quad.predicate.value;
+                const qSubjectPrefixed = getPrefixedName(qSubjectUri, currentPrefixes);
+                const qPredicatePrefixed = getPrefixedName(qPredicateUri, currentPrefixes);
+
+                const subjectMatch = (subjectUri === qSubjectUri) || (subjectPrefixed === qSubjectPrefixed);
+                const predicateMatch = (predicateUri === qPredicateUri) || (predicatePrefixed === qPredicatePrefixed);
+
+                if (subjectMatch && predicateMatch && quad.object.termType === 'Literal') {
+                    const graphUri = quad.graph ? quad.graph.value : null;
+                    return { value: quad.object.value, graphUri: graphUri };
+                }
+            }
+
+            return null;
+        }
+
+        /**
+         * Показывает сообщение в панели Result in SPARQL
+         * @param {string} message - Текст сообщения
+         * @param {string} type - Тип: 'success', 'error', 'info'
+         */
+        function showResultSparqlMessage(message, type = 'info') {
+            const messageDiv = document.getElementById('result-sparql-message');
+            if (messageDiv) {
+                messageDiv.textContent = message;
+                messageDiv.className = 'smart-design-message ' + type;
+                messageDiv.style.display = 'block';
+            }
+        }
+
+        /**
+         * Скрывает сообщение в панели Result in SPARQL
+         */
+        function hideResultSparqlMessage() {
+            const messageDiv = document.getElementById('result-sparql-message');
+            if (messageDiv) {
+                messageDiv.style.display = 'none';
+            }
+        }
+
+        /**
+         * Обработчик кнопки "Применить как Shorthand Triple"
+         * Добавляет триплет в shorthand форме (через запятую)
+         */
+        function smartDesignApplyShorthand() {
+            const resultTextarea = document.getElementById('result-sparql-query');
+            if (!resultTextarea || !resultTextarea.value.trim()) {
+                showResultSparqlMessage('Ошибка: Сначала сгенерируйте SPARQL запрос (нажмите "Создать SPARQL" или "Удалить")', 'error');
+                return;
+            }
+
+            const sparqlQuery = resultTextarea.value.trim();
+            const rdfInput = document.getElementById('rdf-input');
+
+            if (!rdfInput) {
+                showResultSparqlMessage('Ошибка: Не найдено поле RDF данных', 'error');
+                return;
+            }
+
+            // Определяем тип запроса (только INSERT поддерживается для shorthand)
+            const isInsert = sparqlQuery.includes('INSERT DATA');
+            const isDelete = sparqlQuery.includes('DELETE DATA');
+
+            if (isDelete) {
+                showResultSparqlMessage('Ошибка: Shorthand Triple режим не поддерживает DELETE операции. Используйте "Применить как Simple Triple".', 'error');
+                return;
+            }
+
+            if (!isInsert) {
+                showResultSparqlMessage('Ошибка: Неизвестный тип SPARQL запроса', 'error');
+                return;
+            }
+
+            // Паттерн для извлечения URI/префиксного имени
+            const uriPattern = '(?:<[^>]+>|[a-zA-Z_][a-zA-Z0-9_]*:[a-zA-Z0-9_.-]+)';
+            const objectPattern = '(?:<[^>]+>|[a-zA-Z_][a-zA-Z0-9_]*:[a-zA-Z0-9_.-]+|"[^"]*")';
+
+            // Извлекаем GRAPH и триплеты из запроса
+            const graphMatch = sparqlQuery.match(new RegExp(`GRAPH\\s+(${uriPattern})\\s*\\{([\\s\\S]*?)\\}`, 'i'));
+
+            if (!graphMatch) {
+                showResultSparqlMessage('Ошибка: Не удалось распознать GRAPH в SPARQL запросе', 'error');
+                return;
+            }
+
+            const graphRef = graphMatch[1];
+            const graphBody = graphMatch[2];
+
+            // Извлекаем триплеты из тела GRAPH
+            const triplePattern = new RegExp(`(${uriPattern})\\s+(${uriPattern})\\s+(${objectPattern})\\s*\\.`, 'g');
+            const triples = [];
+            let tripleMatch;
+            while ((tripleMatch = triplePattern.exec(graphBody)) !== null) {
+                triples.push({
+                    subject: tripleMatch[1],
+                    predicate: tripleMatch[2],
+                    object: tripleMatch[3]
+                });
+            }
+
+            if (triples.length === 0) {
+                showResultSparqlMessage('Ошибка: Не удалось распознать триплеты в SPARQL запросе', 'error');
+                return;
+            }
+
+            // Конвертируем URI/префикс в префиксную форму
+            function toPrefixed(ref) {
+                if (ref.startsWith('<') && ref.endsWith('>')) {
+                    const cleanUri = ref.slice(1, -1);
+                    return getPrefixedName(cleanUri, currentPrefixes);
+                }
+                return ref;
+            }
+
+            const graphPrefixed = toPrefixed(graphRef);
+            let currentRdfText = rdfInput.value;
+            let successCount = 0;
+            let replaceMessages = [];
+
+            for (const triple of triples) {
+                const subjectPrefixed = toPrefixed(triple.subject);
+                const predicatePrefixed = toPrefixed(triple.predicate);
+                const objectPrefixed = toPrefixed(triple.object);
+
+                // Проверяем, является ли предикат литеральным
+                const isLiteralPred = isLiteralPredicate(predicatePrefixed);
+
+                if (isLiteralPred) {
+                    // Для литеральных предикатов - ищем и заменяем существующее значение
+                    const existingValue = findExistingLiteralValue(subjectPrefixed, predicatePrefixed);
+                    if (existingValue) {
+                        // Нужно удалить старое значение и добавить новое в shorthand стиле
+                        const oldValueEscaped = escapeRegex(`"${existingValue.value}"`);
+
+                        // Паттерн 1: Простой триплет "subject predicate value"
+                        let replacePattern = new RegExp(
+                            `(${escapeRegex(subjectPrefixed)}\\s+${escapeRegex(predicatePrefixed)}\\s+)${oldValueEscaped}`,
+                            'g'
+                        );
+                        let newText = currentRdfText.replace(replacePattern, `$1${objectPrefixed}`);
+
+                        // Паттерн 2: Shorthand формат - предикат после точки с запятой "... ; predicate value"
+                        if (newText === currentRdfText) {
+                            replacePattern = new RegExp(
+                                `(;\\s*${escapeRegex(predicatePrefixed)}\\s+)${oldValueEscaped}`,
+                                'g'
+                            );
+                            newText = currentRdfText.replace(replacePattern, `$1${objectPrefixed}`);
+                        }
+
+                        if (newText !== currentRdfText) {
+                            currentRdfText = newText;
+                            replaceMessages.push(`Прежнее значение "${existingValue.value}" заменено`);
+                            successCount++;
+                            continue;
+                        }
+                    }
+                }
+
+                // Ищем существующий триплет с тем же subject и predicate для добавления через запятую
+                const subjectPredicatePattern = new RegExp(
+                    `(${escapeRegex(subjectPrefixed)}\\s+${escapeRegex(predicatePrefixed)}\\s+)([^;.]+)([;.])`,
+                    'g'
+                );
+
+                const existingMatch = currentRdfText.match(subjectPredicatePattern);
+                if (existingMatch) {
+                    // Добавляем новый объект через запятую
+                    currentRdfText = currentRdfText.replace(
+                        subjectPredicatePattern,
+                        `$1$2, ${objectPrefixed}$3`
+                    );
+                    successCount++;
+                } else {
+                    // Ищем существующий субъект для добавления нового предиката
+                    const subjectPattern = new RegExp(
+                        `(${escapeRegex(subjectPrefixed)}\\s+[^}]*?)([;.])\\s*(})`,
+                        's'
+                    );
+                    const subjectMatch = currentRdfText.match(subjectPattern);
+
+                    if (subjectMatch) {
+                        // Добавляем новый предикат и объект
+                        const replacement = `$1 ;\n        ${predicatePrefixed} ${objectPrefixed}$2$3`;
+                        currentRdfText = currentRdfText.replace(subjectPattern, replacement);
+                        successCount++;
+                    } else {
+                        // Создаем новый субъект в графе
+                        let graphEndPattern = new RegExp(`(${escapeRegex(graphPrefixed)}\\s*\\{[^}]*)(\\s*\\})`, 's');
+                        let graphTextMatch = currentRdfText.match(graphEndPattern);
+
+                        if (graphTextMatch) {
+                            const newTriple = `\n    ${subjectPrefixed} ${predicatePrefixed} ${objectPrefixed} .`;
+                            currentRdfText = currentRdfText.replace(graphEndPattern, `$1${newTriple}$2`);
+                            successCount++;
+                        }
+                    }
+                }
+            }
+
+            if (successCount > 0) {
+                rdfInput.value = currentRdfText;
+                let message = `Shorthand Triple: ${successCount} значение(й) успешно добавлено.`;
+                if (replaceMessages.length > 0) {
+                    message += ' ' + replaceMessages.join('. ') + '.';
+                }
+                message += ' Нажмите "Визуализировать" для обновления графа.';
+                showResultSparqlMessage(message, 'success');
+            } else {
+                showResultSparqlMessage('Не удалось добавить значения в shorthand формате', 'error');
+            }
+
+            // Очищаем поле SPARQL результата после применения
+            resultTextarea.value = '';
         }
 
         /**
