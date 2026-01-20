@@ -1514,6 +1514,7 @@
             <div class="smart-design-buttons">
                 <button class="new-trig-btn" onclick="openNewTrigModal()">New TriG</button>
                 <button onclick="smartDesignCreate()">Создать SPARQL</button>
+                <button onclick="smartDesignCreateWithPrefix()" style="background-color: #1565C0;">Создать SPARQL (prefix)</button>
                 <button class="delete-btn" onclick="smartDesignDelete()">Удалить триплет</button>
                 <button class="clear-btn" onclick="smartDesignClear()">Очистить</button>
             </div>
@@ -5850,6 +5851,152 @@ vad:t1.1 rdfs:label "Схема процесса TriG1.1" ;
         }
 
         /**
+         * Форматирует URI или значение для SPARQL запроса в префиксной форме (prefix:name)
+         * @param {string} value - Значение для форматирования
+         * @param {boolean} isLiteral - Является ли значение литералом (для новых Object)
+         * @returns {string} - Форматированное значение в префиксной форме
+         */
+        function formatForSparqlWithPrefix(value, isLiteral = false) {
+            if (!value) return '';
+
+            // Если это литерал, заключаем в кавычки
+            if (isLiteral) {
+                // Экранируем специальные символы в строке
+                const escaped = value.replace(/\\/g, '\\\\').replace(/"/g, '\\"');
+                return `"${escaped}"`;
+            }
+
+            // Если это полный URI - преобразуем в префиксную форму
+            if (value.startsWith('http://') || value.startsWith('https://')) {
+                const prefixed = getPrefixedName(value, currentPrefixes);
+                // Если удалось преобразовать в префиксную форму
+                if (prefixed !== value && prefixed.includes(':')) {
+                    return prefixed;
+                }
+                // Если не удалось - возвращаем в угловых скобках
+                return `<${value}>`;
+            }
+
+            // Если это уже префиксированное имя
+            if (value.includes(':')) {
+                return value;
+            }
+
+            // Если это кастомное значение без префикса, пробуем использовать vad: префикс
+            if (currentPrefixes['vad']) {
+                return `vad:${value}`;
+            }
+
+            // В крайнем случае создаем URI
+            return `<http://example.org/vad#${value}>`;
+        }
+
+        /**
+         * Генерирует SPARQL INSERT запрос с использованием префиксов (prefix:name)
+         * @param {string} trigUri - URI TriG графа
+         * @param {string} subjectUri - URI субъекта
+         * @param {string} predicateUri - URI предиката
+         * @param {string} objectUri - URI объекта
+         * @param {boolean} isObjectLiteral - Является ли Object литералом
+         * @returns {string} - SPARQL INSERT запрос с префиксами
+         */
+        function generateInsertSparqlWithPrefix(trigUri, subjectUri, predicateUri, objectUri, isObjectLiteral = false) {
+            const prefixDeclarations = generateSparqlPrefixes(currentPrefixes);
+
+            const subject = formatForSparqlWithPrefix(subjectUri);
+            const predicate = formatForSparqlWithPrefix(predicateUri);
+            const object = formatForSparqlWithPrefix(objectUri, isObjectLiteral);
+            const graph = formatForSparqlWithPrefix(trigUri);
+
+            return `${prefixDeclarations}INSERT DATA {
+    GRAPH ${graph} {
+        ${subject} ${predicate} ${object} .
+    }
+}`;
+        }
+
+        /**
+         * Обработчик кнопки "Создать SPARQL (prefix)" - генерирует INSERT SPARQL запрос с использованием префиксов
+         */
+        function smartDesignCreateWithPrefix() {
+            hideSmartDesignMessage();
+
+            // Сбрасываем флаг New TriG, т.к. создаем обычный SPARQL запрос
+            isNewTrigQuery = false;
+            updateSimpleTripleButtonState();
+
+            const trigValue = getSmartDesignValue('smart-design-trig');
+            const subjectValue = getSmartDesignValue('smart-design-subject');
+            const predicateValue = getSmartDesignValue('smart-design-predicate');
+            const objectValue = getSmartDesignValue('smart-design-object');
+            const isObjectLiteral = isSmartDesignValueCustom('smart-design-object');
+
+            if (!trigValue || !subjectValue || !predicateValue || !objectValue) {
+                showSmartDesignMessage('Ошибка: Заполните все четыре поля (TriG, Subject, Predicate, Object)', 'error');
+                return;
+            }
+
+            // Проверка на дубликаты (поддерживает как полные URI, так и prefixed names)
+            const duplicate = findDuplicateTriple(subjectValue, predicateValue, objectValue);
+            if (duplicate) {
+                showSmartDesignMessage(`Ошибка: Триплет уже существует в графе "${duplicate.graphLabel}"`, 'error');
+                return;
+            }
+
+            // Проверка: если TriG НЕ vad:ptree, но субъект vad:Process и предикат из PTREE_PREDICATES - ошибка
+            const isPtreeTrig = trigValue === 'vad:ptree' ||
+                               trigValue === 'http://example.org/vad#ptree' ||
+                               trigValue.endsWith('#ptree');
+
+            if (!isPtreeTrig) {
+                // Преобразуем subjectValue в URI для проверки типа
+                let subjectUri = subjectValue;
+                for (const [prefix, namespace] of Object.entries(currentPrefixes)) {
+                    if (subjectValue.startsWith(prefix + ':')) {
+                        subjectUri = namespace + subjectValue.substring(prefix.length + 1);
+                        break;
+                    }
+                }
+
+                const subjectIsProcess = isSubjectVadProcess(subjectUri);
+                const predicateIsPtree = isPtreePredicate(predicateValue);
+
+                if (subjectIsProcess && predicateIsPtree) {
+                    const ptreePredicatesList = PTREE_PREDICATES
+                        .filter(p => !p.startsWith('http'))
+                        .join(', ');
+                    showSmartDesignMessage(
+                        `Ошибка: Для субъекта типа vad:Process с предикатом из списка PTREE_PREDICATES ` +
+                        `(${ptreePredicatesList}) триплет должен быть добавлен в граф vad:ptree, а не в "${getPrefixedName(trigValue, currentPrefixes) || trigValue}"`,
+                        'error'
+                    );
+                    return;
+                }
+            }
+
+            // Определяем целевой граф на основе правил ptree
+            // Если субъект является vad:Process и предикат в PTREE_PREDICATES,
+            // или если добавляется rdf:type vad:Process, триплет будет добавлен в vad:ptree
+            const targetTrigValue = determineTargetGraph(subjectValue, predicateValue, trigValue, objectValue);
+
+            // Генерируем SPARQL с использованием префиксов
+            const sparqlQuery = generateInsertSparqlWithPrefix(targetTrigValue, subjectValue, predicateValue, objectValue, isObjectLiteral);
+
+            const resultTextarea = document.getElementById('result-sparql-query');
+            if (resultTextarea) {
+                resultTextarea.value = sparqlQuery;
+            }
+
+            // Формируем сообщение с указанием целевого графа
+            let successMessage = 'INSERT SPARQL запрос с prefix:name успешно сгенерирован';
+            if (targetTrigValue !== trigValue) {
+                successMessage += ` (перенаправлен в ${targetTrigValue})`;
+            }
+            successMessage += '.';
+            showSmartDesignMessage(successMessage, 'success');
+        }
+
+        /**
          * Обработчик кнопки "Создать" - генерирует INSERT SPARQL запрос
          */
         function smartDesignCreate() {
@@ -6478,43 +6625,57 @@ vad:t1.1 rdfs:label "Схема процесса TriG1.1" ;
                     }
                 }
 
-                // Ищем существующий триплет с тем же subject и predicate для добавления через запятую
-                const subjectPredicatePattern = new RegExp(
+                // Сначала извлекаем содержимое целевого графа для проверки
+                const graphContentPattern = new RegExp(`(${escapeRegex(graphPrefixed)}\\s*\\{)([\\s\\S]*?)(\\})`, 's');
+                const graphContentMatch = currentRdfText.match(graphContentPattern);
+
+                if (!graphContentMatch) {
+                    // Граф не найден - создаем новый граф с триплетом
+                    const newGraph = `\n\n${graphPrefixed} {\n    ${subjectPrefixed} ${predicatePrefixed} ${objectPrefixed} .\n}`;
+                    currentRdfText += newGraph;
+                    successCount++;
+                    continue;
+                }
+
+                const graphContent = graphContentMatch[2];
+
+                // Ищем существующий триплет с тем же subject и predicate В ПРЕДЕЛАХ ЦЕЛЕВОГО ГРАФА для добавления через запятую
+                const subjectPredicateInGraphPattern = new RegExp(
                     `(${escapeRegex(subjectPrefixed)}\\s+${escapeRegex(predicatePrefixed)}\\s+)([^;.]+)([;.])`,
                     'g'
                 );
 
-                const existingMatch = currentRdfText.match(subjectPredicatePattern);
-                if (existingMatch) {
-                    // Добавляем новый объект через запятую
-                    currentRdfText = currentRdfText.replace(
-                        subjectPredicatePattern,
+                const existingMatchInGraph = graphContent.match(subjectPredicateInGraphPattern);
+                if (existingMatchInGraph) {
+                    // Добавляем новый объект через запятую В ПРЕДЕЛАХ ЦЕЛЕВОГО ГРАФА
+                    const newGraphContent = graphContent.replace(
+                        subjectPredicateInGraphPattern,
                         `$1$2, ${objectPrefixed}$3`
                     );
+                    currentRdfText = currentRdfText.replace(graphContentPattern, `$1${newGraphContent}$3`);
                     successCount++;
                 } else {
-                    // Ищем существующий субъект для добавления нового предиката
-                    const subjectPattern = new RegExp(
-                        `(${escapeRegex(subjectPrefixed)}\\s+[^}]*?)([;.])\\s*(})`,
+                    // Ищем существующий субъект для добавления нового предиката В ПРЕДЕЛАХ ЦЕЛЕВОГО ГРАФА
+                    const subjectInGraphPattern = new RegExp(
+                        `(${escapeRegex(subjectPrefixed)}\\s+[^}]*?)([;.])(?=\\s|$|\\n)`,
                         's'
                     );
-                    const subjectMatch = currentRdfText.match(subjectPattern);
+                    const subjectMatchInGraph = graphContent.match(subjectInGraphPattern);
 
-                    if (subjectMatch) {
-                        // Добавляем новый предикат и объект
-                        const replacement = `$1 ;\n        ${predicatePrefixed} ${objectPrefixed}$2$3`;
-                        currentRdfText = currentRdfText.replace(subjectPattern, replacement);
+                    if (subjectMatchInGraph) {
+                        // Добавляем новый предикат и объект В ПРЕДЕЛАХ ЦЕЛЕВОГО ГРАФА
+                        const newGraphContent = graphContent.replace(
+                            subjectInGraphPattern,
+                            `$1 ;\n        ${predicatePrefixed} ${objectPrefixed}$2`
+                        );
+                        currentRdfText = currentRdfText.replace(graphContentPattern, `$1${newGraphContent}$3`);
                         successCount++;
                     } else {
-                        // Создаем новый субъект в графе
-                        let graphEndPattern = new RegExp(`(${escapeRegex(graphPrefixed)}\\s*\\{[^}]*)(\\s*\\})`, 's');
-                        let graphTextMatch = currentRdfText.match(graphEndPattern);
-
-                        if (graphTextMatch) {
-                            const newTriple = `\n    ${subjectPrefixed} ${predicatePrefixed} ${objectPrefixed} .`;
-                            currentRdfText = currentRdfText.replace(graphEndPattern, `$1${newTriple}$2`);
-                            successCount++;
-                        }
+                        // Создаем новый субъект в целевом графе
+                        const newTriple = `\n    ${subjectPrefixed} ${predicatePrefixed} ${objectPrefixed} .`;
+                        const newGraphContent = graphContent + newTriple;
+                        currentRdfText = currentRdfText.replace(graphContentPattern, `$1${newGraphContent}$3`);
+                        successCount++;
                     }
                 }
             }

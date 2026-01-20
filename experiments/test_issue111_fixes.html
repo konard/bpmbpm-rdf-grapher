@@ -1,0 +1,122 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Test Issue #111 Fixes - Shorthand Triple GRAPH Bug and Prefix SPARQL</title>
+    <style>
+        body { font-family: Arial, sans-serif; max-width: 1200px; margin: 0 auto; padding: 20px; }
+        h1 { color: #333; }
+        .test-section { margin: 20px 0; padding: 20px; border: 1px solid #ddd; border-radius: 5px; }
+        .test-section h2 { margin-top: 0; }
+        .success { color: green; }
+        .error { color: red; }
+        code { background: #f5f5f5; padding: 2px 6px; border-radius: 3px; }
+        pre { background: #f5f5f5; padding: 15px; border-radius: 5px; overflow-x: auto; }
+        .test-case { margin: 15px 0; padding: 15px; background: #fafafa; border-left: 4px solid #ddd; }
+        .test-case.pass { border-left-color: green; }
+        .test-case.fail { border-left-color: red; }
+    </style>
+</head>
+<body>
+    <h1>Test Issue #111 Fixes</h1>
+
+    <div class="test-section">
+        <h2>Bug Fix: Shorthand Triple should respect GRAPH directive</h2>
+        <p>The issue was that when using "Применить как Shorthand Triple", the code would search for the subject
+           across ALL graphs and add the predicate to whichever graph contained the subject first,
+           even if the SPARQL query specified a different target graph.</p>
+
+        <div class="test-case">
+            <h3>Scenario from Issue</h3>
+            <p>When user generates:</p>
+            <pre>
+PREFIX vad: &lt;http://example.org/vad#&gt;
+
+INSERT DATA {
+    GRAPH &lt;http://example.org/vad#t1&gt; {
+        &lt;http://example.org/vad#p1&gt; &lt;http://example.org/vad#hasNext&gt; &lt;http://example.org/vad#Process4&gt; .
+    }
+}</pre>
+            <p>And clicks "Применить как Shorthand Triple", the triple should be added to <code>vad:t1</code> graph,
+               NOT to <code>vad:ptree</code> (where vad:p1 might have metadata).</p>
+        </div>
+
+        <div class="test-case">
+            <h3>Fix Details</h3>
+            <p>The <code>smartDesignApplyShorthand()</code> function was modified to:</p>
+            <ol>
+                <li>First extract the content of the target graph using <code>graphContentPattern</code></li>
+                <li>Search for subject/predicate patterns ONLY within that graph content</li>
+                <li>Apply changes only within the target graph context</li>
+            </ol>
+        </div>
+    </div>
+
+    <div class="test-section">
+        <h2>New Feature: "Создать SPARQL (prefix)" Button</h2>
+        <p>A new button was added that generates SPARQL queries using prefix:name format instead of full IRIs.</p>
+
+        <div class="test-case">
+            <h3>Comparison Example</h3>
+            <p><strong>Original "Создать SPARQL" button produces:</strong></p>
+            <pre>
+PREFIX vad: &lt;http://example.org/vad#&gt;
+
+INSERT DATA {
+    GRAPH &lt;http://example.org/vad#t1&gt; {
+        &lt;http://example.org/vad#p1&gt; &lt;http://example.org/vad#hasNext&gt; &lt;http://example.org/vad#Process4&gt; .
+    }
+}</pre>
+
+            <p><strong>New "Создать SPARQL (prefix)" button produces:</strong></p>
+            <pre>
+PREFIX vad: &lt;http://example.org/vad#&gt;
+
+INSERT DATA {
+    GRAPH vad:t1 {
+        vad:p1 vad:hasNext vad:Process4 .
+    }
+}</pre>
+        </div>
+
+        <div class="test-case">
+            <h3>Implementation Details</h3>
+            <p>New functions added:</p>
+            <ul>
+                <li><code>formatForSparqlWithPrefix(value, isLiteral)</code> - Converts URIs to prefix:name format</li>
+                <li><code>generateInsertSparqlWithPrefix(...)</code> - Generates SPARQL INSERT using prefixed names</li>
+                <li><code>smartDesignCreateWithPrefix()</code> - Button click handler</li>
+            </ul>
+        </div>
+    </div>
+
+    <div class="test-section">
+        <h2>Manual Testing Instructions</h2>
+        <ol>
+            <li>Open <a href="../ver7s/index.html">ver7s/index.html</a></li>
+            <li>Load VAD TriG example data</li>
+            <li>Enable "Режим VAD TriG"</li>
+            <li>Enable "Smart Design (SPARQL)" toggle</li>
+            <li>Test Shorthand Triple fix:
+                <ul>
+                    <li>Select TriG: vad:t1</li>
+                    <li>Select Subject: vad:p1</li>
+                    <li>Select Predicate: vad:hasNext</li>
+                    <li>Select Object: vad:Process4</li>
+                    <li>Click "Создать SPARQL"</li>
+                    <li>Click "Применить как Shorthand Triple"</li>
+                    <li>Verify the triple is added to vad:t1 section, NOT vad:ptree</li>
+                </ul>
+            </li>
+            <li>Test new prefix button:
+                <ul>
+                    <li>Fill in Smart Design fields</li>
+                    <li>Click "Создать SPARQL (prefix)"</li>
+                    <li>Verify the generated SPARQL uses prefix:name format</li>
+                </ul>
+            </li>
+        </ol>
+    </div>
+</body>
+</html>
