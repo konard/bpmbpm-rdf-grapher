@@ -5505,6 +5505,135 @@ vad:t1.1 rdfs:label "Схема процесса TriG1.1" ;
         }
 
         /**
+         * Проверяет, является ли выбранный TriG графом vad:ptree
+         * @returns {boolean}
+         */
+        function isSelectedTrigPtree() {
+            const trigSelect = document.getElementById('smart-design-trig');
+            if (!trigSelect || !trigSelect.value) return false;
+            const trigValue = trigSelect.value;
+            return trigValue === 'vad:ptree' ||
+                   trigValue === 'http://example.org/vad#ptree' ||
+                   trigValue.endsWith('#ptree');
+        }
+
+        /**
+         * Получает субъекты типа vad:Process для фильтрации в режиме vad:ptree
+         * @returns {Array} - Массив объектов {uri, label}
+         */
+        function getProcessSubjects() {
+            const subjects = [];
+            const seen = new Set();
+
+            currentQuads.forEach(quad => {
+                const uri = quad.subject.value;
+                if (!seen.has(uri) && isSubjectVadProcess(uri)) {
+                    seen.add(uri);
+                    const label = getPrefixedName(uri, currentPrefixes);
+                    subjects.push({ uri: uri, label: label });
+                }
+            });
+
+            return subjects.sort((a, b) => a.label.localeCompare(b.label));
+        }
+
+        /**
+         * Получает предикаты из PTREE_PREDICATES для фильтрации в режиме vad:ptree
+         * @returns {Array} - Массив объектов {uri, label}
+         */
+        function getPtreePredicates() {
+            const predicates = [];
+            const seen = new Set();
+
+            // Добавляем только предикаты, которые есть в PTREE_PREDICATES и присутствуют в данных
+            currentQuads.forEach(quad => {
+                const uri = quad.predicate.value;
+                const prefixedName = getPrefixedName(uri, currentPrefixes);
+                if (!seen.has(uri) && (isPtreePredicate(uri) || isPtreePredicate(prefixedName))) {
+                    seen.add(uri);
+                    predicates.push({ uri: uri, label: prefixedName });
+                }
+            });
+
+            // Также добавляем предикаты из PTREE_PREDICATES, которых может не быть в данных
+            PTREE_PREDICATES.forEach(pred => {
+                if (!seen.has(pred) && !pred.startsWith('http')) {
+                    // Это prefixed name, проверяем есть ли такой в списке
+                    const alreadyInList = predicates.some(p => p.label === pred);
+                    if (!alreadyInList) {
+                        // Пробуем развернуть в полный URI
+                        let fullUri = pred;
+                        for (const [prefix, namespace] of Object.entries(currentPrefixes)) {
+                            if (pred.startsWith(prefix + ':')) {
+                                fullUri = namespace + pred.substring(prefix.length + 1);
+                                break;
+                            }
+                        }
+                        if (!seen.has(fullUri)) {
+                            seen.add(fullUri);
+                            predicates.push({ uri: fullUri, label: pred });
+                        }
+                    }
+                }
+            });
+
+            return predicates.sort((a, b) => a.label.localeCompare(b.label));
+        }
+
+        /**
+         * Обновляет содержимое выпадающих списков Subject и Predicate
+         * в зависимости от выбранного TriG (vad:ptree или другой)
+         */
+        function updateSubjectPredicateDropdowns() {
+            const subjectSelect = document.getElementById('smart-design-subject');
+            const predicateSelect = document.getElementById('smart-design-predicate');
+
+            if (!subjectSelect || !predicateSelect) return;
+
+            const isPtree = isSelectedTrigPtree();
+
+            // Сохраняем текущие выбранные значения (если возможно)
+            const currentSubjectValue = subjectSelect.value;
+            const currentPredicateValue = predicateSelect.value;
+
+            // Очищаем и заполняем Subject
+            subjectSelect.innerHTML = '<option value="">-- Выберите Subject --</option>';
+            subjectSelect.innerHTML += '<option value="__NEW__">New (создать новый)</option>';
+
+            const subjects = isPtree ? getProcessSubjects() : getAllSubjects();
+            subjects.forEach(s => {
+                const option = document.createElement('option');
+                option.value = s.uri;
+                option.textContent = s.label;
+                subjectSelect.appendChild(option);
+            });
+
+            // Очищаем и заполняем Predicate
+            predicateSelect.innerHTML = '<option value="">-- Выберите Predicate --</option>';
+            predicateSelect.innerHTML += '<option value="__NEW__">New (создать новый)</option>';
+
+            const predicates = isPtree ? getPtreePredicates() : getAllPredicates();
+            predicates.forEach(p => {
+                const option = document.createElement('option');
+                option.value = p.uri;
+                option.textContent = p.label;
+                predicateSelect.appendChild(option);
+            });
+
+            // Восстанавливаем выбор если значение все еще доступно
+            if (currentSubjectValue && Array.from(subjectSelect.options).some(o => o.value === currentSubjectValue)) {
+                subjectSelect.value = currentSubjectValue;
+            } else {
+                subjectSelect.value = '';
+            }
+            if (currentPredicateValue && Array.from(predicateSelect.options).some(o => o.value === currentPredicateValue)) {
+                predicateSelect.value = currentPredicateValue;
+            } else {
+                predicateSelect.value = '';
+            }
+        }
+
+        /**
          * Запрашивает у пользователя новое имя и проверяет его уникальность
          * @param {string} fieldName - Название поля (TriG, Subject, Predicate, Object)
          * @param {Function} existsChecker - Функция проверки существования
@@ -5563,6 +5692,8 @@ vad:t1.1 rdfs:label "Схема процесса TriG1.1" ;
                 trigSelect.addEventListener('change', function() {
                     // TriG теперь не имеет опции __NEW__, просто обновляем состояние полей
                     updateSmartDesignFieldsState();
+                    // Перезаполняем Subject и Predicate в зависимости от выбранного TriG (vad:ptree или нет)
+                    updateSubjectPredicateDropdowns();
                 });
             }
 
@@ -5746,6 +5877,37 @@ vad:t1.1 rdfs:label "Схема процесса TriG1.1" ;
                 return;
             }
 
+            // Проверка: если TriG НЕ vad:ptree, но субъект vad:Process и предикат из PTREE_PREDICATES - ошибка
+            const isPtreeTrig = trigValue === 'vad:ptree' ||
+                               trigValue === 'http://example.org/vad#ptree' ||
+                               trigValue.endsWith('#ptree');
+
+            if (!isPtreeTrig) {
+                // Преобразуем subjectValue в URI для проверки типа
+                let subjectUri = subjectValue;
+                for (const [prefix, namespace] of Object.entries(currentPrefixes)) {
+                    if (subjectValue.startsWith(prefix + ':')) {
+                        subjectUri = namespace + subjectValue.substring(prefix.length + 1);
+                        break;
+                    }
+                }
+
+                const subjectIsProcess = isSubjectVadProcess(subjectUri);
+                const predicateIsPtree = isPtreePredicate(predicateValue);
+
+                if (subjectIsProcess && predicateIsPtree) {
+                    const ptreePredicatesList = PTREE_PREDICATES
+                        .filter(p => !p.startsWith('http'))
+                        .join(', ');
+                    showSmartDesignMessage(
+                        `Ошибка: Для субъекта типа vad:Process с предикатом из списка PTREE_PREDICATES ` +
+                        `(${ptreePredicatesList}) триплет должен быть добавлен в граф vad:ptree, а не в "${getPrefixedName(trigValue, currentPrefixes) || trigValue}"`,
+                        'error'
+                    );
+                    return;
+                }
+            }
+
             // Определяем целевой граф на основе правил ptree
             // Если субъект является vad:Process и предикат в PTREE_PREDICATES,
             // или если добавляется rdf:type vad:Process, триплет будет добавлен в vad:ptree
@@ -5860,11 +6022,11 @@ vad:t1.1 rdfs:label "Схема процесса TriG1.1" ;
          * Обработчик кнопки "Применить SPARQL" - применяет запрос к RDF данным
          */
         function smartDesignApply() {
-            hideSmartDesignMessage();
+            hideResultSparqlMessage();
 
             const resultTextarea = document.getElementById('result-sparql-query');
             if (!resultTextarea || !resultTextarea.value.trim()) {
-                showSmartDesignMessage('Ошибка: Сначала сгенерируйте SPARQL запрос (нажмите "Создать Simple Triples" или "Удалить")', 'error');
+                showResultSparqlMessage('Ошибка: Сначала сгенерируйте SPARQL запрос (нажмите "Создать SPARQL" или "Удалить триплет")', 'error');
                 return;
             }
 
@@ -5872,7 +6034,7 @@ vad:t1.1 rdfs:label "Схема процесса TriG1.1" ;
             const rdfInput = document.getElementById('rdf-input');
 
             if (!rdfInput) {
-                showSmartDesignMessage('Ошибка: Не найдено поле RDF данных', 'error');
+                showResultSparqlMessage('Ошибка: Не найдено поле RDF данных', 'error');
                 return;
             }
 
@@ -5881,7 +6043,7 @@ vad:t1.1 rdfs:label "Схема процесса TriG1.1" ;
             const isDelete = sparqlQuery.includes('DELETE DATA');
 
             if (!isInsert && !isDelete) {
-                showSmartDesignMessage('Ошибка: Неизвестный тип SPARQL запроса', 'error');
+                showResultSparqlMessage('Ошибка: Неизвестный тип SPARQL запроса', 'error');
                 return;
             }
 
@@ -5894,7 +6056,7 @@ vad:t1.1 rdfs:label "Схема процесса TriG1.1" ;
             const graphMatch = sparqlQuery.match(new RegExp(`GRAPH\\s+(${uriPattern})\\s*\\{([\\s\\S]*?)\\}`, 'i'));
 
             if (!graphMatch) {
-                showSmartDesignMessage('Ошибка: Не удалось распознать GRAPH в SPARQL запросе', 'error');
+                showResultSparqlMessage('Ошибка: Не удалось распознать GRAPH в SPARQL запросе', 'error');
                 return;
             }
 
@@ -5914,7 +6076,7 @@ vad:t1.1 rdfs:label "Схема процесса TriG1.1" ;
             }
 
             if (triples.length === 0) {
-                showSmartDesignMessage('Ошибка: Не удалось распознать триплеты в SPARQL запросе', 'error');
+                showResultSparqlMessage('Ошибка: Не удалось распознать триплеты в SPARQL запросе', 'error');
                 return;
             }
 
@@ -5955,7 +6117,7 @@ vad:t1.1 rdfs:label "Схема процесса TriG1.1" ;
                     // Если есть дубликаты, показываем ошибку
                     if (duplicateTriples.length > 0) {
                         const duplicateMessages = duplicateTriples.map(d => `"${d.triple}" (в графе "${d.graph}")`).join(', ');
-                        showSmartDesignMessage(`Ошибка: Обнаружены дубликаты триплетов: ${duplicateMessages}`, 'error');
+                        showResultSparqlMessage(`Ошибка: Обнаружены дубликаты триплетов: ${duplicateMessages}`, 'error');
                         return;
                     }
                 }
@@ -5988,7 +6150,7 @@ vad:t1.1 rdfs:label "Схема процесса TriG1.1" ;
                 }
 
                 rdfInput.value = currentRdfText;
-                showSmartDesignMessage('Триплеты успешно добавлены в RDF данные. Нажмите "Визуализировать" для обновления графа.', 'success');
+                showResultSparqlMessage('Триплеты успешно добавлены в RDF данные. Нажмите "Визуализировать" для обновления графа.', 'success');
 
             } else if (isDelete) {
                 // Удаляем триплеты из RDF данных
@@ -6017,10 +6179,10 @@ vad:t1.1 rdfs:label "Схема процесса TriG1.1" ;
                 }
 
                 if (!wasDeleted) {
-                    showSmartDesignMessage('Предупреждение: Триплеты не найдены в текстовом представлении RDF данных', 'info');
+                    showResultSparqlMessage('Предупреждение: Триплеты не найдены в текстовом представлении RDF данных', 'info');
                 } else {
                     rdfInput.value = newRdfText;
-                    showSmartDesignMessage('Триплеты успешно удалены из RDF данных. Нажмите "Визуализировать" для обновления графа.', 'success');
+                    showResultSparqlMessage('Триплеты успешно удалены из RDF данных. Нажмите "Визуализировать" для обновления графа.', 'success');
                 }
             }
 
@@ -6633,6 +6795,9 @@ ${triples.join('\n')}
                     smartDesignContainer.classList.add('visible');
                     // Заполняем выпадающие списки при активации Smart Design
                     populateSmartDesignDropdowns();
+                    // Показываем справочные сообщения при открытии панели
+                    showSmartDesignMessage('Выберите TriG, затем Subject, Predicate и Object. Нажмите "Создать SPARQL" для генерации запроса.', 'info');
+                    showResultSparqlMessage('После генерации SPARQL запроса нажмите "Применить как Simple Triple" или "Применить как Shorthand Triple" для добавления в RDF данные.', 'info');
                 } else {
                     // Показываем сообщение, что Smart Design доступен только в VAD TriG
                     showSmartDesignMessage('SPARQL Smart Design доступен только в режиме "Режим VAD TriG"', 'info');
