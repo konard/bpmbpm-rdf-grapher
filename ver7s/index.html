@@ -1485,9 +1485,6 @@
         <!-- Панель Smart Design -->
         <div class="smart-design-panel">
             <h3>Smart Design</h3>
-            <div class="smart-design-info" style="font-size: 12px; color: #666; margin-bottom: 10px; padding: 5px; background-color: #f5f5f5; border-radius: 4px;">
-                Создание SPARQL INSERT/DELETE запросов из выбранных значений (TriG, Subject, Predicate, Object)
-            </div>
             <div class="smart-design-fields">
                 <div class="smart-design-field">
                     <label for="smart-design-trig">TriG:</label>
@@ -1525,9 +1522,6 @@
         <!-- Панель Result in SPARQL -->
         <div class="result-sparql-panel">
             <h3>Result in SPARQL</h3>
-            <div class="result-sparql-info" style="font-size: 12px; color: #666; margin-bottom: 10px; padding: 5px; background-color: #f5f5f5; border-radius: 4px;">
-                Simple Triple - добавление отдельной строки | Shorthand Triple - добавление через запятую (для литералов заменяет значение)
-            </div>
             <textarea class="result-sparql-textarea" id="result-sparql-query" placeholder="Здесь будет сгенерированный SPARQL запрос..."></textarea>
             <div class="smart-design-buttons" style="margin-top: 10px;">
                 <button class="apply-btn" onclick="smartDesignApply()">Применить как Simple Triple</button>
@@ -5941,6 +5935,31 @@ vad:t1.1 rdfs:label "Схема процесса TriG1.1" ;
             let currentRdfText = rdfInput.value;
 
             if (isInsert) {
+                // Проверка на дубликаты для каждого триплета (кроме создания нового TriG)
+                if (!isNewTrigQuery) {
+                    const duplicateTriples = [];
+                    for (const triple of triples) {
+                        const subjectPrefixed = toPrefixed(triple.subject);
+                        const predicatePrefixed = toPrefixed(triple.predicate);
+                        const objectPrefixed = toPrefixed(triple.object);
+
+                        const duplicate = findDuplicateTriple(subjectPrefixed, predicatePrefixed, objectPrefixed);
+                        if (duplicate) {
+                            duplicateTriples.push({
+                                triple: `${subjectPrefixed} ${predicatePrefixed} ${objectPrefixed}`,
+                                graph: duplicate.graphLabel
+                            });
+                        }
+                    }
+
+                    // Если есть дубликаты, показываем ошибку
+                    if (duplicateTriples.length > 0) {
+                        const duplicateMessages = duplicateTriples.map(d => `"${d.triple}" (в графе "${d.graph}")`).join(', ');
+                        showSmartDesignMessage(`Ошибка: Обнаружены дубликаты триплетов: ${duplicateMessages}`, 'error');
+                        return;
+                    }
+                }
+
                 // Формируем триплеты для вставки
                 const triplesForInsert = triples.map(t => {
                     const subjectPrefixed = toPrefixed(t.subject);
@@ -6183,10 +6202,79 @@ vad:t1.1 rdfs:label "Схема процесса TriG1.1" ;
                 return ref;
             }
 
+            // Проверка на дубликаты для каждого триплета
+            const duplicateTriples = [];
+            for (const triple of triples) {
+                const subjectPrefixed = toPrefixed(triple.subject);
+                const predicatePrefixed = toPrefixed(triple.predicate);
+                const objectPrefixed = toPrefixed(triple.object);
+
+                const duplicate = findDuplicateTriple(subjectPrefixed, predicatePrefixed, objectPrefixed);
+                if (duplicate) {
+                    duplicateTriples.push({
+                        triple: `${subjectPrefixed} ${predicatePrefixed} ${objectPrefixed}`,
+                        graph: duplicate.graphLabel
+                    });
+                }
+            }
+
+            // Если есть дубликаты, показываем ошибку
+            if (duplicateTriples.length > 0) {
+                const duplicateMessages = duplicateTriples.map(d => `"${d.triple}" (в графе "${d.graph}")`).join(', ');
+                showResultSparqlMessage(`Ошибка: Обнаружены дубликаты триплетов: ${duplicateMessages}`, 'error');
+                return;
+            }
+
             const graphPrefixed = toPrefixed(graphRef);
             let currentRdfText = rdfInput.value;
             let successCount = 0;
             let replaceMessages = [];
+
+            // Специальная обработка для создания нового TriG в shorthand формате
+            if (isNewTrigQuery) {
+                // Группируем триплеты по субъекту для shorthand записи
+                const triplesBySubject = new Map();
+                for (const triple of triples) {
+                    const subjectPrefixed = toPrefixed(triple.subject);
+                    const predicatePrefixed = toPrefixed(triple.predicate);
+                    const objectPrefixed = toPrefixed(triple.object);
+
+                    if (!triplesBySubject.has(subjectPrefixed)) {
+                        triplesBySubject.set(subjectPrefixed, []);
+                    }
+                    triplesBySubject.get(subjectPrefixed).push({ predicate: predicatePrefixed, object: objectPrefixed });
+                }
+
+                // Формируем shorthand запись для каждого субъекта
+                let shorthandTriples = [];
+                for (const [subject, predicateObjects] of triplesBySubject) {
+                    if (predicateObjects.length === 1) {
+                        // Один предикат-объект - простая запись
+                        shorthandTriples.push(`    ${subject} ${predicateObjects[0].predicate} ${predicateObjects[0].object} .`);
+                    } else {
+                        // Несколько предикатов-объектов - shorthand через точку с запятой
+                        const firstPO = predicateObjects[0];
+                        let shorthandLine = `    ${subject} ${firstPO.predicate} ${firstPO.object}`;
+                        for (let i = 1; i < predicateObjects.length; i++) {
+                            shorthandLine += ` ;\n        ${predicateObjects[i].predicate} ${predicateObjects[i].object}`;
+                        }
+                        shorthandLine += ' .';
+                        shorthandTriples.push(shorthandLine);
+                    }
+                }
+
+                // Создаем новый граф с shorthand записями
+                const newGraph = `\n\n${graphPrefixed} {\n${shorthandTriples.join('\n')}\n}`;
+                currentRdfText += newGraph;
+                rdfInput.value = currentRdfText;
+
+                // Сбрасываем флаг New TriG
+                isNewTrigQuery = false;
+                updateSimpleTripleButtonState();
+
+                showResultSparqlMessage(`Новый TriG "${graphPrefixed}" успешно создан в shorthand формате. Нажмите "Визуализировать" для обновления графа.`, 'success');
+                return;
+            }
 
             for (const triple of triples) {
                 const subjectPrefixed = toPrefixed(triple.subject);
@@ -6398,27 +6486,21 @@ ${triples.join('\n')}
             updateSimpleTripleButtonState();
 
             closeNewTrigModal();
-            showSmartDesignMessage('SPARQL запрос для создания нового TriG сгенерирован. Нажмите "Применить как Shorthand Triple" для добавления в RDF данные.', 'success');
+            showSmartDesignMessage('SPARQL запрос для создания нового TriG сгенерирован. Нажмите "Применить как Simple Triple" (отдельные строки) или "Применить как Shorthand Triple" (составная запись через ;).', 'success');
         }
 
         /**
          * Обновляет состояние кнопки "Применить как Simple Triple"
-         * Кнопка отключается, когда текущий SPARQL запрос создан функцией "New TriG"
+         * Обе кнопки активны для создания нового TriG
          */
         function updateSimpleTripleButtonState() {
             const simpleTripleBtn = document.querySelector('.apply-btn[onclick="smartDesignApply()"]');
             if (simpleTripleBtn) {
-                if (isNewTrigQuery) {
-                    simpleTripleBtn.disabled = true;
-                    simpleTripleBtn.style.opacity = '0.5';
-                    simpleTripleBtn.style.cursor = 'not-allowed';
-                    simpleTripleBtn.title = 'Для создания нового TriG используйте "Применить как Shorthand Triple"';
-                } else {
-                    simpleTripleBtn.disabled = false;
-                    simpleTripleBtn.style.opacity = '1';
-                    simpleTripleBtn.style.cursor = 'pointer';
-                    simpleTripleBtn.title = '';
-                }
+                // Кнопка Simple Triple всегда активна
+                simpleTripleBtn.disabled = false;
+                simpleTripleBtn.style.opacity = '1';
+                simpleTripleBtn.style.cursor = 'pointer';
+                simpleTripleBtn.title = '';
             }
         }
 
@@ -6551,9 +6633,6 @@ ${triples.join('\n')}
                     smartDesignContainer.classList.add('visible');
                     // Заполняем выпадающие списки при активации Smart Design
                     populateSmartDesignDropdowns();
-                    // Показываем начальное сообщение при открытии Smart Design
-                    showSmartDesignMessage('Создание SPARQL INSERT/DELETE запросов из выбранных значений (TriG, Subject, Predicate, Object)', 'info');
-                    showResultSparqlMessage('Simple Triple - добавление отдельной строки | Shorthand Triple - добавление через запятую (для литералов заменяет значение)', 'info');
                 } else {
                     // Показываем сообщение, что Smart Design доступен только в VAD TriG
                     showSmartDesignMessage('SPARQL Smart Design доступен только в режиме "Режим VAD TriG"', 'info');
