@@ -2449,6 +2449,8 @@ WHERE {
             });
 
             // Собираем информацию о процессах для каждого графа
+            // Шаг 1: Собираем все URI процессов из всех графов (включая vad:ptree)
+            const allProcessUris = new Set();
             Object.values(hierarchy).forEach(graphInfo => {
                 graphInfo.quads.forEach(quad => {
                     const predicateUri = quad.predicate.value;
@@ -2459,10 +2461,45 @@ WHERE {
                         const typeUri = quad.object.value;
                         const typeLabel = getPrefixedName(typeUri, prefixes);
                         if (typeLabel === 'vad:Process' || typeUri === 'http://example.org/vad#Process') {
-                            graphInfo.processes.push(quad.subject.value);
+                            allProcessUris.add(quad.subject.value);
                         }
                     }
                 });
+            });
+
+            // Шаг 2: Для каждого графа (кроме ptree) определяем, какие процессы в нём присутствуют
+            // Процесс считается присутствующим в графе, если у него есть свойства (vad:hasExecutor, vad:hasNext и т.д.) в этом графе
+            const processPredicates = [
+                'http://example.org/vad#hasExecutor',
+                'vad:hasExecutor',
+                'http://example.org/vad#hasNext',
+                'vad:hasNext',
+                'http://example.org/vad#processSubtype',
+                'vad:processSubtype'
+            ];
+
+            Object.values(hierarchy).forEach(graphInfo => {
+                // Для vad:ptree пропускаем присваивание процессов (это граф метаданных)
+                if (graphInfo.uri === PTREE_GRAPH_URI) {
+                    return;
+                }
+
+                // Ищем процессы, которые имеют свойства в этом графе
+                const processesInGraph = new Set();
+                graphInfo.quads.forEach(quad => {
+                    const subjectUri = quad.subject.value;
+                    const predicateUri = quad.predicate.value;
+                    const predicateLabel = getPrefixedName(predicateUri, prefixes);
+
+                    // Если субъект является процессом (из allProcessUris) и предикат - это свойство процесса
+                    if (allProcessUris.has(subjectUri)) {
+                        if (processPredicates.includes(predicateUri) || processPredicates.includes(predicateLabel)) {
+                            processesInGraph.add(subjectUri);
+                        }
+                    }
+                });
+
+                graphInfo.processes = Array.from(processesInGraph);
             });
 
             return { valid: true, errors: [], hierarchy, rootTrigUri };
@@ -3008,51 +3045,64 @@ WHERE {
                 'vad:processSubtype'
             ];
 
-            quads.forEach(quad => {
-                const predicateValue = quad.predicate.value;
-                const predicateLabel = getPrefixedName(predicateValue, prefixes);
+            // Функция для обработки квадов и наполнения кешей
+            function processQuads(quadsToProcess) {
+                quadsToProcess.forEach(quad => {
+                    const predicateValue = quad.predicate.value;
+                    const predicateLabel = getPrefixedName(predicateValue, prefixes);
 
-                // Build types cache
-                if (typePredicates.includes(predicateValue) ||
-                    typePredicates.includes(predicateLabel) ||
-                    predicateLabel === 'a') {
+                    // Build types cache
+                    if (typePredicates.includes(predicateValue) ||
+                        typePredicates.includes(predicateLabel) ||
+                        predicateLabel === 'a') {
 
-                    const subjectUri = quad.subject.value;
-                    const typeUri = quad.object.value;
-                    const typeLabel = getPrefixedName(typeUri, prefixes);
+                        const subjectUri = quad.subject.value;
+                        const typeUri = quad.object.value;
+                        const typeLabel = getPrefixedName(typeUri, prefixes);
 
-                    if (!nodeTypesCache[subjectUri]) {
-                        nodeTypesCache[subjectUri] = [];
+                        if (!nodeTypesCache[subjectUri]) {
+                            nodeTypesCache[subjectUri] = [];
+                        }
+
+                        if (!nodeTypesCache[subjectUri].includes(typeUri)) {
+                            nodeTypesCache[subjectUri].push(typeUri);
+                        }
+                        if (!nodeTypesCache[subjectUri].includes(typeLabel)) {
+                            nodeTypesCache[subjectUri].push(typeLabel);
+                        }
                     }
 
-                    if (!nodeTypesCache[subjectUri].includes(typeUri)) {
-                        nodeTypesCache[subjectUri].push(typeUri);
-                    }
-                    if (!nodeTypesCache[subjectUri].includes(typeLabel)) {
-                        nodeTypesCache[subjectUri].push(typeLabel);
-                    }
-                }
+                    // Build subtypes cache for vad:processSubtype
+                    if (subtypePredicates.includes(predicateValue) ||
+                        subtypePredicates.includes(predicateLabel)) {
 
-                // Build subtypes cache for vad:processSubtype
-                if (subtypePredicates.includes(predicateValue) ||
-                    subtypePredicates.includes(predicateLabel)) {
+                        const subjectUri = quad.subject.value;
+                        const subtypeUri = quad.object.value;
+                        const subtypeLabel = getPrefixedName(subtypeUri, prefixes);
 
-                    const subjectUri = quad.subject.value;
-                    const subtypeUri = quad.object.value;
-                    const subtypeLabel = getPrefixedName(subtypeUri, prefixes);
+                        if (!nodeSubtypesCache[subjectUri]) {
+                            nodeSubtypesCache[subjectUri] = [];
+                        }
 
-                    if (!nodeSubtypesCache[subjectUri]) {
-                        nodeSubtypesCache[subjectUri] = [];
+                        if (!nodeSubtypesCache[subjectUri].includes(subtypeUri)) {
+                            nodeSubtypesCache[subjectUri].push(subtypeUri);
+                        }
+                        if (!nodeSubtypesCache[subjectUri].includes(subtypeLabel)) {
+                            nodeSubtypesCache[subjectUri].push(subtypeLabel);
+                        }
                     }
+                });
+            }
 
-                    if (!nodeSubtypesCache[subjectUri].includes(subtypeUri)) {
-                        nodeSubtypesCache[subjectUri].push(subtypeUri);
-                    }
-                    if (!nodeSubtypesCache[subjectUri].includes(subtypeLabel)) {
-                        nodeSubtypesCache[subjectUri].push(subtypeLabel);
-                    }
-                }
-            });
+            // Обрабатываем переданные квады
+            processQuads(quads);
+
+            // Дополнительно: в режиме VAD TriG также включаем типы из vad:ptree
+            // чтобы rdf:type vad:Process были доступны для всех TriG графов
+            if (trigHierarchy && trigHierarchy[PTREE_GRAPH_URI]) {
+                const ptreeQuads = trigHierarchy[PTREE_GRAPH_URI].quads;
+                processQuads(ptreeQuads);
+            }
         }
 
         // ============================================================================
