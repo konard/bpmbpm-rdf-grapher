@@ -1517,7 +1517,7 @@
             <div class="smart-design-buttons">
                 <button class="new-trig-btn" onclick="openNewTrigModal()">New TriG</button>
                 <button onclick="smartDesignCreate()">Создать SPARQL</button>
-                <button class="delete-btn" onclick="smartDesignDelete()">Удалить</button>
+                <button class="delete-btn" onclick="smartDesignDelete()">Удалить триплет</button>
                 <button class="clear-btn" onclick="smartDesignClear()">Очистить</button>
             </div>
             <div id="smart-design-message" class="smart-design-message" style="display: none;"></div>
@@ -2312,6 +2312,7 @@ WHERE {
         let trigHierarchy = {};  // Иерархия TriG графов: { uri -> { label, hasParent, children, quads } }
         let selectedTrigUri = null;  // Текущий выбранный TriG для отображения
         let allTrigGraphs = [];  // Список всех TriG графов
+        let isNewTrigQuery = false;  // Флаг: текущий SPARQL запрос создан функцией "New TriG"
         const PTREE_GRAPH_URI = 'http://example.org/vad#ptree';  // URI графа Дерево Процессов
 
         /**
@@ -3415,15 +3416,28 @@ WHERE {
             const hasTrigPredicate = 'http://example.org/vad#hasTrig';
             let targetTrigUri = null;
 
-            // Проверяем все квады из текущего графа или всех графов
-            const quadsToCheck = selectedTrigUri && trigHierarchy[selectedTrigUri]
-                ? trigHierarchy[selectedTrigUri].quads
-                : currentQuads;
+            // Сначала проверяем в vad:ptree (там хранятся метаданные процессов, включая hasTrig)
+            if (trigHierarchy && trigHierarchy[PTREE_GRAPH_URI]) {
+                const ptreeQuads = trigHierarchy[PTREE_GRAPH_URI].quads;
+                for (const quad of ptreeQuads) {
+                    if (quad.subject.value === nodeUri && quad.predicate.value === hasTrigPredicate) {
+                        targetTrigUri = quad.object.value;
+                        break;
+                    }
+                }
+            }
 
-            for (const quad of quadsToCheck) {
-                if (quad.subject.value === nodeUri && quad.predicate.value === hasTrigPredicate) {
-                    targetTrigUri = quad.object.value;
-                    break;
+            // Если не найдено в ptree, проверяем в текущем графе или во всех графах
+            if (!targetTrigUri) {
+                const quadsToCheck = selectedTrigUri && trigHierarchy[selectedTrigUri]
+                    ? trigHierarchy[selectedTrigUri].quads
+                    : currentQuads;
+
+                for (const quad of quadsToCheck) {
+                    if (quad.subject.value === nodeUri && quad.predicate.value === hasTrigPredicate) {
+                        targetTrigUri = quad.object.value;
+                        break;
+                    }
                 }
             }
 
@@ -5255,12 +5269,8 @@ vad:t1.1 rdfs:label "Схема процесса TriG1.1" ;
                 messageDiv.textContent = message;
                 messageDiv.className = 'smart-design-message ' + type;
                 messageDiv.style.display = 'block';
-                // Автоматически скрываем через 5 секунд для success и info
-                if (type !== 'error') {
-                    setTimeout(() => {
-                        messageDiv.style.display = 'none';
-                    }, 5000);
-                }
+                // Сообщение остается видимым до следующего действия пользователя
+                // (не скрываем автоматически по таймеру)
             }
         }
 
@@ -5720,6 +5730,10 @@ vad:t1.1 rdfs:label "Схема процесса TriG1.1" ;
         function smartDesignCreate() {
             hideSmartDesignMessage();
 
+            // Сбрасываем флаг New TriG, т.к. создаем обычный SPARQL запрос
+            isNewTrigQuery = false;
+            updateSimpleTripleButtonState();
+
             const trigValue = getSmartDesignValue('smart-design-trig');
             const subjectValue = getSmartDesignValue('smart-design-subject');
             const predicateValue = getSmartDesignValue('smart-design-predicate');
@@ -5759,10 +5773,14 @@ vad:t1.1 rdfs:label "Схема процесса TriG1.1" ;
         }
 
         /**
-         * Обработчик кнопки "Удалить" - генерирует DELETE SPARQL запрос с проверкой существования
+         * Обработчик кнопки "Удалить триплет" - генерирует DELETE SPARQL запрос с проверкой существования
          */
         function smartDesignDelete() {
             hideSmartDesignMessage();
+
+            // Сбрасываем флаг New TriG, т.к. создаем обычный SPARQL запрос
+            isNewTrigQuery = false;
+            updateSimpleTripleButtonState();
 
             const trigValue = getSmartDesignValue('smart-design-trig');
             const subjectValue = getSmartDesignValue('smart-design-subject');
@@ -5833,6 +5851,10 @@ vad:t1.1 rdfs:label "Схема процесса TriG1.1" ;
             if (predicateSelect) predicateSelect.value = '';
             if (objectSelect) objectSelect.value = '';
             if (resultTextarea) resultTextarea.value = '';
+
+            // Сбрасываем флаг New TriG
+            isNewTrigQuery = false;
+            updateSimpleTripleButtonState();
 
             // Перезаполняем выпадающие списки (удаляем добавленные кастомные значения)
             populateSmartDesignDropdowns();
@@ -5983,8 +6005,8 @@ vad:t1.1 rdfs:label "Схема процесса TriG1.1" ;
                 }
             }
 
-            // Очищаем поле результата после применения
-            resultTextarea.value = '';
+            // Поля Smart Design и Result in SPARQL не очищаются после применения
+            // Очистка происходит только по кнопке "Очистить"
         }
 
         /**
@@ -6259,8 +6281,8 @@ vad:t1.1 rdfs:label "Схема процесса TriG1.1" ;
                 showResultSparqlMessage('Не удалось добавить значения в shorthand формате', 'error');
             }
 
-            // Очищаем поле SPARQL результата после применения
-            resultTextarea.value = '';
+            // Поля Smart Design и Result in SPARQL не очищаются после применения
+            // Очистка происходит только по кнопке "Очистить"
         }
 
         /**
@@ -6348,8 +6370,9 @@ vad:t1.1 rdfs:label "Схема процесса TriG1.1" ;
 
             // vad:hasParent (опционально)
             if (parentUri) {
-                const parentFormatted = formatForSparql(parentUri);
-                triples.push(`        ${trigUri} vad:hasParent ${parentFormatted} .`);
+                // Преобразуем URI родителя в префиксную форму
+                const parentPrefixed = getPrefixedName(parentUri, currentPrefixes);
+                triples.push(`        ${trigUri} vad:hasParent ${parentPrefixed} .`);
             }
 
             // vad:typeOfScheme (опционально)
@@ -6370,8 +6393,33 @@ ${triples.join('\n')}
                 resultTextarea.value = sparqlQuery;
             }
 
+            // Устанавливаем флаг, что это запрос New TriG
+            isNewTrigQuery = true;
+            updateSimpleTripleButtonState();
+
             closeNewTrigModal();
-            showSmartDesignMessage('SPARQL запрос для создания нового TriG сгенерирован. Нажмите "Применить SPARQL" для добавления в RDF данные.', 'success');
+            showSmartDesignMessage('SPARQL запрос для создания нового TriG сгенерирован. Нажмите "Применить как Shorthand Triple" для добавления в RDF данные.', 'success');
+        }
+
+        /**
+         * Обновляет состояние кнопки "Применить как Simple Triple"
+         * Кнопка отключается, когда текущий SPARQL запрос создан функцией "New TriG"
+         */
+        function updateSimpleTripleButtonState() {
+            const simpleTripleBtn = document.querySelector('.apply-btn[onclick="smartDesignApply()"]');
+            if (simpleTripleBtn) {
+                if (isNewTrigQuery) {
+                    simpleTripleBtn.disabled = true;
+                    simpleTripleBtn.style.opacity = '0.5';
+                    simpleTripleBtn.style.cursor = 'not-allowed';
+                    simpleTripleBtn.title = 'Для создания нового TriG используйте "Применить как Shorthand Triple"';
+                } else {
+                    simpleTripleBtn.disabled = false;
+                    simpleTripleBtn.style.opacity = '1';
+                    simpleTripleBtn.style.cursor = 'pointer';
+                    simpleTripleBtn.title = '';
+                }
+            }
         }
 
         /**
@@ -6503,6 +6551,9 @@ ${triples.join('\n')}
                     smartDesignContainer.classList.add('visible');
                     // Заполняем выпадающие списки при активации Smart Design
                     populateSmartDesignDropdowns();
+                    // Показываем начальное сообщение при открытии Smart Design
+                    showSmartDesignMessage('Создание SPARQL INSERT/DELETE запросов из выбранных значений (TriG, Subject, Predicate, Object)', 'info');
+                    showResultSparqlMessage('Simple Triple - добавление отдельной строки | Shorthand Triple - добавление через запятую (для литералов заменяет значение)', 'info');
                 } else {
                     // Показываем сообщение, что Smart Design доступен только в VAD TriG
                     showSmartDesignMessage('SPARQL Smart Design доступен только в режиме "Режим VAD TriG"', 'info');
