@@ -23,23 +23,35 @@ classDiagram
         ---
         Individual properties in VADProcessDia:
         +vad:hasExecutor : ExecutorGroup
-        +vad:processSubtype : Basic|Detailed
+        +vad:processSubtype : Basic|Detailed|DetailedChild|DetailedExternal
         +vad:hasNext : Process [0..*]
     }
 
     class VADProcessDia {
         <<Class>>
         TriG Named Graph
+        +rdf:type vad:VADProcessDia
         +rdfs:label : string
         +vad:hasParent : VADProcessDia|root
+        +vad:definesProcess : Process [0..1]
     }
 
     class ProcessTree {
         <<Class>>
         Single instance: vad:ptree
+        +rdf:type vad:ProcessTree
         +rdfs:label : string
         +vad:hasParent : root
         Contains PTREE_PREDICATES for all Process
+    }
+
+    class ExecutorTree {
+        <<Class>>
+        Single instance: vad:rtree
+        +rdf:type vad:ExecutorTree
+        +rdfs:label : string
+        +vad:hasParent : root
+        Contains RTREE_PREDICATES for all Executor
     }
 
     class ExecutorGroup {
@@ -51,6 +63,7 @@ classDiagram
 
     class Executor {
         <<Class>>
+        Stored in vad:rtree
         +rdf:type vad:Executor
         +rdfs:label : string
     }
@@ -63,6 +76,17 @@ classDiagram
     class Detailed {
         <<Subtype of Process>>
         Has child diagram via hasTrig
+        Parent class for DetailedChild, DetailedExternal
+    }
+
+    class DetailedChild {
+        <<Subtype of Detailed>>
+        Child diagram has hasParent to current diagram
+    }
+
+    class DetailedExternal {
+        <<Subtype of Detailed>>
+        Child diagram does NOT have hasParent to current diagram
     }
 
     class root {
@@ -75,15 +99,23 @@ classDiagram
         Stores shared Process metadata
     }
 
+    class rtree {
+        <<Instance of ExecutorTree>>
+        Stores shared Executor metadata
+    }
+
     %% ======================================
     %% RELATIONSHIPS
     %% ======================================
 
     Process "1" --> "0..1" VADProcessDia : hasTrig
+    VADProcessDia "1" --> "0..1" Process : definesProcess
     Process "1" --> "1" ExecutorGroup : hasExecutor
     Process "1" --> "0..*" Process : hasNext
     Process "1" --> "1" Basic : processSubtype
     Process "1" --> "1" Detailed : processSubtype
+    Process "1" --> "1" DetailedChild : processSubtype
+    Process "1" --> "1" DetailedExternal : processSubtype
 
     ExecutorGroup "1" --> "1..*" Executor : includes
 
@@ -91,11 +123,15 @@ classDiagram
     VADProcessDia "1" --> "1" root : hasParent
 
     ProcessTree "1" --> "1" root : hasParent
+    ExecutorTree "1" --> "1" root : hasParent
 
     Basic --|> Process : subClassOf
     Detailed --|> Process : subClassOf
+    DetailedChild --|> Detailed : subClassOf
+    DetailedExternal --|> Detailed : subClassOf
 
     ptree ..|> ProcessTree : instanceOf
+    rtree ..|> ExecutorTree : instanceOf
 ```
 
 ### Property Groups Diagram
@@ -110,16 +146,25 @@ flowchart TB
         PT4["vad:hasTrig"]
     end
 
+    subgraph RTREE["vad:rtree (RTREE_PREDICATES)"]
+        direction TB
+        RT1["rdf:type vad:Executor"]
+        RT2["rdfs:label"]
+    end
+
     subgraph VADDIA["VADProcessDia (Individual Properties)"]
         direction TB
         VP1["vad:hasExecutor"]
         VP2["vad:processSubtype"]
         VP3["vad:hasNext"]
+        VP4["vad:definesProcess"]
     end
 
     PROCESS[("vad:Process\n(instance)")]
+    EXECUTOR[("vad:Executor\n(instance)")]
 
     PTREE --> |"Shared metadata\nfor all diagrams"| PROCESS
+    RTREE --> |"Shared metadata\nfor all diagrams"| EXECUTOR
     VADDIA --> |"Unique properties\nper diagram"| PROCESS
 ```
 
@@ -135,6 +180,7 @@ flowchart TB
 
     subgraph PTREE["vad:ptree"]
         direction TB
+        PTREE_TYPE["rdf:type: vad:ProcessTree"]
         PTREE_LABEL["rdfs:label: Дерево Процессов"]
         PTREE_PARENT["hasParent: vad:root"]
 
@@ -149,13 +195,28 @@ flowchart TB
         end
     end
 
+    subgraph RTREE["vad:rtree"]
+        direction TB
+        RTREE_TYPE["rdf:type: vad:ExecutorTree"]
+        RTREE_LABEL["rdfs:label: Дерево Исполнителей"]
+        RTREE_PARENT["hasParent: vad:root"]
+
+        subgraph RTREE_EXEC["Executor Metadata"]
+            E1["vad:Executor1\nИсполнитель 1"]
+            E2["vad:Executor2\nИсполнитель 2"]
+            Emore["...Executor3-28"]
+        end
+    end
+
     subgraph T_PGA["vad:t_pGA"]
         direction TB
+        TGA_TYPE["rdf:type: vad:VADProcessDia"]
         TGA_LABEL["rdfs:label: Схема процесса t_pGA"]
         TGA_PARENT["hasParent: vad:root"]
+        TGA_DEFINES["definesProcess: vad:pGA"]
 
         subgraph TGA_CHAIN["Process Chain"]
-            C_P1["vad:p1\nhasExecutor: ExecutorGroup1\nprocessSubtype: Detailed\nhasNext: Process2"]
+            C_P1["vad:p1\nhasExecutor: ExecutorGroup1\nprocessSubtype: DetailedChild\nhasNext: Process2"]
             C_P2["vad:Process2\nhasNext: Process3, Process4"]
             C_P3["vad:Process3\nhasNext: Process4"]
             C_more["..."]
@@ -170,8 +231,10 @@ flowchart TB
 
     subgraph T_P1["vad:t_p1"]
         direction TB
+        TP1_TYPE["rdf:type: vad:VADProcessDia"]
         TP1_LABEL["rdfs:label: Схема процесса t_p1"]
         TP1_PARENT["hasParent: vad:t_pGA"]
+        TP1_DEFINES["definesProcess: vad:p1"]
 
         subgraph TP1_CHAIN["Process Chain"]
             C_P21["vad:Process21\nhasNext: Process22"]
@@ -181,11 +244,14 @@ flowchart TB
     end
 
     ROOT --> PTREE
+    ROOT --> RTREE
     ROOT --> T_PGA
     T_PGA --> T_P1
 
     P1 -.->|"hasTrig"| T_P1
     PGA -.->|"hasTrig"| T_PGA
+    T_P1 -.->|"definesProcess"| P1
+    T_PGA -.->|"definesProcess"| PGA
 ```
 
 ### VAD Process Chain Visualization
@@ -194,7 +260,7 @@ Example of `vad:t_pGA` process chain:
 
 ```mermaid
 flowchart LR
-    subgraph EXECUTORS["Executors Row"]
+    subgraph EXECUTORS["Executors Row (from vad:rtree)"]
         E1["Исполнитель 1"]
         E2["Исполнитель 2"]
         E3["Исполнитель 3"]
@@ -206,7 +272,7 @@ flowchart LR
     end
 
     subgraph CHAIN["VAD Chain: t_pGA"]
-        P1["p1 Процесс 1\n(Detailed)"]
+        P1["p1 Процесс 1\n(DetailedChild)"]
         P2["Процесс 2\n(Basic)"]
         P3["Процесс 3\n(Basic)"]
         P4["Процесс 4\n(Basic)"]
@@ -251,8 +317,9 @@ flowchart LR
 ```
 
 Legend:
-- Yellow: Detailed process (has child diagram via `hasTrig`)
+- Yellow: DetailedChild process (has child diagram via `hasTrig`, child has `hasParent` to current)
 - Blue: Basic process (no child diagram)
+- (Not shown) DetailedExternal: would have different color for processes referencing external diagrams
 
 ### Data Flow Diagram
 
@@ -271,6 +338,9 @@ flowchart TB
         subgraph PTREE_DATA["vad:ptree Data"]
             PTREE_QUADS["Shared Process Metadata\n(PTREE_PREDICATES)"]
         end
+        subgraph RTREE_DATA["vad:rtree Data"]
+            RTREE_QUADS["Shared Executor Metadata\n(RTREE_PREDICATES)"]
+        end
         subgraph TRIG_DATA["VADProcessDia Data"]
             TRIG_QUADS["Individual Process Properties"]
         end
@@ -285,11 +355,15 @@ flowchart TB
     TRIG --> PARSER
     PARSER --> QUADS
     QUADS --> PTREE_DATA
+    QUADS --> RTREE_DATA
     QUADS --> TRIG_DATA
     PTREE_DATA --> TREE
+    RTREE_DATA --> TREE
     PTREE_DATA --> VAD
+    RTREE_DATA --> VAD
     TRIG_DATA --> VAD
     PTREE_DATA --> PROPS
+    RTREE_DATA --> PROPS
     TRIG_DATA --> PROPS
 ```
 
@@ -304,5 +378,16 @@ flowchart TB
 | Process (hasNext) | - | `VADProcessDia` | `VAD_ALLOWED_PREDICATES` |
 | Process (hasExecutor) | - | `VADProcessDia` | `VAD_ALLOWED_PREDICATES` |
 | Process (processSubtype) | - | `VADProcessDia` | `VAD_ALLOWED_PREDICATES` |
+| Executor (type) | `vad:Executor` | `vad:rtree` | `VAD_ALLOWED_TYPES` |
+| Executor (label) | - | `vad:rtree` | `RTREE_PREDICATES` |
 | ExecutorGroup | `vad:ExecutorGroup` | `VADProcessDia` | `VAD_ALLOWED_TYPES` |
-| Executor | `vad:Executor` | `VADProcessDia` | `VAD_ALLOWED_TYPES` |
+| TriG (definesProcess) | - | `VADProcessDia` | `VAD_ALLOWED_PREDICATES` |
+
+## Process Subtypes
+
+| Subtype | Description | Visual Indicator |
+|---------|-------------|------------------|
+| `vad:Basic` | No child diagram | Blue fill |
+| `vad:Detailed` | Has child diagram (parent class) | Yellow fill |
+| `vad:DetailedChild` | Child diagram has `hasParent` to current | Yellow fill |
+| `vad:DetailedExternal` | Child diagram does NOT have `hasParent` to current | Yellow fill (with external indicator) |
