@@ -4886,11 +4886,9 @@ vad:t_p1 {
                 htmlLabel += '>';
 
                 // Определяем стиль узла на основе vad:processSubtype
-                // Проверяем nodeSubtypesCache для определения типа процесса (Detailed или Basic)
+                // Проверяем nodeSubtypesCache для определения типа процесса (Detailed, DetailedChild, DetailedExternal или Basic)
                 const nodeSubtypes = nodeSubtypesCache[uri] || [];
-                const isDetailed = nodeSubtypes.some(subtype =>
-                    subtype === 'vad:Detailed' || subtype === 'http://example.org/vad#Detailed'
-                );
+                const isDetailed = nodeSubtypes.some(subtype => isDetailedSubtype(subtype));
 
                 // Выбираем стиль: голубой для Detailed, зеленый для Basic (по умолчанию)
                 let nodeStyle;
