@@ -1,5 +1,4 @@
 ### SPARQL Smart Design
-в работе
 
 ### run
 https://bpmbpm.github.io/rdf-grapher/ver7s/
