@@ -1756,7 +1756,21 @@ WHERE {
             'vad:ExecutorGroup',
             'http://example.org/vad#ExecutorGroup',
             'vad:Executor',
-            'http://example.org/vad#Executor'
+            'http://example.org/vad#Executor',
+            'vad:VADProcessDia',
+            'http://example.org/vad#VADProcessDia',
+            'vad:ProcessTree',
+            'http://example.org/vad#ProcessTree',
+            'vad:ExecutorTree',
+            'http://example.org/vad#ExecutorTree',
+            'vad:Basic',
+            'http://example.org/vad#Basic',
+            'vad:Detailed',
+            'http://example.org/vad#Detailed',
+            'vad:DetailedChild',
+            'http://example.org/vad#DetailedChild',
+            'vad:DetailedExternal',
+            'http://example.org/vad#DetailedExternal'
         ];
 
         /**
@@ -1780,7 +1794,9 @@ WHERE {
             'vad:processSubtype',
             'http://example.org/vad#processSubtype',
             'vad:hasTrig',
-            'http://example.org/vad#hasTrig'
+            'http://example.org/vad#hasTrig',
+            'vad:definesProcess',
+            'http://example.org/vad#definesProcess'
         ];
 
         /**
@@ -1800,12 +1816,55 @@ WHERE {
         ];
 
         /**
+         * RTREE_PREDICATES - Предикаты, которые для сущностей типа vad:Executor
+         * должны храниться в графе vad:rtree (Дерево Исполнителей)
+         * Остальные предикаты остаются в соответствующем TriG (схеме процесса)
+         */
+        const RTREE_PREDICATES = [
+            'rdf:type',
+            'http://www.w3.org/1999/02/22-rdf-syntax-ns#type',
+            'rdfs:label',
+            'http://www.w3.org/2000/01/rdf-schema#label'
+        ];
+
+        /**
+         * TRIG_TYPES - Типы TriG графов в VAD онтологии
+         * Используется для валидации и определения типов графов
+         */
+        const TRIG_TYPES = {
+            PROCESS_TREE: ['vad:ProcessTree', 'http://example.org/vad#ProcessTree'],
+            EXECUTOR_TREE: ['vad:ExecutorTree', 'http://example.org/vad#ExecutorTree'],
+            VAD_PROCESS_DIA: ['vad:VADProcessDia', 'http://example.org/vad#VADProcessDia']
+        };
+
+        /**
+         * PROCESS_SUBTYPES - Подтипы процессов в VAD онтологии
+         */
+        const PROCESS_SUBTYPES = {
+            BASIC: ['vad:Basic', 'http://example.org/vad#Basic'],
+            DETAILED: ['vad:Detailed', 'http://example.org/vad#Detailed'],
+            DETAILED_CHILD: ['vad:DetailedChild', 'http://example.org/vad#DetailedChild'],
+            DETAILED_EXTERNAL: ['vad:DetailedExternal', 'http://example.org/vad#DetailedExternal']
+        };
+
+        /**
          * Проверяет, является ли предикат предикатом для ptree
          * @param {string} predicateUri - URI или prefixed name предиката
          * @returns {boolean}
          */
         function isPtreePredicate(predicateUri) {
             return PTREE_PREDICATES.some(allowed =>
+                predicateUri === allowed || predicateUri.endsWith('#' + allowed.split(':')[1])
+            );
+        }
+
+        /**
+         * Проверяет, является ли предикат предикатом для rtree
+         * @param {string} predicateUri - URI или prefixed name предиката
+         * @returns {boolean}
+         */
+        function isRtreePredicate(predicateUri) {
+            return RTREE_PREDICATES.some(allowed =>
                 predicateUri === allowed || predicateUri.endsWith('#' + allowed.split(':')[1])
             );
         }
@@ -1820,6 +1879,98 @@ WHERE {
             return types.some(t =>
                 t === 'vad:Process' || t === 'http://example.org/vad#Process'
             );
+        }
+
+        /**
+         * Проверяет, является ли субъект типом vad:Executor
+         * @param {string} subjectUri - URI субъекта
+         * @returns {boolean}
+         */
+        function isSubjectVadExecutor(subjectUri) {
+            const types = nodeTypesCache[subjectUri] || [];
+            return types.some(t =>
+                t === 'vad:Executor' || t === 'http://example.org/vad#Executor'
+            );
+        }
+
+        /**
+         * Определяет тип TriG графа
+         * @param {string} trigUri - URI TriG графа
+         * @param {Array} quads - Массив квадов
+         * @returns {string|null} - Тип графа или null
+         */
+        function getTrigType(trigUri, quads) {
+            const typeQuad = quads.find(quad =>
+                quad.subject.value === trigUri &&
+                (quad.predicate.value.endsWith('#type') ||
+                 quad.predicate.value === 'http://www.w3.org/1999/02/22-rdf-syntax-ns#type')
+            );
+
+            if (typeQuad) {
+                const typeValue = typeQuad.object.value;
+                if (TRIG_TYPES.PROCESS_TREE.some(t => typeValue === t || typeValue.endsWith('#ProcessTree'))) {
+                    return 'vad:ProcessTree';
+                }
+                if (TRIG_TYPES.EXECUTOR_TREE.some(t => typeValue === t || typeValue.endsWith('#ExecutorTree'))) {
+                    return 'vad:ExecutorTree';
+                }
+                if (TRIG_TYPES.VAD_PROCESS_DIA.some(t => typeValue === t || typeValue.endsWith('#VADProcessDia'))) {
+                    return 'vad:VADProcessDia';
+                }
+            }
+
+            // Определение типа по эвристике (для обратной совместимости)
+            if (trigUri.endsWith('#ptree') || trigUri.includes('ptree')) {
+                return 'vad:ProcessTree';
+            }
+            if (trigUri.endsWith('#rtree') || trigUri.includes('rtree')) {
+                return 'vad:ExecutorTree';
+            }
+            return 'vad:VADProcessDia';
+        }
+
+        /**
+         * Проверяет, является ли тип типом ProcessTree
+         * @param {string} typeUri - URI типа
+         * @returns {boolean}
+         */
+        function isProcessTreeType(typeUri) {
+            return TRIG_TYPES.PROCESS_TREE.some(t =>
+                typeUri === t || typeUri.endsWith('#ProcessTree')
+            );
+        }
+
+        /**
+         * Проверяет, является ли тип типом ExecutorTree
+         * @param {string} typeUri - URI типа
+         * @returns {boolean}
+         */
+        function isExecutorTreeType(typeUri) {
+            return TRIG_TYPES.EXECUTOR_TREE.some(t =>
+                typeUri === t || typeUri.endsWith('#ExecutorTree')
+            );
+        }
+
+        /**
+         * Проверяет, является ли тип типом VADProcessDia
+         * @param {string} typeUri - URI типа
+         * @returns {boolean}
+         */
+        function isVADProcessDiaType(typeUri) {
+            return TRIG_TYPES.VAD_PROCESS_DIA.some(t =>
+                typeUri === t || typeUri.endsWith('#VADProcessDia')
+            );
+        }
+
+        /**
+         * Проверяет, является ли подтип процесса детализированным (Detailed, DetailedChild, DetailedExternal)
+         * @param {string} subtypeUri - URI подтипа
+         * @returns {boolean}
+         */
+        function isDetailedSubtype(subtypeUri) {
+            return PROCESS_SUBTYPES.DETAILED.some(t => subtypeUri === t || subtypeUri.endsWith('#Detailed')) ||
+                   PROCESS_SUBTYPES.DETAILED_CHILD.some(t => subtypeUri === t || subtypeUri.endsWith('#DetailedChild')) ||
+                   PROCESS_SUBTYPES.DETAILED_EXTERNAL.some(t => subtypeUri === t || subtypeUri.endsWith('#DetailedExternal'));
         }
 
         /**
@@ -3969,8 +4120,9 @@ vad:Trig1 {
         function loadExampleTrigVADv2() {
             const exampleTrigVADv2 = `# Пример TriG VADv2 (Value Added Chain Diagram с иерархией TriG)
 # Демонстрация иерархии TriG графов через hasParent
-# Процесс p1 имеет подтип "Детализированный" и ссылку на vad:t1.1
-# Остальные процессы имеют подтип "Базовый"
+# Процесс p1 имеет подтип "DetailedChild" (подпроцесс с детализацией)
+# Остальные процессы имеют подтип "Basic"
+# Исполнители определены в vad:rtree (Дерево Исполнителей)
 
 @prefix rdf: <http://www.w3.org/1999/02/22-rdf-syntax-ns#> .
 @prefix rdfs: <http://www.w3.org/2000/01/rdf-schema#> .
@@ -3983,10 +4135,11 @@ vad:Trig1 {
 # ============================================================================
 
 vad:ptree {
-vad:ptree rdfs:label "Дерево Процессов (TriG)" ;
-    vad:hasParent vad:root .
+    vad:ptree rdf:type vad:ProcessTree ;
+        rdfs:label "Дерево Процессов (TriG)" ;
+        vad:hasParent vad:root .
 
- # Метаданные процессов для групп процессов (после root) 
+    # Метаданные процессов для групп процессов (после root)
 
     vad:pGA rdf:type vad:Process ;
         rdfs:label "Группа Процессов А" ;
@@ -4063,17 +4216,80 @@ vad:ptree rdfs:label "Дерево Процессов (TriG)" ;
 }
 
 # ============================================================================
+# Дерево Исполнителей (rtree) - общий граф с метаданными всех исполнителей
+# Содержит rdf:type, rdfs:label для всех vad:Executor
+# ============================================================================
+
+vad:rtree {
+    vad:rtree rdf:type vad:ExecutorTree ;
+        rdfs:label "Дерево Исполнителей (TriG)" ;
+        vad:hasParent vad:root .
+
+    # Исполнители для t_pGA
+    vad:Executor1 rdf:type vad:Executor ;
+        rdfs:label "Исполнитель 1" .
+
+    vad:Executor2 rdf:type vad:Executor ;
+        rdfs:label "Исполнитель 2" .
+
+    vad:Executor3 rdf:type vad:Executor ;
+        rdfs:label "Исполнитель 3" .
+
+    vad:Executor4 rdf:type vad:Executor ;
+        rdfs:label "Исполнитель 4" .
+
+    vad:Executor5 rdf:type vad:Executor ;
+        rdfs:label "Исполнитель 5" .
+
+    vad:Executor6 rdf:type vad:Executor ;
+        rdfs:label "Исполнитель 6" .
+
+    vad:Executor7 rdf:type vad:Executor ;
+        rdfs:label "Исполнитель 7" .
+
+    vad:Executor8 rdf:type vad:Executor ;
+        rdfs:label "Исполнитель 8" .
+
+    # Исполнители для t_p1
+    vad:Executor21 rdf:type vad:Executor ;
+        rdfs:label "Исполнитель 21" .
+
+    vad:Executor22 rdf:type vad:Executor ;
+        rdfs:label "Исполнитель 22" .
+
+    vad:Executor23 rdf:type vad:Executor ;
+        rdfs:label "Исполнитель 23" .
+
+    vad:Executor24 rdf:type vad:Executor ;
+        rdfs:label "Исполнитель 24" .
+
+    vad:Executor25 rdf:type vad:Executor ;
+        rdfs:label "Исполнитель 25" .
+
+    vad:Executor26 rdf:type vad:Executor ;
+        rdfs:label "Исполнитель 26" .
+
+    vad:Executor27 rdf:type vad:Executor ;
+        rdfs:label "Исполнитель 27" .
+
+    vad:Executor28 rdf:type vad:Executor ;
+        rdfs:label "Исполнитель 28" .
+}
+
+# ============================================================================
 # Корневой TriG граф: t_pGA (hasParent = root)
 # ============================================================================
 
 vad:t_pGA {
-vad:t_pGA rdfs:label "Схема процесса t_pGA (t=TriG) процесса (группы процессов) pGA " ;
-    vad:hasParent vad:root .
+    vad:t_pGA rdf:type vad:VADProcessDia ;
+        rdfs:label "Схема процесса t_pGA (t=TriG) процесса (группы процессов) pGA" ;
+        vad:hasParent vad:root ;
+        vad:definesProcess vad:pGA .
 
-    # Процесс 1 - Детализированный (имеет ссылку на дочерний TriG)
+    # Процесс 1 - DetailedChild (имеет дочернюю схему vad:t_p1 с hasParent на текущую)
     # rdf:type находится в vad:ptree
     vad:p1 vad:hasExecutor vad:ExecutorGroup1 ;
-        vad:processSubtype vad:Detailed ;
+        vad:processSubtype vad:DetailedChild ;
         vad:hasNext vad:Process2 .
 
     # Процесс 2 - Базовый
@@ -4143,30 +4359,7 @@ vad:t_pGA rdfs:label "Схема процесса t_pGA (t=TriG) процесс�
         rdfs:label "Группа исполнителей процесса Процесс 8" ;
         vad:includes vad:Executor2, vad:Executor7 .
 
-    # Исполнители
-    vad:Executor1 rdf:type vad:Executor ;
-        rdfs:label "Исполнитель 1" .
-
-    vad:Executor2 rdf:type vad:Executor ;
-        rdfs:label "Исполнитель 2" .
-
-    vad:Executor3 rdf:type vad:Executor ;
-        rdfs:label "Исполнитель 3" .
-
-    vad:Executor4 rdf:type vad:Executor ;
-        rdfs:label "Исполнитель 4" .
-
-    vad:Executor5 rdf:type vad:Executor ;
-        rdfs:label "Исполнитель 5" .
-
-    vad:Executor6 rdf:type vad:Executor ;
-        rdfs:label "Исполнитель 6" .
-
-    vad:Executor7 rdf:type vad:Executor ;
-        rdfs:label "Исполнитель 7" .
-
-    vad:Executor8 rdf:type vad:Executor ;
-        rdfs:label "Исполнитель 8" .
+    # Примечание: Исполнители (vad:Executor1..8) определены в vad:rtree
 }
 
 # ============================================================================
@@ -4176,8 +4369,10 @@ vad:t_pGA rdfs:label "Схема процесса t_pGA (t=TriG) процесс�
 # ============================================================================
 
 vad:t_p1 {
-vad:t_p1 rdfs:label "Схема процесса t_p1 (TriG) для процесса p1" ;
-    vad:hasParent vad:t_pGA .
+    vad:t_p1 rdf:type vad:VADProcessDia ;
+        rdfs:label "Схема процесса t_p1 (TriG) для процесса p1" ;
+        vad:hasParent vad:t_pGA ;
+        vad:definesProcess vad:p1 .
 
     # Процесс 21 - Базовый
     # rdf:type находится в vad:ptree
@@ -4252,30 +4447,7 @@ vad:t_p1 rdfs:label "Схема процесса t_p1 (TriG) для процес
         rdfs:label "Группа исполнителей процесса Процесс 28" ;
         vad:includes vad:Executor22, vad:Executor27 .
 
-    # Исполнители для TriG11
-    vad:Executor21 rdf:type vad:Executor ;
-        rdfs:label "Исполнитель 21" .
-
-    vad:Executor22 rdf:type vad:Executor ;
-        rdfs:label "Исполнитель 22" .
-
-    vad:Executor23 rdf:type vad:Executor ;
-        rdfs:label "Исполнитель 23" .
-
-    vad:Executor24 rdf:type vad:Executor ;
-        rdfs:label "Исполнитель 24" .
-
-    vad:Executor25 rdf:type vad:Executor ;
-        rdfs:label "Исполнитель 25" .
-
-    vad:Executor26 rdf:type vad:Executor ;
-        rdfs:label "Исполнитель 26" .
-
-    vad:Executor27 rdf:type vad:Executor ;
-        rdfs:label "Исполнитель 27" .
-
-    vad:Executor28 rdf:type vad:Executor ;
-        rdfs:label "Исполнитель 28" .
+    # Примечание: Исполнители (vad:Executor21..28) определены в vad:rtree
 }`;
 
             document.getElementById('rdf-input').value = exampleTrigVADv2;
