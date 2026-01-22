@@ -4,9 +4,8 @@ SPARQL Smart Design + Ontology + file
 
 ### run
 https://bpmbpm.github.io/rdf-grapher/ver7sof/
-```
-Загрузить пример RDF данных:
-```
+
+*Загрузить пример RDF данных:*  
 выбрать (choose): **TrigVADfile1**  
 Нажать кнопку (press the button) **Визуализировать**
 
