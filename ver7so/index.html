@@ -6996,7 +6996,7 @@ vad:t_p1 {
         /**
          * Обработчик кнопки "Применить SPARQL" - применяет запрос к RDF данным
          */
-        function smartDesignApply() {
+        async function smartDesignApply() {
             hideResultSparqlMessage();
 
             const resultTextarea = document.getElementById('result-sparql-query');
