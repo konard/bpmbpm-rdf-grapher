@@ -32,7 +32,7 @@ classDiagram
         TriG Named Graph
         +rdf:type vad:VADProcessDia
         +rdfs:label : string
-        +vad:hasParent : VADProcessDia|root
+        +vad:hasParentTrig : VADProcessDia|root
         +vad:definesProcess : Process [0..1]
     }
 
@@ -41,7 +41,7 @@ classDiagram
         Single instance: vad:ptree
         +rdf:type vad:ProcessTree
         +rdfs:label : string
-        +vad:hasParent : root
+        +vad:hasParentTrig : root
         Contains PTREE_PREDICATES for all Process
     }
 
@@ -50,7 +50,7 @@ classDiagram
         Single instance: vad:rtree
         +rdf:type vad:ExecutorTree
         +rdfs:label : string
-        +vad:hasParent : root
+        +vad:hasParentTrig : root
         Contains RTREE_PREDICATES for all Executor
     }
 
@@ -81,12 +81,12 @@ classDiagram
 
     class DetailedChild {
         <<Subtype of Detailed>>
-        Child diagram has hasParent to current diagram
+        Child diagram has hasParentTrig to current diagram
     }
 
     class DetailedExternal {
         <<Subtype of Detailed>>
-        Child diagram does NOT have hasParent to current diagram
+        Child diagram does NOT have hasParentTrig to current diagram
     }
 
     class root {
@@ -119,11 +119,11 @@ classDiagram
 
     ExecutorGroup "1" --> "1..*" Executor : includes
 
-    VADProcessDia "1" --> "1" VADProcessDia : hasParent
-    VADProcessDia "1" --> "1" root : hasParent
+    VADProcessDia "1" --> "1" VADProcessDia : hasParentTrig
+    VADProcessDia "1" --> "1" root : hasParentTrig
 
-    ProcessTree "1" --> "1" root : hasParent
-    ExecutorTree "1" --> "1" root : hasParent
+    ProcessTree "1" --> "1" root : hasParentTrig
+    ExecutorTree "1" --> "1" root : hasParentTrig
 
     Basic --|> Process : subClassOf
     Detailed --|> Process : subClassOf
@@ -182,7 +182,7 @@ flowchart TB
         direction TB
         PTREE_TYPE["rdf:type: vad:ProcessTree"]
         PTREE_LABEL["rdfs:label: Дерево Процессов"]
-        PTREE_PARENT["hasParent: vad:root"]
+        PTREE_PARENT["hasParentTrig: vad:root"]
 
         subgraph PTREE_PROCESSES["Process Metadata"]
             PGA["vad:pGA\nГруппа Процессов А\nhasTrig: t_pGA"]
@@ -199,7 +199,7 @@ flowchart TB
         direction TB
         RTREE_TYPE["rdf:type: vad:ExecutorTree"]
         RTREE_LABEL["rdfs:label: Дерево Исполнителей"]
-        RTREE_PARENT["hasParent: vad:root"]
+        RTREE_PARENT["hasParentTrig: vad:root"]
 
         subgraph RTREE_EXEC["Executor Metadata"]
             E1["vad:Executor1\nИсполнитель 1"]
@@ -212,7 +212,7 @@ flowchart TB
         direction TB
         TGA_TYPE["rdf:type: vad:VADProcessDia"]
         TGA_LABEL["rdfs:label: Схема процесса t_pGA"]
-        TGA_PARENT["hasParent: vad:root"]
+        TGA_PARENT["hasParentTrig: vad:root"]
         TGA_DEFINES["definesProcess: vad:pGA"]
 
         subgraph TGA_CHAIN["Process Chain"]
@@ -233,7 +233,7 @@ flowchart TB
         direction TB
         TP1_TYPE["rdf:type: vad:VADProcessDia"]
         TP1_LABEL["rdfs:label: Схема процесса t_p1"]
-        TP1_PARENT["hasParent: vad:t_pGA"]
+        TP1_PARENT["hasParentTrig: vad:t_pGA"]
         TP1_DEFINES["definesProcess: vad:p1"]
 
         subgraph TP1_CHAIN["Process Chain"]
@@ -317,7 +317,7 @@ flowchart LR
 ```
 
 Legend:
-- Yellow: DetailedChild process (has child diagram via `hasTrig`, child has `hasParent` to current)
+- Yellow: DetailedChild process (has child diagram via `hasTrig`, child has `hasParentTrig` to current)
 - Blue: Basic process (no child diagram)
 - (Not shown) DetailedExternal: would have different color for processes referencing external diagrams
 
@@ -389,5 +389,5 @@ flowchart TB
 |---------|-------------|------------------|
 | `vad:Basic` | No child diagram | Blue fill |
 | `vad:Detailed` | Has child diagram (parent class) | Yellow fill |
-| `vad:DetailedChild` | Child diagram has `hasParent` to current | Yellow fill |
-| `vad:DetailedExternal` | Child diagram does NOT have `hasParent` to current | Yellow fill (with external indicator) |
+| `vad:DetailedChild` | Child diagram has `hasParentTrig` to current | Yellow fill |
+| `vad:DetailedExternal` | Child diagram does NOT have `hasParentTrig` to current | Yellow fill (with external indicator) |
