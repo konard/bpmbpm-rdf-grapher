@@ -1,5 +1,5 @@
 # Предложения по оптимизации TrigVADv2 и алгоритма обработки
-
+см. [Onto2](https://github.com/bpmbpm/rdf-grapher/issues/115)
 ## 1. Явная связь между TriG и Process
 
 ### 1.1 Проблема
