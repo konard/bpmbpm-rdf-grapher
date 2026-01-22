@@ -283,3 +283,4 @@ vad:t_another {
 - [Basic VAD Ontology](vad-basic-ontology.ttl) — файл онтологии
 - [RDF Grapher ver7so](index.html) — основное приложение
 - [Help](help.md) — справка по работе с окном Smart Design
+- исходный issue, см. [Onto4 Блок Термины](https://github.com/bpmbpm/rdf-grapher/issues/119)
