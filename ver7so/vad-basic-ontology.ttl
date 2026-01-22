@@ -93,6 +93,7 @@ vad:Process
 
         2. Группа свойств «Индивидуальная для конкретной схемы процесса»
            (хранится в соответствующем TriG типа VADProcessDia):
+           - vad:isSubprocessTrig (ссылка на содержащий TriG, добавляется первым!)
            - vad:hasExecutor (исполнитель/группа исполнителей процесса)
            - vad:processSubtype (подтип процесса: Basic или Detailed)
            - vad:hasNext (следующий процесс в цепочке)
@@ -128,7 +129,7 @@ vad:VADProcessDia
 
         Структурные свойства TriG:
         - rdfs:label - название схемы
-        - vad:hasParent - родительский TriG (для построения иерархии)
+        - vad:hasParentTrig - родительский TriG (для построения иерархии)
     """ ;
     dcterms:description "Схема процесса, представленная как именованный граф TriG" .
 
@@ -158,7 +159,7 @@ vad:ProcessTree
 
         Структурные свойства самого vad:ptree:
         - rdfs:label "Дерево Процессов (TriG)"
-        - vad:hasParent vad:root
+        - vad:hasParentTrig vad:root
 
         После структурных свойств vad:ptree следует перечень всех объектов
         типа Process с их общими свойствами.
@@ -252,7 +253,7 @@ vad:ExecutorTree
 
         Структурные свойства самого vad:rtree:
         - rdfs:label "Дерево Исполнителей (TriG)"
-        - vad:hasParent vad:root
+        - vad:hasParentTrig vad:root
 
         Таким образом, все свойства исполнителя перечисляются не в схеме
         процесса (VADProcessDia), а разово в vad:rtree.
@@ -323,7 +324,7 @@ vad:Detailed
 # DetailedChild - Детализированный процесс (подпроцесс)
 # ------------------------------------------------------------------------------
 # Детализированный процесс, который является подпроцессом текущего процесса
-# (связан через vad:hasParent с текущей схемой процесса)
+# (связан через vad:hasParentTrig с текущей схемой процесса)
 # ------------------------------------------------------------------------------
 
 vad:DetailedChild
@@ -335,12 +336,12 @@ vad:DetailedChild
 
         Признак того, что детализируемый процесс (с синей заливкой и кликабельный)
         является подпроцессом текущего процесса, т.е. связан с текущей схемой
-        процесса через vad:hasParent.
+        процесса через vad:hasParentTrig.
 
         Пример:
         # В схеме vad:t_pGA процесс vad:p1 имеет подтип DetailedChild,
         # потому что его детализирующая схема vad:t_p1 имеет:
-        # vad:t_p1 vad:hasParent vad:t_pGA .
+        # vad:t_p1 vad:hasParentTrig vad:t_pGA .
 
         Визуализация:
         - Синяя заливка (как у Detailed)
@@ -354,7 +355,7 @@ vad:DetailedChild
 # DetailedExternal - Детализированный процесс (внешний)
 # ------------------------------------------------------------------------------
 # Детализированный процесс, который НЕ является подпроцессом текущего процесса
-# (не связан через vad:hasParent с текущей схемой процесса)
+# (не связан через vad:hasParentTrig с текущей схемой процесса)
 # ------------------------------------------------------------------------------
 
 vad:DetailedExternal
@@ -371,7 +372,7 @@ vad:DetailedExternal
         Пример:
         # В схеме vad:t_p1 процесс vad:externalProcess имеет подтип DetailedExternal,
         # потому что его детализирующая схема vad:t_external НЕ имеет:
-        # vad:t_external vad:hasParent vad:t_p1 .
+        # vad:t_external vad:hasParentTrig vad:t_p1 .
 
         Визуализация:
         - Синяя заливка (как у Detailed)
@@ -399,7 +400,7 @@ vad:ptree
         Дерево процессов (ptree) - единственный экземпляр класса ProcessTree.
 
         Является именованным графом (TriG), содержащим:
-        1. Собственные свойства (rdfs:label, vad:hasParent)
+        1. Собственные свойства (rdfs:label, vad:hasParentTrig)
         2. Общие свойства всех объектов типа vad:Process
 
         Связь с JS-кодом: используется для определения целевого графа
@@ -420,7 +421,7 @@ vad:rtree
         Дерево исполнителей (rtree) - единственный экземпляр класса ExecutorTree.
 
         Является именованным графом (TriG), содержащим:
-        1. Собственные свойства (rdfs:label, vad:hasParent)
+        1. Собственные свойства (rdfs:label, vad:hasParentTrig)
         2. Общие свойства всех объектов типа vad:Executor
 
         При отрисовке схемы процесса используется информация как из vad:ptree
@@ -448,9 +449,9 @@ vad:root
         определения верхнего уровня иерархии.
 
         Использование:
-        vad:ptree vad:hasParent vad:root .
-        vad:rtree vad:hasParent vad:root .
-        vad:t_pGA vad:hasParent vad:root .
+        vad:ptree vad:hasParentTrig vad:root .
+        vad:rtree vad:hasParentTrig vad:root .
+        vad:t_pGA vad:hasParentTrig vad:root .
     """ ;
     dcterms:description "Технический корневой узел дерева TriG графов" .
 
@@ -532,7 +533,7 @@ vad:definesProcess
         vad:t_p1 vad:definesProcess vad:p1 .
 
         Преимущество: явная связь без необходимости ручной синхронизации
-        и без дублирования vad:hasParent.
+        и без дублирования vad:hasParentTrig.
 
         Связь с JS-кодом: входит в VAD_ALLOWED_PREDICATES
     """ ;
@@ -573,6 +574,49 @@ vad:hasNext
         Связь с JS-кодом: входит в VAD_ALLOWED_PREDICATES
     """ ;
     dcterms:description "Определяет следующий процесс в цепочке добавленной стоимости" .
+
+# ------------------------------------------------------------------------------
+# vad:isSubprocessTrig - Явная связь процесса со схемой процесса
+# ------------------------------------------------------------------------------
+# Указывает, что процесс является подпроцессом в данном TriG
+# Добавляется первым при создании нового процесса в составе TriG
+# ------------------------------------------------------------------------------
+
+vad:isSubprocessTrig
+    a rdf:Property, owl:ObjectProperty ;
+    rdfs:label "isSubprocessTrig" ;
+    rdfs:domain vad:Process ;
+    rdfs:range vad:VADProcessDia ;
+    rdfs:comment """
+        Предикат isSubprocessTrig явно указывает вхождение индивида процесса
+        в схему процесса (TriG).
+
+        Этот предикат ПЕРВЫМ добавляется при создании нового процесса
+        в составе TriG (схемы процесса). Он явно указывает, что данный
+        процесс является подпроцессом в данной схеме.
+
+        Пример:
+        vad:Process2 vad:isSubprocessTrig vad:t_pGA ;
+            vad:hasExecutor vad:ExecutorGroup_Process2 ;
+            vad:processSubtype vad:Basic .
+
+        Порядок предикатов:
+        1. vad:isSubprocessTrig - связь с TriG (первым!)
+        2. vad:hasExecutor - группа исполнителей
+        3. vad:processSubtype - подтип процесса
+        4. vad:hasNext - следующий процесс (опционально)
+
+        Преимущества:
+        - Явная связь процесса со схемой процесса
+        - Упрощает SPARQL-запросы для поиска процессов в схеме
+        - Ясная семантика: процесс входит в состав TriG
+
+        Свойство хранится в TriG схемы процесса (VADProcessDia),
+        НЕ в vad:ptree.
+
+        Связь с JS-кодом: входит в VAD_ALLOWED_PREDICATES
+    """ ;
+    dcterms:description "Явно указывает вхождение индивида процесса в схему процесса (TriG)" .
 
 # ------------------------------------------------------------------------------
 # vad:hasExecutor - Исполнитель процесса
@@ -619,9 +663,9 @@ vad:processSubtype
         - vad:Basic - базовый процесс (без детализации)
         - vad:Detailed - детализированный процесс (имеет дочернюю схему)
         - vad:DetailedChild - детализированный процесс-подпроцесс
-          (дочерняя схема имеет vad:hasParent на текущую схему)
+          (дочерняя схема имеет vad:hasParentTrig на текущую схему)
         - vad:DetailedExternal - детализированный внешний процесс
-          (дочерняя схема НЕ имеет vad:hasParent на текущую схему)
+          (дочерняя схема НЕ имеет vad:hasParentTrig на текущую схему)
 
         Пример:
         vad:Process1 vad:processSubtype vad:DetailedChild .
@@ -636,32 +680,37 @@ vad:processSubtype
     dcterms:description "Указывает подтип процесса (Basic, Detailed, DetailedChild или DetailedExternal)" .
 
 # ------------------------------------------------------------------------------
-# vad:hasParent - Родительский TriG
+# vad:hasParentTrig - Родительский TriG
 # ------------------------------------------------------------------------------
 # Определяет иерархию TriG графов
+# ВАЖНО: Предикат hasParentTrig используется ТОЛЬКО для TriG-графов,
+# а не для объектов типа Process.
 # ------------------------------------------------------------------------------
 
-vad:hasParent
+vad:hasParentTrig
     a rdf:Property, owl:ObjectProperty ;
-    rdfs:label "hasParent" ;
+    rdfs:label "hasParentTrig" ;
     rdfs:domain [ owl:unionOf ( vad:VADProcessDia vad:ProcessTree vad:ExecutorTree ) ] ;
     rdfs:range [ owl:unionOf ( vad:VADProcessDia rdfs:Resource ) ] ;
     rdfs:comment """
-        Предикат hasParent определяет родительский TriG граф.
+        Предикат hasParentTrig определяет родительский TriG граф.
 
-        Используется для построения иерархии TriG графов в Окне «Дерево TriG».
+        ВАЖНО: Этот предикат используется ТОЛЬКО для TriG-графов,
+        а НЕ для объектов типа Process. Название явно указывает,
+        что это отношение только между объектами TriG для построения
+        дерева в окне «Дерево TriG».
 
-        Корневые графы имеют hasParent = vad:root:
-        vad:ptree vad:hasParent vad:root .
-        vad:rtree vad:hasParent vad:root .
-        vad:t_pGA vad:hasParent vad:root .
+        Корневые графы имеют hasParentTrig = vad:root:
+        vad:ptree vad:hasParentTrig vad:root .
+        vad:rtree vad:hasParentTrig vad:root .
+        vad:t_pGA vad:hasParentTrig vad:root .
 
         Дочерние графы указывают на родительский:
-        vad:t_p1 vad:hasParent vad:t_pGA .
+        vad:t_p1 vad:hasParentTrig vad:t_pGA .
 
         Связь с JS-кодом: входит в VAD_ALLOWED_PREDICATES
     """ ;
-    dcterms:description "Определяет родительский TriG граф для построения иерархии" .
+    dcterms:description "Определяет родительский TriG граф для построения иерархии (только для TriG-графов)" .
 
 # ------------------------------------------------------------------------------
 # vad:includes - Включает исполнителя
@@ -708,7 +757,7 @@ vad:includes
 #
 # vad:t_pGA {
 #     vad:t_pGA rdfs:label "Схема процесса t_pGA" ;
-#         vad:hasParent vad:root .
+#         vad:hasParentTrig vad:root .
 #
 #     vad:p1 vad:hasExecutor vad:ExecutorGroup1 ;
 #         vad:processSubtype vad:Detailed ;
@@ -721,6 +770,75 @@ vad:includes
 #     vad:Executor1 rdf:type vad:Executor ;
 #         rdfs:label "Исполнитель 1" .
 # }
+
+# ==============================================================================
+# ПРИЛОЖЕНИЕ 1: СВОДНАЯ ТАБЛИЦА «ОБЪЕКТ-ПРЕДИКАТ»
+# ==============================================================================
+# Допустимые предикаты для каждого типа объекта
+# Используется для фильтрации в окне Smart Design (поле Predicate зависит от Subject Type)
+#
+# Связь с JS-кодом: константа TYPE_PREDICATE_MAP
+# ==============================================================================
+#
+# | Тип объекта (Subject Type)    | Допустимые предикаты                                        | Граф хранения     |
+# |-------------------------------|-------------------------------------------------------------|-------------------|
+# | vad:Process (в ptree)         | rdf:type, rdfs:label, dcterms:description, vad:hasTrig      | vad:ptree         |
+# | vad:Process (в VADProcessDia) | vad:isSubprocessTrig, vad:hasExecutor, vad:processSubtype,  | VADProcessDia     |
+# |                               | vad:hasNext                                                 |                   |
+# | vad:Executor (в rtree)        | rdf:type, rdfs:label                                        | vad:rtree         |
+# | vad:ExecutorGroup             | rdf:type, rdfs:label, vad:includes                          | VADProcessDia     |
+# | vad:VADProcessDia             | rdf:type, rdfs:label, vad:hasParentTrig, vad:definesProcess | VADProcessDia     |
+# | vad:ProcessTree               | rdf:type, rdfs:label, vad:hasParentTrig                     | vad:ptree         |
+# | vad:ExecutorTree              | rdf:type, rdfs:label, vad:hasParentTrig                     | vad:rtree         |
+#
+# Примечание:
+# - Process имеет разный набор предикатов в зависимости от контекста (ptree или VADProcessDia)
+# - ProcessTree и ExecutorTree - это специальные типы для деревьев ptree и rtree
+# - Подтипы Process (Basic, Detailed, DetailedChild, DetailedExternal) наследуют предикаты Process
+#
+# ==============================================================================
+
+# ==============================================================================
+# ПРИЛОЖЕНИЕ 2: СПИСКИ ОБЩИХ СВОЙСТВ
+# ==============================================================================
+# Перечень свойств для каждого типа объекта по группам
+#
+# Связь с JS-кодом: константы PTREE_PREDICATES, RTREE_PREDICATES
+# ==============================================================================
+#
+# --- Группа «Общие свойства процессов для всех схем процессов» (PTREE_PREDICATES) ---
+# Хранятся в vad:ptree для всех объектов типа vad:Process:
+#   1. rdf:type           - тип объекта (vad:Process)
+#   2. rdfs:label         - название процесса
+#   3. dcterms:description - описание процесса
+#   4. vad:hasTrig        - ссылка на детализирующую схему (при наличии)
+#
+# --- Группа «Индивидуальные свойства процесса для конкретной схемы» ---
+# Хранятся в соответствующем VADProcessDia:
+#   1. vad:isSubprocessTrig - связь с TriG (добавляется первым!)
+#   2. vad:hasExecutor      - группа исполнителей
+#   3. vad:processSubtype   - подтип процесса
+#   4. vad:hasNext          - следующий процесс
+#
+# --- Группа «Общие свойства исполнителя для всех схем процессов» (RTREE_PREDICATES) ---
+# Хранятся в vad:rtree для всех объектов типа vad:Executor:
+#   1. rdf:type     - тип объекта (vad:Executor)
+#   2. rdfs:label   - название исполнителя
+#
+# --- Группа «Свойства группы исполнителей» ---
+# Хранятся в соответствующем VADProcessDia:
+#   1. rdf:type     - тип объекта (vad:ExecutorGroup)
+#   2. rdfs:label   - название группы (генерируется автоматически)
+#   3. vad:includes - включённые исполнители
+#
+# --- Группа «Свойства схемы процесса» ---
+# Хранятся в соответствующем TriG (VADProcessDia):
+#   1. rdf:type           - тип объекта (vad:VADProcessDia)
+#   2. rdfs:label         - название схемы
+#   3. vad:hasParentTrig  - родительский TriG
+#   4. vad:definesProcess - связь с процессом, который схема детализирует
+#
+# ==============================================================================
 
 # ==============================================================================
 # КОНЕЦ ОНТОЛОГИИ

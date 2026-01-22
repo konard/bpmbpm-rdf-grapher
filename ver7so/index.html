@@ -1499,6 +1499,12 @@
                     </select>
                 </div>
                 <div class="smart-design-field">
+                    <label for="smart-design-subject-type">Subject Type:</label>
+                    <select id="smart-design-subject-type">
+                        <option value="">-- Выберите тип Subject --</option>
+                    </select>
+                </div>
+                <div class="smart-design-field">
                     <label for="smart-design-predicate">Predicate:</label>
                     <select id="smart-design-predicate">
                         <option value="">-- Выберите Predicate --</option>
@@ -1517,6 +1523,7 @@
                 <button onclick="smartDesignCreateWithPrefix()" style="background-color: #1565C0;">Создать SPARQL (prefix)</button>
                 <button class="delete-btn" onclick="smartDesignDelete()">Удалить триплет</button>
                 <button class="clear-btn" onclick="smartDesignClear()">Очистить</button>
+                <button id="smart-design-mode-toggle" onclick="toggleSmartDesignMode()" style="background-color: #607D8B; margin-left: 10px;">Режим: Фильтр</button>
             </div>
             <div id="smart-design-message" class="smart-design-message" style="display: none;"></div>
         </div>
@@ -1549,7 +1556,7 @@
                     <input type="text" id="new-trig-label" placeholder="Введите название">
                 </div>
                 <div class="new-trig-field">
-                    <label for="new-trig-parent">vad:hasParent (родитель):</label>
+                    <label for="new-trig-parent">vad:hasParentTrig (родитель):</label>
                     <select id="new-trig-parent">
                         <option value="">-- Выберите родителя --</option>
                     </select>
@@ -1710,13 +1717,13 @@ WHERE {
             ]
         };
 
-        // Фильтры для режима VAD - скрываем hasParent и rdf:type
+        // Фильтры для режима VAD - скрываем hasParentTrig и rdf:type
         const FilterVAD = {
             hiddenPredicates: [
                 'rdf:type',
                 'http://www.w3.org/1999/02/22-rdf-syntax-ns#type',
-                'vad:hasParent',
-                'http://example.org/vad#hasParent'
+                'vad:hasParentTrig',
+                'http://example.org/vad#hasParentTrig'
             ]
         };
 
@@ -1787,8 +1794,8 @@ WHERE {
             'http://example.org/vad#hasNext',
             'vad:hasExecutor',
             'http://example.org/vad#hasExecutor',
-            'vad:hasParent',
-            'http://example.org/vad#hasParent',
+            'vad:hasParentTrig',
+            'http://example.org/vad#hasParentTrig',
             'vad:includes',
             'http://example.org/vad#includes',
             'vad:processSubtype',
@@ -1796,7 +1803,9 @@ WHERE {
             'vad:hasTrig',
             'http://example.org/vad#hasTrig',
             'vad:definesProcess',
-            'http://example.org/vad#definesProcess'
+            'http://example.org/vad#definesProcess',
+            'vad:isSubprocessTrig',
+            'http://example.org/vad#isSubprocessTrig'
         ];
 
         /**
@@ -1846,6 +1855,78 @@ WHERE {
             DETAILED_CHILD: ['vad:DetailedChild', 'http://example.org/vad#DetailedChild'],
             DETAILED_EXTERNAL: ['vad:DetailedExternal', 'http://example.org/vad#DetailedExternal']
         };
+
+        /**
+         * TYPE_PREDICATE_MAP - Сводная таблица «Объект-Предикат» (Приложение 1 к онтологии)
+         * Определяет допустимые предикаты для каждого типа объекта в зависимости от контекста TriG
+         *
+         * Связь с онтологией: Приложение 1 в vad-basic-ontology.ttl
+         */
+        const TYPE_PREDICATE_MAP = {
+            // Process в ptree (концепт) - общие свойства
+            'vad:Process': {
+                ptree: [
+                    'rdf:type',
+                    'rdfs:label',
+                    'dcterms:description',
+                    'vad:hasTrig'
+                ],
+                // Process в VADProcessDia (индивид) - индивидуальные свойства
+                vadProcessDia: [
+                    'vad:isSubprocessTrig',
+                    'vad:hasExecutor',
+                    'vad:processSubtype',
+                    'vad:hasNext'
+                ]
+            },
+            // Executor в rtree - общие свойства
+            'vad:Executor': {
+                rtree: [
+                    'rdf:type',
+                    'rdfs:label'
+                ]
+            },
+            // ExecutorGroup в VADProcessDia
+            'vad:ExecutorGroup': {
+                vadProcessDia: [
+                    'rdf:type',
+                    'rdfs:label',
+                    'vad:includes'
+                ]
+            },
+            // VADProcessDia - свойства схемы процесса
+            'vad:VADProcessDia': {
+                vadProcessDia: [
+                    'rdf:type',
+                    'rdfs:label',
+                    'vad:hasParentTrig',
+                    'vad:definesProcess'
+                ]
+            },
+            // ProcessTree (vad:ptree)
+            'vad:ProcessTree': {
+                ptree: [
+                    'rdf:type',
+                    'rdfs:label',
+                    'vad:hasParentTrig'
+                ]
+            },
+            // ExecutorTree (vad:rtree)
+            'vad:ExecutorTree': {
+                rtree: [
+                    'rdf:type',
+                    'rdfs:label',
+                    'vad:hasParentTrig'
+                ]
+            }
+        };
+
+        /**
+         * Режим работы Smart Design:
+         * - 'filtered' - справочники фильтруются по связанным значениям (Subject Type -> Predicate)
+         * - 'full' - справочники отображают полный набор значений
+         */
+        let smartDesignMode = 'filtered';
 
         /**
          * Проверяет, является ли предикат предикатом для ptree
@@ -2165,7 +2246,7 @@ WHERE {
             message += `Всего ошибок: ${errors.length}\n`;
             message += '\nРазрешенные типы: vad:Process, vad:ExecutorGroup, vad:Executor\n';
             message += 'Разрешенные предикаты: rdf:type, rdfs:label, dcterms:description,\n';
-            message += '  vad:hasNext, vad:hasExecutor, vad:hasParent, vad:includes,\n';
+            message += '  vad:hasNext, vad:hasExecutor, vad:hasParentTrig, vad:includes,\n';
             message += '  vad:processSubtype, vad:hasTrig';
 
             return message;
@@ -2315,9 +2396,9 @@ WHERE {
                 description: 'Связь группы с исполнителями'
             },
             'HasParentStyle': {
-                predicates: ['vad:hasParent', 'http://example.org/vad#hasParent'],
+                predicates: ['vad:hasParentTrig', 'http://example.org/vad#hasParentTrig'],
                 dot: 'color="#999999" penwidth="1" style="dashed" arrowhead="empty"',
-                label: 'Родитель (vad:hasParent)',
+                label: 'Родитель (vad:hasParentTrig)',
                 description: 'Связь с родительским процессом'
             },
             'TypeStyle': {
@@ -2455,7 +2536,7 @@ WHERE {
         // ГЛОБАЛЬНЫЕ ПЕРЕМЕННЫЕ ДЛЯ VAD TriG РЕЖИМА
         // ============================================================================
 
-        let trigHierarchy = {};  // Иерархия TriG графов: { uri -> { label, hasParent, children, quads } }
+        let trigHierarchy = {};  // Иерархия TriG графов: { uri -> { label, hasParentTrig, children, quads } }
         let selectedTrigUri = null;  // Текущий выбранный TriG для отображения
         let allTrigGraphs = [];  // Список всех TriG графов
         let isNewTrigQuery = false;  // Флаг: текущий SPARQL запрос создан функцией "New TriG"
@@ -2539,7 +2620,7 @@ WHERE {
                 }
             });
 
-            // Ищем rdfs:label и vad:hasParent для каждого графа (определяются вне графа)
+            // Ищем rdfs:label и vad:hasParentTrig для каждого графа (определяются вне графа)
             quads.forEach(quad => {
                 const subjectUri = quad.subject.value;
                 const predicateUri = quad.predicate.value;
@@ -2552,20 +2633,20 @@ WHERE {
                         hierarchy[subjectUri].label = quad.object.value;
                     }
 
-                    // vad:hasParent для графа
-                    if (predicateLabel === 'vad:hasParent' || predicateUri === 'http://example.org/vad#hasParent') {
+                    // vad:hasParentTrig для графа
+                    if (predicateLabel === 'vad:hasParentTrig' || predicateUri === 'http://example.org/vad#hasParentTrig') {
                         hierarchy[subjectUri].hasParent = quad.object.value;
                     }
                 }
             });
 
-            // Проверяем, что все графы имеют hasParent
+            // Проверяем, что все графы имеют hasParentTrig
             Object.values(hierarchy).forEach(graphInfo => {
                 if (!graphInfo.hasParent) {
                     const graphLabel = getPrefixedName(graphInfo.uri, prefixes);
                     errors.push({
                         graph: graphLabel,
-                        message: `TriG "${graphLabel}" не имеет свойства hasParent. В режиме VAD TriG каждый TriG граф должен иметь свойство hasParent.`
+                        message: `TriG "${graphLabel}" не имеет свойства hasParentTrig. В режиме VAD TriG каждый TriG граф должен иметь свойство hasParentTrig.`
                     });
                 }
             });
@@ -2574,7 +2655,7 @@ WHERE {
                 return { valid: false, errors, hierarchy: null, rootTrigUri: null };
             }
 
-            // Строим дерево: находим корневые элементы (hasParent = vad:root)
+            // Строим дерево: находим корневые элементы (hasParentTrig = vad:root)
             const rootUri = 'http://example.org/vad#root';
             let rootTrigUri = null;
 
@@ -2669,9 +2750,9 @@ WHERE {
 
             message += '═══════════════════════════════════════\n';
             message += `Всего ошибок: ${errors.length}\n`;
-            message += '\nВ режиме VAD TriG каждый TriG граф должен иметь свойство vad:hasParent.\n';
-            message += 'Корневой граф должен иметь hasParent = vad:root.\n';
-            message += 'Дочерние графы указывают на родительский граф через hasParent.';
+            message += '\nВ режиме VAD TriG каждый TriG граф должен иметь свойство vad:hasParentTrig.\n';
+            message += 'Корневой граф должен иметь hasParentTrig = vad:root.\n';
+            message += 'Дочерние графы указывают на родительский граф через hasParentTrig.';
 
             return message;
         }
@@ -2936,7 +3017,7 @@ WHERE {
             if (graphInfo.hasParent) {
                 const parentLabel = getPrefixedName(graphInfo.hasParent, prefixes);
                 html += `<div class="trig-property-item">`;
-                html += `<div class="trig-property-predicate">vad:hasParent</div>`;
+                html += `<div class="trig-property-predicate">vad:hasParentTrig</div>`;
                 html += `<div class="trig-property-value uri">${escapeHtml(parentLabel)}</div>`;
                 html += `</div>`;
             }
@@ -3770,7 +3851,7 @@ vad:Process1 rdf:type vad:Process ;
     rdfs:label "Процесс 1" ;
     dcterms:description "Первый процесс в цепочке добавленной стоимости" ;
     vad:hasExecutor vad:ExecutorGroup1 ;
-    vad:hasParent vad:Process0 ;
+    vad:hasParentTrig vad:Process0 ;
     vad:hasNext vad:Process2 .
 
 # Процесс 2
@@ -3778,7 +3859,7 @@ vad:Process2 rdf:type vad:Process ;
     rdfs:label "Процесс 2" ;
     dcterms:description "Второй процесс, выполняется после Процесса 1" ;
     vad:hasExecutor vad:ExecutorGroup2 ;
-    vad:hasParent vad:Process0 ;
+    vad:hasParentTrig vad:Process0 ;
     vad:hasNext vad:Process3, vad:Process4 .
 
 # Процесс 3
@@ -3786,7 +3867,7 @@ vad:Process3 rdf:type vad:Process ;
     rdfs:label "Процесс 3" ;
     dcterms:description "Третий процесс в цепочке" ;
     vad:hasExecutor vad:ExecutorGroup3 ;
-    vad:hasParent vad:Process0 ;
+    vad:hasParentTrig vad:Process0 ;
     vad:hasNext vad:Process4 .
 
 # Процесс 4
@@ -3794,7 +3875,7 @@ vad:Process4 rdf:type vad:Process ;
     rdfs:label "Процесс 4" ;
     dcterms:description "Четвёртый процесс в цепочке" ;
     vad:hasExecutor vad:ExecutorGroup4 ;
-    vad:hasParent vad:Process0 ;
+    vad:hasParentTrig vad:Process0 ;
     vad:hasNext vad:Process5 .
 
 # Процесс 5
@@ -3802,7 +3883,7 @@ vad:Process5 rdf:type vad:Process ;
     rdfs:label "Процесс 5" ;
     dcterms:description "Пятый процесс в цепочке" ;
     vad:hasExecutor vad:ExecutorGroup5 ;
-    vad:hasParent vad:Process0 ;
+    vad:hasParentTrig vad:Process0 ;
     vad:hasNext vad:Process6 .
 
 # Процесс 6
@@ -3810,7 +3891,7 @@ vad:Process6 rdf:type vad:Process ;
     rdfs:label "Процесс 6" ;
     dcterms:description "Шестой процесс в цепочке" ;
     vad:hasExecutor vad:ExecutorGroup6 ;
-    vad:hasParent vad:Process0 ;
+    vad:hasParentTrig vad:Process0 ;
     vad:hasNext vad:Process7 .
 
 # Процесс 7
@@ -3818,7 +3899,7 @@ vad:Process7 rdf:type vad:Process ;
     rdfs:label "Процесс 7" ;
     dcterms:description "Седьмой процесс в цепочке" ;
     vad:hasExecutor vad:ExecutorGroup7 ;
-    vad:hasParent vad:Process0 ;
+    vad:hasParentTrig vad:Process0 ;
     vad:hasNext vad:Process8 .
 
 # Процесс 8
@@ -3826,7 +3907,7 @@ vad:Process8 rdf:type vad:Process ;
     rdfs:label "Процесс 8" ;
     dcterms:description "Заключительный процесс в цепочке" ;
     vad:hasExecutor vad:ExecutorGroup8 ;
-    vad:hasParent vad:Process0 .
+    vad:hasParentTrig vad:Process0 .
 
 # Группы исполнителей
 vad:ExecutorGroup1 rdf:type vad:ExecutorGroup ;
@@ -3988,7 +4069,7 @@ vad:Trig1 {
         rdfs:label "Процесс 1" ;
         dcterms:description "Первый процесс в цепочке добавленной стоимости" ;
         vad:hasExecutor vad:ExecutorGroup1 ;
-        vad:hasParent vad:Process0 ;
+        vad:hasParentTrig vad:Process0 ;
         vad:hasNext vad:Process2 .
 
     # Процесс 2
@@ -3996,7 +4077,7 @@ vad:Trig1 {
         rdfs:label "Процесс 2" ;
         dcterms:description "Второй процесс, выполняется после Процесса 1" ;
         vad:hasExecutor vad:ExecutorGroup2 ;
-        vad:hasParent vad:Process0 ;
+        vad:hasParentTrig vad:Process0 ;
         vad:hasNext vad:Process3, vad:Process4 .
 
     # Процесс 3
@@ -4004,7 +4085,7 @@ vad:Trig1 {
         rdfs:label "Процесс 3" ;
         dcterms:description "Третий процесс в цепочке" ;
         vad:hasExecutor vad:ExecutorGroup3 ;
-        vad:hasParent vad:Process0 ;
+        vad:hasParentTrig vad:Process0 ;
         vad:hasNext vad:Process4 .
 
     # Процесс 4
@@ -4012,7 +4093,7 @@ vad:Trig1 {
         rdfs:label "Процесс 4" ;
         dcterms:description "Четвёртый процесс в цепочке" ;
         vad:hasExecutor vad:ExecutorGroup4 ;
-        vad:hasParent vad:Process0 ;
+        vad:hasParentTrig vad:Process0 ;
         vad:hasNext vad:Process5 .
 
     # Процесс 5
@@ -4020,7 +4101,7 @@ vad:Trig1 {
         rdfs:label "Процесс 5" ;
         dcterms:description "Пятый процесс в цепочке" ;
         vad:hasExecutor vad:ExecutorGroup5 ;
-        vad:hasParent vad:Process0 ;
+        vad:hasParentTrig vad:Process0 ;
         vad:hasNext vad:Process6 .
 
     # Процесс 6
@@ -4028,7 +4109,7 @@ vad:Trig1 {
         rdfs:label "Процесс 6" ;
         dcterms:description "Шестой процесс в цепочке" ;
         vad:hasExecutor vad:ExecutorGroup6 ;
-        vad:hasParent vad:Process0 ;
+        vad:hasParentTrig vad:Process0 ;
         vad:hasNext vad:Process7 .
 
     # Процесс 7
@@ -4036,7 +4117,7 @@ vad:Trig1 {
         rdfs:label "Процесс 7" ;
         dcterms:description "Седьмой процесс в цепочке" ;
         vad:hasExecutor vad:ExecutorGroup7 ;
-        vad:hasParent vad:Process0 ;
+        vad:hasParentTrig vad:Process0 ;
         vad:hasNext vad:Process8 .
 
     # Процесс 8
@@ -4044,7 +4125,7 @@ vad:Trig1 {
         rdfs:label "Процесс 8" ;
         dcterms:description "Заключительный процесс в цепочке" ;
         vad:hasExecutor vad:ExecutorGroup8 ;
-        vad:hasParent vad:Process0 .
+        vad:hasParentTrig vad:Process0 .
 
     # Группы исполнителей
     vad:ExecutorGroup1 rdf:type vad:ExecutorGroup ;
@@ -4114,15 +4195,19 @@ vad:Trig1 {
         /**
          * Загружает пример TriG VADv2 с иерархией TriG графов
          * Содержит:
-         * - Trig1: корневой граф (hasParent = root)
-         * - Trig11: дочерний граф (hasParent = Trig1)
+         * - Trig1: корневой граф (hasParentTrig = root)
+         * - Trig11: дочерний граф (hasParentTrig = Trig1)
          */
         function loadExampleTrigVADv2() {
             const exampleTrigVADv2 = `# Пример TriG VADv2 (Value Added Chain Diagram с иерархией TriG)
-# Демонстрация иерархии TriG графов через hasParent
+# Демонстрация иерархии TriG графов через hasParentTrig
 # Процесс p1 имеет подтип "DetailedChild" (подпроцесс с детализацией)
 # Остальные процессы имеют подтип "Basic"
 # Исполнители определены в vad:rtree (Дерево Исполнителей)
+#
+# ВАЖНЫЕ ПРАВИЛА:
+# 1. vad:isSubprocessTrig указывается первым для явной связи индивида с TriG
+# 2. ID группы исполнителей формируется как: ExecutorGroup_ + ID процесса
 
 @prefix rdf: <http://www.w3.org/1999/02/22-rdf-syntax-ns#> .
 @prefix rdfs: <http://www.w3.org/2000/01/rdf-schema#> .
@@ -4137,7 +4222,7 @@ vad:Trig1 {
 vad:ptree {
     vad:ptree rdf:type vad:ProcessTree ;
         rdfs:label "Дерево Процессов (TriG)" ;
-        vad:hasParent vad:root .
+        vad:hasParentTrig vad:root .
 
     # Метаданные процессов для групп процессов (после root)
 
@@ -4223,7 +4308,7 @@ vad:ptree {
 vad:rtree {
     vad:rtree rdf:type vad:ExecutorTree ;
         rdfs:label "Дерево Исполнителей (TriG)" ;
-        vad:hasParent vad:root .
+        vad:hasParentTrig vad:root .
 
     # Исполнители для t_pGA
     vad:Executor1 rdf:type vad:Executor ;
@@ -4277,93 +4362,102 @@ vad:rtree {
 }
 
 # ============================================================================
-# Корневой TriG граф: t_pGA (hasParent = root)
+# Корневой TriG граф: t_pGA (hasParentTrig = root)
 # ============================================================================
 
 vad:t_pGA {
     vad:t_pGA rdf:type vad:VADProcessDia ;
         rdfs:label "Схема процесса t_pGA (t=TriG) процесса (группы процессов) pGA" ;
-        vad:hasParent vad:root ;
+        vad:hasParentTrig vad:root ;
         vad:definesProcess vad:pGA .
 
-    # Процесс 1 - DetailedChild (имеет дочернюю схему vad:t_p1 с hasParent на текущую)
+    # Процесс 1 - DetailedChild (имеет дочернюю схему vad:t_p1 с hasParentTrig на текущую)
     # rdf:type находится в vad:ptree
-    vad:p1 vad:hasExecutor vad:ExecutorGroup1 ;
+    # isSubprocessTrig указывается первым для явной связи с TriG
+    vad:p1 vad:isSubprocessTrig vad:t_pGA ;
+        vad:hasExecutor vad:ExecutorGroup_p1 ;
         vad:processSubtype vad:DetailedChild ;
         vad:hasNext vad:Process2 .
 
     # Процесс 2 - Базовый
-    vad:Process2 vad:hasExecutor vad:ExecutorGroup2 ;
+    vad:Process2 vad:isSubprocessTrig vad:t_pGA ;
+        vad:hasExecutor vad:ExecutorGroup_Process2 ;
         vad:processSubtype vad:Basic ;
         vad:hasNext vad:Process3, vad:Process4 .
 
     # Процесс 3 - Базовый
-    vad:Process3 vad:hasExecutor vad:ExecutorGroup3 ;
+    vad:Process3 vad:isSubprocessTrig vad:t_pGA ;
+        vad:hasExecutor vad:ExecutorGroup_Process3 ;
         vad:processSubtype vad:Basic ;
         vad:hasNext vad:Process4 .
 
     # Процесс 4 - Базовый
-    vad:Process4 vad:hasExecutor vad:ExecutorGroup4 ;
+    vad:Process4 vad:isSubprocessTrig vad:t_pGA ;
+        vad:hasExecutor vad:ExecutorGroup_Process4 ;
         vad:processSubtype vad:Basic ;
         vad:hasNext vad:Process5 .
 
     # Процесс 5 - Базовый
-    vad:Process5 vad:hasExecutor vad:ExecutorGroup5 ;
+    vad:Process5 vad:isSubprocessTrig vad:t_pGA ;
+        vad:hasExecutor vad:ExecutorGroup_Process5 ;
         vad:processSubtype vad:Basic ;
         vad:hasNext vad:Process6 .
 
     # Процесс 6 - Базовый
-    vad:Process6 vad:hasExecutor vad:ExecutorGroup6 ;
+    vad:Process6 vad:isSubprocessTrig vad:t_pGA ;
+        vad:hasExecutor vad:ExecutorGroup_Process6 ;
         vad:processSubtype vad:Basic ;
         vad:hasNext vad:Process7 .
 
     # Процесс 7 - Базовый
-    vad:Process7 vad:hasExecutor vad:ExecutorGroup7 ;
+    vad:Process7 vad:isSubprocessTrig vad:t_pGA ;
+        vad:hasExecutor vad:ExecutorGroup_Process7 ;
         vad:processSubtype vad:Basic ;
         vad:hasNext vad:Process8 .
 
     # Процесс 8 - Базовый
-    vad:Process8 vad:hasExecutor vad:ExecutorGroup8 ;
+    vad:Process8 vad:isSubprocessTrig vad:t_pGA ;
+        vad:hasExecutor vad:ExecutorGroup_Process8 ;
         vad:processSubtype vad:Basic .
 
-    # Группы исполнителей
-    vad:ExecutorGroup1 rdf:type vad:ExecutorGroup ;
-        rdfs:label "Группа исполнителей процесса Процесс 1" ;
+    # Группы исполнителей (ID формируется как ExecutorGroup_ + ID процесса)
+    vad:ExecutorGroup_p1 rdf:type vad:ExecutorGroup ;
+        rdfs:label "Группа исполнителей процесса p1" ;
         vad:includes vad:Executor1 .
 
-    vad:ExecutorGroup2 rdf:type vad:ExecutorGroup ;
-        rdfs:label "Группа исполнителей процесса Процесс 2" ;
+    vad:ExecutorGroup_Process2 rdf:type vad:ExecutorGroup ;
+        rdfs:label "Группа исполнителей процесса Process2" ;
         vad:includes vad:Executor1, vad:Executor2 .
 
-    vad:ExecutorGroup3 rdf:type vad:ExecutorGroup ;
-        rdfs:label "Группа исполнителей процесса Процесс 3" ;
+    vad:ExecutorGroup_Process3 rdf:type vad:ExecutorGroup ;
+        rdfs:label "Группа исполнителей процесса Process3" ;
         vad:includes vad:Executor3 .
 
-    vad:ExecutorGroup4 rdf:type vad:ExecutorGroup ;
-        rdfs:label "Группа исполнителей процесса Процесс 4" ;
+    vad:ExecutorGroup_Process4 rdf:type vad:ExecutorGroup ;
+        rdfs:label "Группа исполнителей процесса Process4" ;
         vad:includes vad:Executor3, vad:Executor4 .
 
-    vad:ExecutorGroup5 rdf:type vad:ExecutorGroup ;
-        rdfs:label "Группа исполнителей процесса Процесс 5" ;
+    vad:ExecutorGroup_Process5 rdf:type vad:ExecutorGroup ;
+        rdfs:label "Группа исполнителей процесса Process5" ;
         vad:includes vad:Executor5, vad:Executor6 .
 
-    vad:ExecutorGroup6 rdf:type vad:ExecutorGroup ;
-        rdfs:label "Группа исполнителей процесса Процесс 6" ;
+    vad:ExecutorGroup_Process6 rdf:type vad:ExecutorGroup ;
+        rdfs:label "Группа исполнителей процесса Process6" ;
         vad:includes vad:Executor7, vad:Executor8 .
 
-    vad:ExecutorGroup7 rdf:type vad:ExecutorGroup ;
-        rdfs:label "Группа исполнителей процесса Процесс 7" ;
+    vad:ExecutorGroup_Process7 rdf:type vad:ExecutorGroup ;
+        rdfs:label "Группа исполнителей процесса Process7" ;
         vad:includes vad:Executor1, vad:Executor5 .
 
-    vad:ExecutorGroup8 rdf:type vad:ExecutorGroup ;
-        rdfs:label "Группа исполнителей процесса Процесс 8" ;
+    vad:ExecutorGroup_Process8 rdf:type vad:ExecutorGroup ;
+        rdfs:label "Группа исполнителей процесса Process8" ;
         vad:includes vad:Executor2, vad:Executor7 .
 
     # Примечание: Исполнители (vad:Executor1..8) определены в vad:rtree
 }
 
 # ============================================================================
-# Дочерний TriG граф: t_p1 (hasParent = t_pGA)
+# Дочерний TriG граф: t_p1 (hasParentTrig = t_pGA)
 # Это детализация процесса p1 из родительского графа t_pGA
 # Все объекты имеют префикс 2 в номерах (Process21, Исполнитель 21 и т.д.)
 # ============================================================================
@@ -4371,80 +4465,89 @@ vad:t_pGA {
 vad:t_p1 {
     vad:t_p1 rdf:type vad:VADProcessDia ;
         rdfs:label "Схема процесса t_p1 (TriG) для процесса p1" ;
-        vad:hasParent vad:t_pGA ;
+        vad:hasParentTrig vad:t_pGA ;
         vad:definesProcess vad:p1 .
 
     # Процесс 21 - Базовый
     # rdf:type находится в vad:ptree
-    vad:Process21 vad:hasExecutor vad:ExecutorGroup21 ;
+    # isSubprocessTrig указывается первым для явной связи с TriG
+    vad:Process21 vad:isSubprocessTrig vad:t_p1 ;
+        vad:hasExecutor vad:ExecutorGroup_Process21 ;
         vad:processSubtype vad:Basic ;
         vad:hasNext vad:Process22 .
 
     # Процесс 22 - Базовый
-    vad:Process22 vad:hasExecutor vad:ExecutorGroup22 ;
+    vad:Process22 vad:isSubprocessTrig vad:t_p1 ;
+        vad:hasExecutor vad:ExecutorGroup_Process22 ;
         vad:processSubtype vad:Basic ;
         vad:hasNext vad:Process23, vad:Process24 .
 
     # Процесс 23 - Базовый
-    vad:Process23 vad:hasExecutor vad:ExecutorGroup23 ;
+    vad:Process23 vad:isSubprocessTrig vad:t_p1 ;
+        vad:hasExecutor vad:ExecutorGroup_Process23 ;
         vad:processSubtype vad:Basic ;
         vad:hasNext vad:Process24 .
 
     # Процесс 24 - Базовый
-    vad:Process24 vad:hasExecutor vad:ExecutorGroup24 ;
+    vad:Process24 vad:isSubprocessTrig vad:t_p1 ;
+        vad:hasExecutor vad:ExecutorGroup_Process24 ;
         vad:processSubtype vad:Basic ;
         vad:hasNext vad:Process25 .
 
     # Процесс 25 - Базовый
-    vad:Process25 vad:hasExecutor vad:ExecutorGroup25 ;
+    vad:Process25 vad:isSubprocessTrig vad:t_p1 ;
+        vad:hasExecutor vad:ExecutorGroup_Process25 ;
         vad:processSubtype vad:Basic ;
         vad:hasNext vad:Process26 .
 
     # Процесс 26 - Базовый
-    vad:Process26 vad:hasExecutor vad:ExecutorGroup26 ;
+    vad:Process26 vad:isSubprocessTrig vad:t_p1 ;
+        vad:hasExecutor vad:ExecutorGroup_Process26 ;
         vad:processSubtype vad:Basic ;
         vad:hasNext vad:Process27 .
 
     # Процесс 27 - Базовый
-    vad:Process27 vad:hasExecutor vad:ExecutorGroup27 ;
+    vad:Process27 vad:isSubprocessTrig vad:t_p1 ;
+        vad:hasExecutor vad:ExecutorGroup_Process27 ;
         vad:processSubtype vad:Basic ;
         vad:hasNext vad:Process28 .
 
     # Процесс 28 - Базовый
-    vad:Process28 vad:hasExecutor vad:ExecutorGroup28 ;
+    vad:Process28 vad:isSubprocessTrig vad:t_p1 ;
+        vad:hasExecutor vad:ExecutorGroup_Process28 ;
         vad:processSubtype vad:Basic .
 
-    # Группы исполнителей для TriG11
-    vad:ExecutorGroup21 rdf:type vad:ExecutorGroup ;
-        rdfs:label "Группа исполнителей процесса Процесс 21" ;
+    # Группы исполнителей (ID формируется как ExecutorGroup_ + ID процесса)
+    vad:ExecutorGroup_Process21 rdf:type vad:ExecutorGroup ;
+        rdfs:label "Группа исполнителей процесса Process21" ;
         vad:includes vad:Executor21 .
 
-    vad:ExecutorGroup22 rdf:type vad:ExecutorGroup ;
-        rdfs:label "Группа исполнителей процесса Процесс 22" ;
+    vad:ExecutorGroup_Process22 rdf:type vad:ExecutorGroup ;
+        rdfs:label "Группа исполнителей процесса Process22" ;
         vad:includes vad:Executor21, vad:Executor22 .
 
-    vad:ExecutorGroup23 rdf:type vad:ExecutorGroup ;
-        rdfs:label "Группа исполнителей процесса Процесс 23" ;
+    vad:ExecutorGroup_Process23 rdf:type vad:ExecutorGroup ;
+        rdfs:label "Группа исполнителей процесса Process23" ;
         vad:includes vad:Executor23 .
 
-    vad:ExecutorGroup24 rdf:type vad:ExecutorGroup ;
-        rdfs:label "Группа исполнителей процесса Процесс 24" ;
+    vad:ExecutorGroup_Process24 rdf:type vad:ExecutorGroup ;
+        rdfs:label "Группа исполнителей процесса Process24" ;
         vad:includes vad:Executor23, vad:Executor24 .
 
-    vad:ExecutorGroup25 rdf:type vad:ExecutorGroup ;
-        rdfs:label "Группа исполнителей процесса Процесс 25" ;
+    vad:ExecutorGroup_Process25 rdf:type vad:ExecutorGroup ;
+        rdfs:label "Группа исполнителей процесса Process25" ;
         vad:includes vad:Executor25, vad:Executor26 .
 
-    vad:ExecutorGroup26 rdf:type vad:ExecutorGroup ;
-        rdfs:label "Группа исполнителей процесса Процесс 26" ;
+    vad:ExecutorGroup_Process26 rdf:type vad:ExecutorGroup ;
+        rdfs:label "Группа исполнителей процесса Process26" ;
         vad:includes vad:Executor27, vad:Executor28 .
 
-    vad:ExecutorGroup27 rdf:type vad:ExecutorGroup ;
-        rdfs:label "Группа исполнителей процесса Процесс 27" ;
+    vad:ExecutorGroup_Process27 rdf:type vad:ExecutorGroup ;
+        rdfs:label "Группа исполнителей процесса Process27" ;
         vad:includes vad:Executor21, vad:Executor25 .
 
-    vad:ExecutorGroup28 rdf:type vad:ExecutorGroup ;
-        rdfs:label "Группа исполнителей процесса Процесс 28" ;
+    vad:ExecutorGroup_Process28 rdf:type vad:ExecutorGroup ;
+        rdfs:label "Группа исполнителей процесса Process28" ;
         vad:includes vad:Executor22, vad:Executor27 .
 
     # Примечание: Исполнители (vad:Executor21..28) определены в vad:rtree
@@ -4627,7 +4730,7 @@ vad:t_p1 {
          * - Процессы отображаются как cds (chevron) с зеленой заливкой
          * - Под процессами показываются исполнители
          * - Связи hasNext идут с востока на запад
-         * - hasParent не показывается, но есть в свойствах
+         * - hasParentTrig не показывается, но есть в свойствах
          */
         function rdfToDotVAD(quads, prefixes = {}) {
             buildNodeTypesCache(currentQuads, prefixes);
@@ -4710,7 +4813,7 @@ vad:t_p1 {
                     }
 
                     // Собираем hasParent
-                    if (predicateLabel === 'vad:hasParent' || predicateUri === 'http://example.org/vad#hasParent') {
+                    if (predicateLabel === 'vad:hasParentTrig' || predicateUri === 'http://example.org/vad#hasParentTrig') {
                         processInfo.hasParent = objectValue;
                     }
                 }
@@ -5600,6 +5703,7 @@ vad:t_p1 {
         function populateSmartDesignDropdowns() {
             const trigSelect = document.getElementById('smart-design-trig');
             const subjectSelect = document.getElementById('smart-design-subject');
+            const subjectTypeSelect = document.getElementById('smart-design-subject-type');
             const predicateSelect = document.getElementById('smart-design-predicate');
             const objectSelect = document.getElementById('smart-design-object');
 
@@ -5629,9 +5733,13 @@ vad:t_p1 {
                 subjectSelect.appendChild(option);
             });
 
-            // Очищаем и заполняем Predicate
+            // Очищаем и заполняем Subject Type
+            if (subjectTypeSelect) {
+                populateSubjectTypeDropdown();
+            }
+
+            // Очищаем и заполняем Predicate (без опции "New" - предикаты берутся только из онтологии)
             predicateSelect.innerHTML = '<option value="">-- Выберите Predicate --</option>';
-            predicateSelect.innerHTML += '<option value="__NEW__">New (создать новый)</option>';
             const predicates = getAllPredicates();
             predicates.forEach(p => {
                 const option = document.createElement('option');
@@ -5656,11 +5764,165 @@ vad:t_p1 {
         }
 
         /**
-         * Обновляет состояние полей Subject/Predicate/Object (активные только после выбора TriG)
+         * Заполняет выпадающий список Subject Type
+         * Типы зависят от выбранного TriG
+         */
+        function populateSubjectTypeDropdown() {
+            const subjectTypeSelect = document.getElementById('smart-design-subject-type');
+            const trigSelect = document.getElementById('smart-design-trig');
+
+            if (!subjectTypeSelect) return;
+
+            subjectTypeSelect.innerHTML = '<option value="">-- Выберите тип Subject --</option>';
+
+            // Определяем доступные типы в зависимости от выбранного TriG
+            const trigValue = trigSelect ? trigSelect.value : '';
+            const isPtree = trigValue === 'vad:ptree' || trigValue === 'http://example.org/vad#ptree' || trigValue.endsWith('#ptree');
+            const isRtree = trigValue === 'vad:rtree' || trigValue === 'http://example.org/vad#rtree' || trigValue.endsWith('#rtree');
+
+            let availableTypes = [];
+
+            if (isPtree) {
+                // В ptree можно добавлять только Process и ProcessTree
+                availableTypes = ['vad:Process', 'vad:ProcessTree'];
+            } else if (isRtree) {
+                // В rtree можно добавлять только Executor и ExecutorTree
+                availableTypes = ['vad:Executor', 'vad:ExecutorTree'];
+            } else if (trigValue) {
+                // В VADProcessDia можно добавлять Process (индивиды), ExecutorGroup, VADProcessDia
+                availableTypes = ['vad:Process', 'vad:ExecutorGroup', 'vad:VADProcessDia'];
+            }
+
+            availableTypes.forEach(type => {
+                const option = document.createElement('option');
+                option.value = type;
+                option.textContent = type;
+                subjectTypeSelect.appendChild(option);
+            });
+        }
+
+        /**
+         * Получает допустимые предикаты для выбранного Subject Type в зависимости от контекста TriG
+         * @param {string} subjectType - Тип субъекта (например, 'vad:Process')
+         * @param {string} trigContext - Контекст TriG ('ptree', 'rtree', 'vadProcessDia')
+         * @returns {Array} - Массив допустимых предикатов
+         */
+        function getPredicatesForSubjectType(subjectType, trigContext) {
+            const typeConfig = TYPE_PREDICATE_MAP[subjectType];
+            if (!typeConfig) return [];
+
+            let predicates = [];
+
+            if (trigContext === 'ptree' && typeConfig.ptree) {
+                predicates = typeConfig.ptree;
+            } else if (trigContext === 'rtree' && typeConfig.rtree) {
+                predicates = typeConfig.rtree;
+            } else if (trigContext === 'vadProcessDia' && typeConfig.vadProcessDia) {
+                predicates = typeConfig.vadProcessDia;
+            }
+
+            return predicates;
+        }
+
+        /**
+         * Определяет контекст TriG по его URI
+         * @param {string} trigUri - URI TriG графа
+         * @returns {string} - 'ptree', 'rtree' или 'vadProcessDia'
+         */
+        function getTrigContext(trigUri) {
+            if (!trigUri) return '';
+            if (trigUri === 'vad:ptree' || trigUri === 'http://example.org/vad#ptree' || trigUri.endsWith('#ptree')) {
+                return 'ptree';
+            }
+            if (trigUri === 'vad:rtree' || trigUri === 'http://example.org/vad#rtree' || trigUri.endsWith('#rtree')) {
+                return 'rtree';
+            }
+            return 'vadProcessDia';
+        }
+
+        /**
+         * Обновляет выпадающий список Predicate на основе выбранного Subject Type
+         */
+        function updatePredicateBySubjectType() {
+            const subjectTypeSelect = document.getElementById('smart-design-subject-type');
+            const predicateSelect = document.getElementById('smart-design-predicate');
+            const trigSelect = document.getElementById('smart-design-trig');
+
+            if (!subjectTypeSelect || !predicateSelect || !trigSelect) return;
+
+            const subjectType = subjectTypeSelect.value;
+            const trigUri = trigSelect.value;
+            const trigContext = getTrigContext(trigUri);
+
+            // Сохраняем текущее выбранное значение
+            const currentPredicateValue = predicateSelect.value;
+
+            // В режиме 'full' не фильтруем предикаты
+            if (smartDesignMode === 'full' || !subjectType) {
+                // Восстанавливаем полный список предикатов
+                predicateSelect.innerHTML = '<option value="">-- Выберите Predicate --</option>';
+                const allPredicates = getAllPredicates();
+                allPredicates.forEach(p => {
+                    const option = document.createElement('option');
+                    option.value = p.uri;
+                    option.textContent = p.label;
+                    predicateSelect.appendChild(option);
+                });
+            } else {
+                // Режим 'filtered' - показываем только допустимые предикаты
+                const allowedPredicates = getPredicatesForSubjectType(subjectType, trigContext);
+
+                predicateSelect.innerHTML = '<option value="">-- Выберите Predicate --</option>';
+
+                allowedPredicates.forEach(pred => {
+                    const option = document.createElement('option');
+                    // Пробуем развернуть в полный URI
+                    let fullUri = pred;
+                    for (const [prefix, namespace] of Object.entries(currentPrefixes)) {
+                        if (pred.startsWith(prefix + ':')) {
+                            fullUri = namespace + pred.substring(prefix.length + 1);
+                            break;
+                        }
+                    }
+                    option.value = fullUri;
+                    option.textContent = pred;
+                    predicateSelect.appendChild(option);
+                });
+            }
+
+            // Восстанавливаем выбор если значение все еще доступно
+            if (currentPredicateValue && Array.from(predicateSelect.options).some(o => o.value === currentPredicateValue)) {
+                predicateSelect.value = currentPredicateValue;
+            } else {
+                predicateSelect.value = '';
+            }
+        }
+
+        /**
+         * Переключает режим работы Smart Design (filtered/full)
+         */
+        function toggleSmartDesignMode() {
+            const toggleBtn = document.getElementById('smart-design-mode-toggle');
+
+            if (smartDesignMode === 'filtered') {
+                smartDesignMode = 'full';
+                if (toggleBtn) toggleBtn.textContent = 'Режим: Полный';
+            } else {
+                smartDesignMode = 'filtered';
+                if (toggleBtn) toggleBtn.textContent = 'Режим: Фильтр';
+            }
+
+            // Обновляем список предикатов
+            updatePredicateBySubjectType();
+        }
+
+        /**
+         * Обновляет состояние полей Subject/SubjectType/Predicate/Object (активные только после выбора TriG)
          */
         function updateSmartDesignFieldsState() {
             const trigSelect = document.getElementById('smart-design-trig');
             const subjectSelect = document.getElementById('smart-design-subject');
+            const subjectTypeSelect = document.getElementById('smart-design-subject-type');
             const predicateSelect = document.getElementById('smart-design-predicate');
             const objectSelect = document.getElementById('smart-design-object');
 
@@ -5673,11 +5935,13 @@ vad:t_p1 {
             if (newTrigActive) {
                 trigSelect.disabled = true;
                 subjectSelect.disabled = true;
+                if (subjectTypeSelect) subjectTypeSelect.disabled = true;
                 predicateSelect.disabled = true;
                 objectSelect.disabled = true;
             } else {
                 trigSelect.disabled = false;
                 subjectSelect.disabled = !trigSelected;
+                if (subjectTypeSelect) subjectTypeSelect.disabled = !trigSelected;
                 predicateSelect.disabled = !trigSelected;
                 objectSelect.disabled = !trigSelected;
             }
@@ -5765,6 +6029,7 @@ vad:t_p1 {
          */
         function updateSubjectPredicateDropdowns() {
             const subjectSelect = document.getElementById('smart-design-subject');
+            const subjectTypeSelect = document.getElementById('smart-design-subject-type');
             const predicateSelect = document.getElementById('smart-design-predicate');
 
             if (!subjectSelect || !predicateSelect) return;
@@ -5787,17 +6052,13 @@ vad:t_p1 {
                 subjectSelect.appendChild(option);
             });
 
-            // Очищаем и заполняем Predicate
-            predicateSelect.innerHTML = '<option value="">-- Выберите Predicate --</option>';
-            predicateSelect.innerHTML += '<option value="__NEW__">New (создать новый)</option>';
+            // Сбрасываем Subject Type при смене TriG
+            if (subjectTypeSelect) {
+                subjectTypeSelect.value = '';
+            }
 
-            const predicates = isPtree ? getPtreePredicates() : getAllPredicates();
-            predicates.forEach(p => {
-                const option = document.createElement('option');
-                option.value = p.uri;
-                option.textContent = p.label;
-                predicateSelect.appendChild(option);
-            });
+            // Обновляем Predicate с учетом режима и Subject Type
+            updatePredicateBySubjectType();
 
             // Восстанавливаем выбор если значение все еще доступно
             if (currentSubjectValue && Array.from(subjectSelect.options).some(o => o.value === currentSubjectValue)) {
@@ -5860,10 +6121,118 @@ vad:t_p1 {
             }
         }
 
+        /**
+         * Специализированный обработчик для поля Subject с учётом логики концепт/индивид
+         * @param {HTMLSelectElement} selectElement - Элемент select
+         */
+        function handleSubjectSelectChange(selectElement) {
+            const trigSelect = document.getElementById('smart-design-trig');
+            const trigContext = getTrigContext(trigSelect ? trigSelect.value : '');
+
+            if (selectElement.value === '__NEW__') {
+                if (trigContext === 'ptree') {
+                    // В ptree можно создавать новые концепты Process
+                    const newValue = promptForNewValue('Process (концепт)', subjectExists, false);
+                    if (newValue) {
+                        const option = document.createElement('option');
+                        option.value = '__CUSTOM__:' + newValue;
+                        option.textContent = newValue + ' (новый концепт)';
+                        selectElement.insertBefore(option, selectElement.options[2]);
+                        selectElement.value = option.value;
+                        hideSmartDesignMessage();
+                        showSmartDesignMessage('Создаётся новый концепт Process в ptree. Не забудьте добавить rdf:type, rdfs:label и другие обязательные свойства.', 'info');
+                    } else {
+                        selectElement.value = '';
+                    }
+                } else if (trigContext === 'rtree') {
+                    // В rtree можно создавать новые концепты Executor
+                    const newValue = promptForNewValue('Executor (концепт)', subjectExists, false);
+                    if (newValue) {
+                        const option = document.createElement('option');
+                        option.value = '__CUSTOM__:' + newValue;
+                        option.textContent = newValue + ' (новый концепт)';
+                        selectElement.insertBefore(option, selectElement.options[2]);
+                        selectElement.value = option.value;
+                        hideSmartDesignMessage();
+                        showSmartDesignMessage('Создаётся новый концепт Executor в rtree. Не забудьте добавить rdf:type и rdfs:label.', 'info');
+                    } else {
+                        selectElement.value = '';
+                    }
+                } else if (trigContext === 'vadProcessDia') {
+                    // В VADProcessDia можно только выбирать существующие концепты из ptree
+                    // Показываем диалог выбора концепта
+                    showConceptSelectionDialog(selectElement);
+                } else {
+                    // Нет выбранного TriG - стандартное поведение
+                    handleSelectChange(selectElement, 'Subject', subjectExists, false);
+                }
+            }
+        }
+
+        /**
+         * Показывает диалог выбора концепта из ptree для создания индивида в VADProcessDia
+         * @param {HTMLSelectElement} selectElement - Элемент select для Subject
+         */
+        function showConceptSelectionDialog(selectElement) {
+            // Получаем список концептов Process из ptree
+            const processConcepts = getProcessSubjects();
+
+            if (processConcepts.length === 0) {
+                showSmartDesignMessage('В ptree нет концептов Process. Сначала создайте концепт процесса в ptree.', 'error');
+                selectElement.value = '';
+                return;
+            }
+
+            // Создаём список для выбора
+            const conceptNames = processConcepts.map(c => c.label).join('\n');
+            const selectedConcept = prompt(
+                'В VADProcessDia нельзя создавать новые имена - только индивиды существующих концептов.\n\n' +
+                'Выберите концепт из ptree (введите имя):\n\n' +
+                conceptNames
+            );
+
+            if (selectedConcept && selectedConcept.trim()) {
+                const trimmed = selectedConcept.trim();
+                // Ищем соответствующий концепт
+                const matchingConcept = processConcepts.find(c =>
+                    c.label === trimmed ||
+                    c.label.toLowerCase() === trimmed.toLowerCase() ||
+                    c.uri.endsWith('#' + trimmed) ||
+                    c.uri.endsWith('/' + trimmed)
+                );
+
+                if (matchingConcept) {
+                    // Выбираем существующий концепт
+                    selectElement.value = matchingConcept.uri;
+                    hideSmartDesignMessage();
+                    showSmartDesignMessage(
+                        `Выбран концепт "${matchingConcept.label}". Для создания индивида добавьте vad:isSubprocessTrig первым.`,
+                        'info'
+                    );
+                } else {
+                    showSmartDesignMessage(`Концепт "${trimmed}" не найден в ptree. Сначала создайте его там.`, 'error');
+                    selectElement.value = '';
+                }
+            } else {
+                selectElement.value = '';
+            }
+        }
+
+        /**
+         * Проверяет, существует ли концепт Process в ptree
+         * @param {string} processUri - URI процесса для проверки
+         * @returns {boolean} - true если концепт существует в ptree
+         */
+        function isProcessConceptInPtree(processUri) {
+            const processConcepts = getProcessSubjects();
+            return processConcepts.some(c => c.uri === processUri);
+        }
+
         // Добавляем обработчики событий для выпадающих списков Smart Design
         document.addEventListener('DOMContentLoaded', function() {
             const trigSelect = document.getElementById('smart-design-trig');
             const subjectSelect = document.getElementById('smart-design-subject');
+            const subjectTypeSelect = document.getElementById('smart-design-subject-type');
             const predicateSelect = document.getElementById('smart-design-predicate');
             const objectSelect = document.getElementById('smart-design-object');
 
@@ -5871,6 +6240,8 @@ vad:t_p1 {
                 trigSelect.addEventListener('change', function() {
                     // TriG теперь не имеет опции __NEW__, просто обновляем состояние полей
                     updateSmartDesignFieldsState();
+                    // Перезаполняем Subject Type в зависимости от выбранного TriG
+                    populateSubjectTypeDropdown();
                     // Перезаполняем Subject и Predicate в зависимости от выбранного TriG (vad:ptree или нет)
                     updateSubjectPredicateDropdowns();
                 });
@@ -5878,13 +6249,23 @@ vad:t_p1 {
 
             if (subjectSelect) {
                 subjectSelect.addEventListener('change', function() {
-                    handleSelectChange(this, 'Subject', subjectExists, false);
+                    // Используем специализированный обработчик для Subject с логикой концепт/индивид
+                    handleSubjectSelectChange(this);
+                    // При выборе существующего Subject, автоматически определяем его тип
+                    autoDetectSubjectType();
+                });
+            }
+
+            if (subjectTypeSelect) {
+                subjectTypeSelect.addEventListener('change', function() {
+                    // При изменении Subject Type, обновляем список допустимых Predicate
+                    updatePredicateBySubjectType();
                 });
             }
 
             if (predicateSelect) {
                 predicateSelect.addEventListener('change', function() {
-                    handleSelectChange(this, 'Predicate', predicateExists, false);
+                    // Predicate больше не имеет опции __NEW__
                 });
             }
 
@@ -5895,6 +6276,41 @@ vad:t_p1 {
                 });
             }
         });
+
+        /**
+         * Автоматически определяет тип выбранного Subject и устанавливает его в Subject Type
+         */
+        function autoDetectSubjectType() {
+            const subjectSelect = document.getElementById('smart-design-subject');
+            const subjectTypeSelect = document.getElementById('smart-design-subject-type');
+
+            if (!subjectSelect || !subjectTypeSelect) return;
+
+            const subjectUri = subjectSelect.value;
+            if (!subjectUri || subjectUri === '__NEW__' || subjectUri.startsWith('__CUSTOM__:')) {
+                // Для нового Subject не меняем Subject Type
+                return;
+            }
+
+            // Получаем типы данного Subject из кэша
+            const types = nodeTypesCache[subjectUri] || [];
+
+            // Проверяем каждый известный тип
+            for (const type of types) {
+                const prefixedType = getPrefixedName(type, currentPrefixes);
+                // Ищем соответствующий тип в выпадающем списке
+                const options = Array.from(subjectTypeSelect.options);
+                const matchingOption = options.find(o =>
+                    o.value === prefixedType || o.value === type
+                );
+                if (matchingOption) {
+                    subjectTypeSelect.value = matchingOption.value;
+                    // Обновляем список Predicate
+                    updatePredicateBySubjectType();
+                    return;
+                }
+            }
+        }
 
         /**
          * Получает значение из выпадающего списка (с учетом кастомных значений)
@@ -6957,11 +7373,11 @@ vad:t_p1 {
                 triples.push(`        ${trigUri} rdfs:label "${escapedLabel}" .`);
             }
 
-            // vad:hasParent (опционально)
+            // vad:hasParentTrig (опционально)
             if (parentUri) {
                 // Преобразуем URI родителя в префиксную форму
                 const parentPrefixed = getPrefixedName(parentUri, currentPrefixes);
-                triples.push(`        ${trigUri} vad:hasParent ${parentPrefixed} .`);
+                triples.push(`        ${trigUri} vad:hasParentTrig ${parentPrefixed} .`);
             }
 
             // vad:typeOfScheme (опционально)
