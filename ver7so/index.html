@@ -1085,6 +1085,14 @@
             font-size: 14px;
         }
 
+        .smart-design-trig-row {
+            margin-bottom: 15px;
+        }
+
+        .smart-design-field-trig {
+            max-width: 400px;
+        }
+
         .smart-design-fields {
             display: grid;
             grid-template-columns: repeat(4, 1fr);
@@ -1485,23 +1493,27 @@
         <!-- Панель Smart Design -->
         <div class="smart-design-panel">
             <h3>Smart Design</h3>
-            <div class="smart-design-fields">
-                <div class="smart-design-field">
+            <!-- Верхний ряд: TriG -->
+            <div class="smart-design-trig-row">
+                <div class="smart-design-field smart-design-field-trig">
                     <label for="smart-design-trig">TriG:</label>
                     <select id="smart-design-trig">
                         <option value="">-- Выберите TriG --</option>
+                    </select>
+                </div>
+            </div>
+            <!-- Нижний ряд: Subject Type, Subject, Predicate, Object -->
+            <div class="smart-design-fields">
+                <div class="smart-design-field">
+                    <label for="smart-design-subject-type">Subject Type:</label>
+                    <select id="smart-design-subject-type">
+                        <option value="">-- Выберите тип Subject --</option>
                     </select>
                 </div>
                 <div class="smart-design-field">
                     <label for="smart-design-subject">Subject:</label>
                     <select id="smart-design-subject">
                         <option value="">-- Выберите Subject --</option>
-                    </select>
-                </div>
-                <div class="smart-design-field">
-                    <label for="smart-design-subject-type">Subject Type:</label>
-                    <select id="smart-design-subject-type">
-                        <option value="">-- Выберите тип Subject --</option>
                     </select>
                 </div>
                 <div class="smart-design-field">
@@ -5899,6 +5911,87 @@ vad:t_p1 {
         }
 
         /**
+         * Предикаты, требующие фильтрации Object по типу vad:Process (из ptree)
+         */
+        const PROCESS_OBJECT_PREDICATES = [
+            'vad:hasNext',
+            'http://example.org/vad#hasNext'
+        ];
+
+        /**
+         * Проверяет, требует ли предикат фильтрации Object до типа Process
+         * @param {string} predicateUri - URI или prefixed name предиката
+         * @returns {boolean}
+         */
+        function isProcessObjectPredicate(predicateUri) {
+            return PROCESS_OBJECT_PREDICATES.some(allowed =>
+                predicateUri === allowed ||
+                predicateUri.endsWith('#hasNext')
+            );
+        }
+
+        /**
+         * Обновляет список Object в зависимости от выбранного Predicate
+         * В режиме Filter: если выбран vad:hasNext, показываем только объекты типа vad:Process из ptree
+         */
+        function updateObjectsByPredicate() {
+            const predicateSelect = document.getElementById('smart-design-predicate');
+            const objectSelect = document.getElementById('smart-design-object');
+
+            if (!predicateSelect || !objectSelect) return;
+
+            const predicateValue = predicateSelect.value;
+
+            // Сохраняем текущее выбранное значение
+            const currentObjectValue = objectSelect.value;
+
+            // В режиме 'full' не фильтруем объекты
+            if (smartDesignMode === 'full' || !predicateValue) {
+                // Восстанавливаем полный список объектов
+                objectSelect.innerHTML = '<option value="">-- Выберите Object --</option>';
+                objectSelect.innerHTML += '<option value="__NEW__">New (создать новый литерал)</option>';
+                const allObjects = getAllObjects();
+                allObjects.forEach(o => {
+                    const option = document.createElement('option');
+                    option.value = o.uri;
+                    option.textContent = o.label;
+                    objectSelect.appendChild(option);
+                });
+            } else if (isProcessObjectPredicate(predicateValue)) {
+                // Режим 'filtered' и предикат требует Object типа Process
+                objectSelect.innerHTML = '<option value="">-- Выберите Object --</option>';
+                // Для hasNext не показываем опцию "New (создать новый литерал)" т.к. объект должен быть Process
+
+                // Получаем только объекты типа vad:Process из ptree
+                const processObjects = getProcessSubjects();
+                processObjects.forEach(p => {
+                    const option = document.createElement('option');
+                    option.value = p.uri;
+                    option.textContent = p.label;
+                    objectSelect.appendChild(option);
+                });
+            } else {
+                // Режим 'filtered' но предикат не требует специальной фильтрации
+                objectSelect.innerHTML = '<option value="">-- Выберите Object --</option>';
+                objectSelect.innerHTML += '<option value="__NEW__">New (создать новый литерал)</option>';
+                const allObjects = getAllObjects();
+                allObjects.forEach(o => {
+                    const option = document.createElement('option');
+                    option.value = o.uri;
+                    option.textContent = o.label;
+                    objectSelect.appendChild(option);
+                });
+            }
+
+            // Восстанавливаем выбор если значение все еще доступно
+            if (currentObjectValue && Array.from(objectSelect.options).some(o => o.value === currentObjectValue)) {
+                objectSelect.value = currentObjectValue;
+            } else {
+                objectSelect.value = '';
+            }
+        }
+
+        /**
          * Переключает режим работы Smart Design (filtered/full)
          */
         function toggleSmartDesignMode() {
@@ -5914,6 +6007,8 @@ vad:t_p1 {
 
             // Обновляем список предикатов
             updatePredicateBySubjectType();
+            // Обновляем список объектов
+            updateObjectsByPredicate();
         }
 
         /**
@@ -6265,7 +6360,8 @@ vad:t_p1 {
 
             if (predicateSelect) {
                 predicateSelect.addEventListener('change', function() {
-                    // Predicate больше не имеет опции __NEW__
+                    // При изменении Predicate, обновляем список допустимых Object
+                    updateObjectsByPredicate();
                 });
             }
 
@@ -6568,26 +6664,32 @@ vad:t_p1 {
                 }
             }
 
-            // Определяем целевой граф на основе правил ptree
-            // Если субъект является vad:Process и предикат в PTREE_PREDICATES,
-            // или если добавляется rdf:type vad:Process, триплет будет добавлен в vad:ptree
-            const targetTrigValue = determineTargetGraph(subjectValue, predicateValue, trigValue, objectValue);
+            // Проверяем, что триплет добавляется в правильный граф (без автоматического перенаправления)
+            // Если субъект является vad:Process и предикат из PTREE_PREDICATES или rdf:type vad:Process,
+            // триплет должен быть добавлен только в vad:ptree
+            const expectedTargetGraph = determineTargetGraph(subjectValue, predicateValue, trigValue, objectValue);
+
+            if (expectedTargetGraph !== trigValue) {
+                const trigLabel = getPrefixedName(trigValue, currentPrefixes) || trigValue;
+                const expectedLabel = getPrefixedName(expectedTargetGraph, currentPrefixes) || expectedTargetGraph;
+                showSmartDesignMessage(
+                    `Ошибка: Данный триплет должен быть добавлен в граф "${expectedLabel}", а не в "${trigLabel}". ` +
+                    `Пожалуйста, выберите корректный TriG.`,
+                    'error'
+                );
+                return;
+            }
 
             // Генерируем SPARQL с использованием префиксов
-            const sparqlQuery = generateInsertSparqlWithPrefix(targetTrigValue, subjectValue, predicateValue, objectValue, isObjectLiteral);
+            const sparqlQuery = generateInsertSparqlWithPrefix(trigValue, subjectValue, predicateValue, objectValue, isObjectLiteral);
 
             const resultTextarea = document.getElementById('result-sparql-query');
             if (resultTextarea) {
                 resultTextarea.value = sparqlQuery;
             }
 
-            // Формируем сообщение с указанием целевого графа
-            let successMessage = 'INSERT SPARQL запрос с prefix:name успешно сгенерирован';
-            if (targetTrigValue !== trigValue) {
-                successMessage += ` (перенаправлен в ${targetTrigValue})`;
-            }
-            successMessage += '.';
-            showSmartDesignMessage(successMessage, 'success');
+            // Формируем сообщение об успешной генерации
+            showSmartDesignMessage('INSERT SPARQL запрос с prefix:name успешно сгенерирован.', 'success');
         }
 
         /**
@@ -6649,23 +6751,31 @@ vad:t_p1 {
                 }
             }
 
-            // Определяем целевой граф на основе правил ptree
-            // Если субъект является vad:Process и предикат в PTREE_PREDICATES,
-            // или если добавляется rdf:type vad:Process, триплет будет добавлен в vad:ptree
-            const targetTrigValue = determineTargetGraph(subjectValue, predicateValue, trigValue, objectValue);
+            // Проверяем, что триплет добавляется в правильный граф (без автоматического перенаправления)
+            // Если субъект является vad:Process и предикат из PTREE_PREDICATES или rdf:type vad:Process,
+            // триплет должен быть добавлен только в vad:ptree
+            const expectedTargetGraph = determineTargetGraph(subjectValue, predicateValue, trigValue, objectValue);
 
-            const sparqlQuery = generateInsertSparql(targetTrigValue, subjectValue, predicateValue, objectValue, isObjectLiteral);
+            if (expectedTargetGraph !== trigValue) {
+                const trigLabel = getPrefixedName(trigValue, currentPrefixes) || trigValue;
+                const expectedLabel = getPrefixedName(expectedTargetGraph, currentPrefixes) || expectedTargetGraph;
+                showSmartDesignMessage(
+                    `Ошибка: Данный триплет должен быть добавлен в граф "${expectedLabel}", а не в "${trigLabel}". ` +
+                    `Пожалуйста, выберите корректный TriG.`,
+                    'error'
+                );
+                return;
+            }
+
+            const sparqlQuery = generateInsertSparql(trigValue, subjectValue, predicateValue, objectValue, isObjectLiteral);
 
             const resultTextarea = document.getElementById('result-sparql-query');
             if (resultTextarea) {
                 resultTextarea.value = sparqlQuery;
             }
 
-            // Формируем сообщение с указанием целевого графа
+            // Формируем сообщение об успешной генерации
             let successMessage = 'INSERT SPARQL запрос успешно сгенерирован';
-            if (targetTrigValue !== trigValue) {
-                successMessage += ` (перенаправлен в ${targetTrigValue})`;
-            }
             showSmartDesignMessage(successMessage, 'success');
         }
 
