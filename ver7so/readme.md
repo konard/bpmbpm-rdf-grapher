@@ -10,3 +10,6 @@ https://bpmbpm.github.io/rdf-grapher/ver7so/
 Нажать кнопку (press the button) **Визуализировать**
 
 Выбор режима:  "SPARQL Smart Design"
+
+### term
+- https://github.com/bpmbpm/doc/tree/main/BPM/TERM ; https://github.com/bpmbpm/doc/blob/main/METAMODEL/object.md
