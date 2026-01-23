@@ -43,12 +43,17 @@
             <span class="example-link" onclick="loadExampleTrigVAD()">Trig VAD</span> |
             <span class="example-link" onclick="loadExampleTrigVADv2()">Trig VADv2</span>
         </p>
+        <div id="example-status" class="example-status" style="display: none;"></div>
     </div>
 
     <div class="container">
         <div class="rdf-input-header">
             <label for="rdf-input">RDF данные или URI:</label>
-            <button class="show-in-window-btn" onclick="showRdfInSeparateWindow()">Показать в отдельном окне</button>
+            <button class="show-in-window-btn" onclick="showRdfInSeparateWindow()">Показать в окне</button>
+            <button class="clear-btn" onclick="clearRdfInput()">Очистить</button>
+            <button class="save-as-btn" onclick="saveAsFile()">Сохранить как</button>
+            <button class="load-btn" onclick="document.getElementById('file-input').click()">Загрузить</button>
+            <input type="file" id="file-input" style="display: none;" accept=".ttl,.rdf,.nt,.nq,.trig" onchange="loadFile(event)">
         </div>
         <textarea id="rdf-input" placeholder="Введите RDF данные в формате Turtle, N-Triples, N-Quads или TriG..."></textarea>
 
@@ -2482,6 +2487,10 @@ WHERE {
         // ============================================================================
 
         function loadExampleTurtle() {
+            const statusEl = document.getElementById('example-status');
+            statusEl.textContent = 'Загрузка Turtle.ttl...';
+            statusEl.style.display = 'block';
+
             fetch('Turtle.ttl')
                 .then(response => response.text())
                 .then(text => {
@@ -2489,14 +2498,30 @@ WHERE {
                     document.getElementById('input-format').value = 'turtle';
                     document.getElementById('visualization-mode').value = 'notation';
                     updateModeDescription();
+                    statusEl.textContent = 'Turtle.ttl успешно загружен';
+                    statusEl.style.backgroundColor = '#d4edda';
+                    statusEl.style.borderColor = '#c3e6cb';
+                    statusEl.style.color = '#155724';
+                    setTimeout(() => statusEl.style.display = 'none', 3000);
                 })
-                .catch(error => console.error('Error loading Turtle.ttl:', error));
+                .catch(error => {
+                    console.error('Error loading Turtle.ttl:', error);
+                    statusEl.textContent = 'Ошибка загрузки Turtle.ttl';
+                    statusEl.style.backgroundColor = '#f8d7da';
+                    statusEl.style.borderColor = '#f5c6cb';
+                    statusEl.style.color = '#721c24';
+                    setTimeout(() => statusEl.style.display = 'none', 5000);
+                });
         }
 
         /**
          * Загружает пример VAD (Value Added Chain Diagram)
          */
         function loadExampleVAD() {
+            const statusEl = document.getElementById('example-status');
+            statusEl.textContent = 'Загрузка VAD.ttl...';
+            statusEl.style.display = 'block';
+
             fetch('VAD.ttl')
                 .then(response => response.text())
                 .then(exampleVAD => {
@@ -2504,11 +2529,27 @@ WHERE {
                     document.getElementById('input-format').value = 'turtle';
                     document.getElementById('visualization-mode').value = 'vad';
                     updateModeDescription();
+                    statusEl.textContent = 'VAD.ttl успешно загружен';
+                    statusEl.style.backgroundColor = '#d4edda';
+                    statusEl.style.borderColor = '#c3e6cb';
+                    statusEl.style.color = '#155724';
+                    setTimeout(() => statusEl.style.display = 'none', 3000);
                 })
-                .catch(error => console.error('Error loading VAD.ttl:', error));
+                .catch(error => {
+                    console.error('Error loading VAD.ttl:', error);
+                    statusEl.textContent = 'Ошибка загрузки VAD.ttl';
+                    statusEl.style.backgroundColor = '#f8d7da';
+                    statusEl.style.borderColor = '#f5c6cb';
+                    statusEl.style.color = '#721c24';
+                    setTimeout(() => statusEl.style.display = 'none', 5000);
+                });
         }
 
         function loadExampleNTriples() {
+            const statusEl = document.getElementById('example-status');
+            statusEl.textContent = 'Загрузка NTriples.ttl...';
+            statusEl.style.display = 'block';
+
             fetch('NTriples.ttl')
                 .then(response => response.text())
                 .then(text => {
@@ -2516,14 +2557,30 @@ WHERE {
                     document.getElementById('input-format').value = 'n-triples';
                     document.getElementById('visualization-mode').value = 'notation';
                     updateModeDescription();
+                    statusEl.textContent = 'NTriples.ttl успешно загружен';
+                    statusEl.style.backgroundColor = '#d4edda';
+                    statusEl.style.borderColor = '#c3e6cb';
+                    statusEl.style.color = '#155724';
+                    setTimeout(() => statusEl.style.display = 'none', 3000);
                 })
-                .catch(error => console.error('Error loading NTriples.ttl:', error));
+                .catch(error => {
+                    console.error('Error loading NTriples.ttl:', error);
+                    statusEl.textContent = 'Ошибка загрузки NTriples.ttl';
+                    statusEl.style.backgroundColor = '#f8d7da';
+                    statusEl.style.borderColor = '#f5c6cb';
+                    statusEl.style.color = '#721c24';
+                    setTimeout(() => statusEl.style.display = 'none', 5000);
+                });
         }
 
         /**
          * Загружает пример RDF данных в формате N-Quads
          */
         function loadExampleNQuads() {
+            const statusEl = document.getElementById('example-status');
+            statusEl.textContent = 'Загрузка NQuads.ttl...';
+            statusEl.style.display = 'block';
+
             fetch('NQuads.ttl')
                 .then(response => response.text())
                 .then(text => {
@@ -2531,14 +2588,30 @@ WHERE {
                     document.getElementById('input-format').value = 'n-quads';
                     document.getElementById('visualization-mode').value = 'notation';
                     updateModeDescription();
+                    statusEl.textContent = 'NQuads.ttl успешно загружен';
+                    statusEl.style.backgroundColor = '#d4edda';
+                    statusEl.style.borderColor = '#c3e6cb';
+                    statusEl.style.color = '#155724';
+                    setTimeout(() => statusEl.style.display = 'none', 3000);
                 })
-                .catch(error => console.error('Error loading NQuads.ttl:', error));
+                .catch(error => {
+                    console.error('Error loading NQuads.ttl:', error);
+                    statusEl.textContent = 'Ошибка загрузки NQuads.ttl';
+                    statusEl.style.backgroundColor = '#f8d7da';
+                    statusEl.style.borderColor = '#f5c6cb';
+                    statusEl.style.color = '#721c24';
+                    setTimeout(() => statusEl.style.display = 'none', 5000);
+                });
         }
 
         /**
          * Загружает пример RDF данных в формате TriG
          */
         function loadExampleTriG() {
+            const statusEl = document.getElementById('example-status');
+            statusEl.textContent = 'Загрузка TriG.ttl...';
+            statusEl.style.display = 'block';
+
             fetch('TriG.ttl')
                 .then(response => response.text())
                 .then(text => {
@@ -2546,8 +2619,20 @@ WHERE {
                     document.getElementById('input-format').value = 'trig';
                     document.getElementById('visualization-mode').value = 'notation';
                     updateModeDescription();
+                    statusEl.textContent = 'TriG.ttl успешно загружен';
+                    statusEl.style.backgroundColor = '#d4edda';
+                    statusEl.style.borderColor = '#c3e6cb';
+                    statusEl.style.color = '#155724';
+                    setTimeout(() => statusEl.style.display = 'none', 3000);
                 })
-                .catch(error => console.error('Error loading TriG.ttl:', error));
+                .catch(error => {
+                    console.error('Error loading TriG.ttl:', error);
+                    statusEl.textContent = 'Ошибка загрузки TriG.ttl';
+                    statusEl.style.backgroundColor = '#f8d7da';
+                    statusEl.style.borderColor = '#f5c6cb';
+                    statusEl.style.color = '#721c24';
+                    setTimeout(() => statusEl.style.display = 'none', 5000);
+                });
         }
 
         /**
@@ -2555,14 +2640,31 @@ WHERE {
          * Имя графа (Trig1) и его label отображаются как название схемы вверху диаграммы
          */
         function loadExampleTrigVAD() {
+            const statusEl = document.getElementById('example-status');
+            statusEl.textContent = 'Загрузка Trig_VAD.ttl...';
+            statusEl.style.display = 'block';
+
             fetch('Trig_VAD.ttl')
                 .then(response => response.text())
+                .then(exampleTrigVAD => {
                     document.getElementById('rdf-input').value = exampleTrigVAD;
                     document.getElementById('input-format').value = 'trig';
                     document.getElementById('visualization-mode').value = 'vad';
                     updateModeDescription();
+                    statusEl.textContent = 'Trig_VAD.ttl успешно загружен';
+                    statusEl.style.backgroundColor = '#d4edda';
+                    statusEl.style.borderColor = '#c3e6cb';
+                    statusEl.style.color = '#155724';
+                    setTimeout(() => statusEl.style.display = 'none', 3000);
                 })
-                .catch(error => console.error('Error loading Trig_VAD.ttl:', error));
+                .catch(error => {
+                    console.error('Error loading Trig_VAD.ttl:', error);
+                    statusEl.textContent = 'Ошибка загрузки Trig_VAD.ttl';
+                    statusEl.style.backgroundColor = '#f8d7da';
+                    statusEl.style.borderColor = '#f5c6cb';
+                    statusEl.style.color = '#721c24';
+                    setTimeout(() => statusEl.style.display = 'none', 5000);
+                });
         }
 
         /**
@@ -2572,14 +2674,31 @@ WHERE {
          * - Trig11: дочерний граф (hasParentTrig = Trig1)
          */
         function loadExampleTrigVADv2() {
+            const statusEl = document.getElementById('example-status');
+            statusEl.textContent = 'Загрузка Trig_VADv2.ttl...';
+            statusEl.style.display = 'block';
+
             fetch('Trig_VADv2.ttl')
                 .then(response => response.text())
+                .then(exampleTrigVADv2 => {
                     document.getElementById('rdf-input').value = exampleTrigVADv2;
                     document.getElementById('input-format').value = 'trig';
                     document.getElementById('visualization-mode').value = 'vad-trig';
                     updateModeDescription();
+                    statusEl.textContent = 'Trig_VADv2.ttl успешно загружен';
+                    statusEl.style.backgroundColor = '#d4edda';
+                    statusEl.style.borderColor = '#c3e6cb';
+                    statusEl.style.color = '#155724';
+                    setTimeout(() => statusEl.style.display = 'none', 3000);
                 })
-                .catch(error => console.error('Error loading Trig_VADv2.ttl:', error));
+                .catch(error => {
+                    console.error('Error loading Trig_VADv2.ttl:', error);
+                    statusEl.textContent = 'Ошибка загрузки Trig_VADv2.ttl';
+                    statusEl.style.backgroundColor = '#f8d7da';
+                    statusEl.style.borderColor = '#f5c6cb';
+                    statusEl.style.color = '#721c24';
+                    setTimeout(() => statusEl.style.display = 'none', 5000);
+                });
         }
 
         /**
@@ -2587,6 +2706,63 @@ WHERE {
          */
         function loadExample() {
             loadExampleTurtle();
+        }
+
+        /**
+         * Очищает содержимое поля RDF данных
+         */
+        function clearRdfInput() {
+            document.getElementById('rdf-input').value = '';
+        }
+
+        /**
+         * Сохраняет содержимое RDF поля как файл
+         */
+        function saveAsFile() {
+            const content = document.getElementById('rdf-input').value;
+            if (!content.trim()) {
+                alert('Нет данных для сохранения');
+                return;
+            }
+
+            const format = document.getElementById('input-format').value;
+            let extension = 'ttl';
+            if (format === 'n-triples') extension = 'nt';
+            else if (format === 'n-quads') extension = 'nq';
+            else if (format === 'trig') extension = 'trig';
+
+            const blob = new Blob([content], { type: 'text/plain' });
+            const url = URL.createObjectURL(blob);
+            const a = document.createElement('a');
+            a.href = url;
+            a.download = `rdf-data.${extension}`;
+            document.body.appendChild(a);
+            a.click();
+            document.body.removeChild(a);
+            URL.revokeObjectURL(url);
+        }
+
+        /**
+         * Загружает файл, выбранный пользователем
+         */
+        function loadFile(event) {
+            const file = event.target.files[0];
+            if (!file) return;
+
+            const reader = new FileReader();
+            reader.onload = function(e) {
+                document.getElementById('rdf-input').value = e.target.result;
+
+                // Определяем формат по расширению
+                const extension = file.name.split('.').pop().toLowerCase();
+                let format = 'turtle';
+                if (extension === 'nt') format = 'n-triples';
+                else if (extension === 'nq') format = 'n-quads';
+                else if (extension === 'trig') format = 'trig';
+
+                document.getElementById('input-format').value = format;
+            };
+            reader.readAsText(file);
         }
 
         // ============================================================================
