@@ -24,11 +24,64 @@
             margin-bottom: 20px;
         }
 
+        .example-status {
+            margin-top: 10px;
+            padding: 8px;
+            background-color: #fff3cd;
+            border: 1px solid #ffeaa7;
+            border-radius: 4px;
+            color: #856404;
+            font-size: 14px;
+        }
+
         .container {
             background-color: white;
             padding: 20px;
             border-radius: 8px;
             box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+        }
+
+        .rdf-input-header {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            margin-bottom: 10px;
+            flex-wrap: wrap;
+        }
+
+        .rdf-input-header label {
+            margin-bottom: 0;
+            flex: 1;
+        }
+
+        .rdf-input-header button {
+            margin-top: 0;
+            padding: 8px 16px;
+            font-size: 14px;
+        }
+
+        .clear-btn {
+            background-color: #dc3545;
+        }
+
+        .clear-btn:hover {
+            background-color: #c82333;
+        }
+
+        .save-as-btn {
+            background-color: #007bff;
+        }
+
+        .save-as-btn:hover {
+            background-color: #0056b3;
+        }
+
+        .load-btn {
+            background-color: #28a745;
+        }
+
+        .load-btn:hover {
+            background-color: #1e7e34;
         }
 
         label {
