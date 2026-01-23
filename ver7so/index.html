@@ -130,7 +130,7 @@
             </div>
         </div>
 
-        <button id="visualize-btn" onclick="visualize()">Отобразить</button>
+        <button id="visualize-btn" onclick="visualize()">Показать</button>
     </div>
 
     <!-- Smart Design Container - отображается только при выборе "SPARQL Smart Design" в режиме VAD TriG -->
@@ -4321,12 +4321,34 @@ WHERE {
             document.getElementById('filter-panel').style.display = 'none';
         }
 
+        /**
+         * Улучшает сообщение об ошибке парсинга, добавляя содержимое проблемной строки
+         * @param {string} errorMessage - Исходное сообщение об ошибке
+         * @param {string} rdfInput - Исходные RDF данные
+         * @returns {string} - Улучшенное сообщение об ошибке
+         */
+        function enhanceParseError(errorMessage, rdfInput) {
+            // Ищем номер строки в сообщении об ошибке (паттерн "on line N" или "line N")
+            const lineMatch = errorMessage.match(/(?:on\s+)?line\s+(\d+)/i);
+            if (lineMatch && rdfInput) {
+                const lineNumber = parseInt(lineMatch[1], 10);
+                const lines = rdfInput.split('\n');
+                if (lineNumber > 0 && lineNumber <= lines.length) {
+                    const problemLine = lines[lineNumber - 1];
+                    return `${errorMessage}\nСтрока ${lineNumber}: ${problemLine}`;
+                }
+            }
+            return errorMessage;
+        }
+
         function showError(message) {
             const output = document.getElementById('output');
             const resultContainer = document.getElementById('result-container');
 
             resultContainer.style.display = 'block';
-            output.innerHTML = `<div class="error"><strong>Ошибка:</strong> ${message}</div>`;
+            // Заменяем переносы строк на <br> для корректного отображения в HTML
+            const formattedMessage = message.replace(/\n/g, '<br>');
+            output.innerHTML = `<div class="error"><strong>Ошибка:</strong> ${formattedMessage}</div>`;
 
             document.getElementById('export-buttons').style.display = 'none';
             document.getElementById('zoom-controls').style.display = 'none';
@@ -6003,7 +6025,7 @@ WHERE {
                 isNewTrigQuery = false;
                 updateSimpleTripleButtonState();
 
-                showResultSparqlMessage('Триплеты успешно добавлены в RDF данные. Нажмите "Визуализировать" для обновления графа.', 'success');
+                showResultSparqlMessage('Триплеты успешно добавлены в RDF данные. Нажмите "Показать" для обновления графа.', 'success');
 
             } else if (isDelete) {
                 // Удаляем триплеты из RDF данных
@@ -6039,7 +6061,7 @@ WHERE {
                     // Переразбираем RDF данные для обновления currentQuads и кэша типов
                     await reparseRdfData();
 
-                    showResultSparqlMessage('Триплеты успешно удалены из RDF данных. Нажмите "Визуализировать" для обновления графа.', 'success');
+                    showResultSparqlMessage('Триплеты успешно удалены из RDF данных. Нажмите "Показать" для обновления графа.', 'success');
                 }
             }
 
@@ -6350,7 +6372,7 @@ WHERE {
                 isNewTrigQuery = false;
                 updateSimpleTripleButtonState();
 
-                showResultSparqlMessage(`Новый TriG "${graphPrefixed}" успешно создан в shorthand формате. Нажмите "Визуализировать" для обновления графа.`, 'success');
+                showResultSparqlMessage(`Новый TriG "${graphPrefixed}" успешно создан в shorthand формате. Нажмите "Показать" для обновления графа.`, 'success');
                 return;
             }
 
@@ -6455,7 +6477,7 @@ WHERE {
                 if (replaceMessages.length > 0) {
                     message += ' ' + replaceMessages.join('. ') + '.';
                 }
-                message += ' Нажмите "Визуализировать" для обновления графа.';
+                message += ' Нажмите "Показать" для обновления графа.';
                 showResultSparqlMessage(message, 'success');
             } else {
                 showResultSparqlMessage('Не удалось добавить значения в shorthand формате', 'error');
@@ -6815,7 +6837,7 @@ ${triples.join('\n')}
                     if (!validation.valid) {
                         showValidationError(formatVADErrors(validation.errors));
                         button.disabled = false;
-                        button.textContent = 'Визуализировать';
+                        button.textContent = 'Показать';
                         return;
                     }
                 }
@@ -6829,7 +6851,7 @@ ${triples.join('\n')}
                         showValidationError(formatVADTriGErrors(hierarchyResult.errors));
                         toggleVADTriGPanels(false);
                         button.disabled = false;
-                        button.textContent = 'Визуализировать';
+                        button.textContent = 'Показать';
                         return;
                     }
 
@@ -6855,7 +6877,7 @@ ${triples.join('\n')}
                         if (!validation.valid) {
                             showValidationError(formatVADErrors(validation.errors));
                             button.disabled = false;
-                            button.textContent = 'Визуализировать';
+                            button.textContent = 'Показать';
                             return;
                         }
                     }
@@ -6924,7 +6946,7 @@ ${triples.join('\n')}
                     console.log(`VAD TriG: Обработано ${quads.length} триплетов, отображается граф ${getPrefixedName(selectedTrigUri, prefixes)}`);
 
                     button.disabled = false;
-                    button.textContent = 'Визуализировать';
+                    button.textContent = 'Показать';
                     return;
                 }
 
@@ -6983,10 +7005,11 @@ ${triples.join('\n')}
 
             } catch (error) {
                 console.error('Ошибка визуализации:', error);
-                showError(`${error.message}`);
+                const enhancedMessage = enhanceParseError(error.message, rdfInput);
+                showError(enhancedMessage);
             } finally {
                 button.disabled = false;
-                button.textContent = 'Визуализировать';
+                button.textContent = 'Показать';
             }
         }
 
