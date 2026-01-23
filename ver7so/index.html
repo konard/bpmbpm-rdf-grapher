@@ -2486,184 +2486,274 @@ WHERE {
         // ФУНКЦИИ ЗАГРУЗКИ ПРИМЕРОВ
         // ============================================================================
 
+        /**
+         * Загружает пример Turtle
+         * Алгоритм загрузки файла:
+         * 1. Отображает статус загрузки
+         * 2. Выполняет fetch запрос к файлу 'Turtle.ttl' (относительный путь от текущего расположения HTML файла)
+         * 3. При успехе: заполняет текстовое поле RDF данными, устанавливает формат ввода и режим визуализации
+         * 4. При ошибке: отображает подробную информацию об ошибке с указанием пути поиска файла
+         */
         function loadExampleTurtle() {
             const statusEl = document.getElementById('example-status');
-            statusEl.textContent = 'Загрузка Turtle.ttl...';
+            const filePath = 'Turtle.ttl';
+            const fullPath = window.location.origin + window.location.pathname.replace(/\/[^\/]*$/, '/') + filePath;
+
+            statusEl.textContent = `Загрузка ${filePath}...`;
             statusEl.style.display = 'block';
 
-            fetch('Turtle.ttl')
-                .then(response => response.text())
+            // Алгоритм загрузки: используем fetch API для асинхронной загрузки файла
+            fetch(filePath)
+                .then(response => {
+                    if (!response.ok) {
+                        throw new Error(`HTTP ${response.status}: ${response.statusText}`);
+                    }
+                    return response.text();
+                })
                 .then(text => {
                     document.getElementById('rdf-input').value = text;
                     document.getElementById('input-format').value = 'turtle';
                     document.getElementById('visualization-mode').value = 'notation';
                     updateModeDescription();
-                    statusEl.textContent = 'Turtle.ttl успешно загружен';
+                    statusEl.textContent = `${filePath} успешно загружен`;
                     statusEl.style.backgroundColor = '#d4edda';
                     statusEl.style.borderColor = '#c3e6cb';
                     statusEl.style.color = '#155724';
-                    setTimeout(() => statusEl.style.display = 'none', 3000);
+                    // Убираем автоматическое скрытие статуса
                 })
                 .catch(error => {
-                    console.error('Error loading Turtle.ttl:', error);
-                    statusEl.textContent = 'Ошибка загрузки Turtle.ttl';
+                    console.error(`Error loading ${filePath}:`, error);
+                    statusEl.textContent = `Ошибка загрузки ${filePath}. Путь поиска: ${fullPath}. Ошибка: ${error.message}`;
                     statusEl.style.backgroundColor = '#f8d7da';
                     statusEl.style.borderColor = '#f5c6cb';
                     statusEl.style.color = '#721c24';
-                    setTimeout(() => statusEl.style.display = 'none', 5000);
+                    // Убираем автоматическое скрытие статуса
                 });
         }
 
         /**
          * Загружает пример VAD (Value Added Chain Diagram)
+         * Алгоритм загрузки файла:
+         * 1. Отображает статус загрузки
+         * 2. Выполняет fetch запрос к файлу 'VAD.ttl' (относительный путь от текущего расположения HTML файла)
+         * 3. При успехе: заполняет текстовое поле RDF данными, устанавливает формат ввода и режим визуализации VAD
+         * 4. При ошибке: отображает подробную информацию об ошибке с указанием пути поиска файла
          */
         function loadExampleVAD() {
             const statusEl = document.getElementById('example-status');
-            statusEl.textContent = 'Загрузка VAD.ttl...';
+            const filePath = 'VAD.ttl';
+            const fullPath = window.location.origin + window.location.pathname.replace(/\/[^\/]*$/, '/') + filePath;
+
+            statusEl.textContent = `Загрузка ${filePath}...`;
             statusEl.style.display = 'block';
 
-            fetch('VAD.ttl')
-                .then(response => response.text())
+            // Алгоритм загрузки: используем fetch API для асинхронной загрузки файла
+            fetch(filePath)
+                .then(response => {
+                    if (!response.ok) {
+                        throw new Error(`HTTP ${response.status}: ${response.statusText}`);
+                    }
+                    return response.text();
+                })
                 .then(exampleVAD => {
                     document.getElementById('rdf-input').value = exampleVAD;
                     document.getElementById('input-format').value = 'turtle';
                     document.getElementById('visualization-mode').value = 'vad';
                     updateModeDescription();
-                    statusEl.textContent = 'VAD.ttl успешно загружен';
+                    statusEl.textContent = `${filePath} успешно загружен`;
                     statusEl.style.backgroundColor = '#d4edda';
                     statusEl.style.borderColor = '#c3e6cb';
                     statusEl.style.color = '#155724';
-                    setTimeout(() => statusEl.style.display = 'none', 3000);
+                    // Убираем автоматическое скрытие статуса
                 })
                 .catch(error => {
-                    console.error('Error loading VAD.ttl:', error);
-                    statusEl.textContent = 'Ошибка загрузки VAD.ttl';
+                    console.error(`Error loading ${filePath}:`, error);
+                    statusEl.textContent = `Ошибка загрузки ${filePath}. Путь поиска: ${fullPath}. Ошибка: ${error.message}`;
                     statusEl.style.backgroundColor = '#f8d7da';
                     statusEl.style.borderColor = '#f5c6cb';
                     statusEl.style.color = '#721c24';
-                    setTimeout(() => statusEl.style.display = 'none', 5000);
+                    // Убираем автоматическое скрытие статуса
                 });
         }
 
+        /**
+         * Загружает пример RDF данных в формате N-Triples
+         * Алгоритм загрузки файла:
+         * 1. Отображает статус загрузки
+         * 2. Выполняет fetch запрос к файлу 'NTriples.ttl' (относительный путь от текущего расположения HTML файла)
+         * 3. При успехе: заполняет текстовое поле RDF данными, устанавливает формат ввода N-Triples и режим визуализации
+         * 4. При ошибке: отображает подробную информацию об ошибке с указанием пути поиска файла
+         */
         function loadExampleNTriples() {
             const statusEl = document.getElementById('example-status');
-            statusEl.textContent = 'Загрузка NTriples.ttl...';
+            const filePath = 'NTriples.ttl';
+            const fullPath = window.location.origin + window.location.pathname.replace(/\/[^\/]*$/, '/') + filePath;
+
+            statusEl.textContent = `Загрузка ${filePath}...`;
             statusEl.style.display = 'block';
 
-            fetch('NTriples.ttl')
-                .then(response => response.text())
+            // Алгоритм загрузки: используем fetch API для асинхронной загрузки файла
+            fetch(filePath)
+                .then(response => {
+                    if (!response.ok) {
+                        throw new Error(`HTTP ${response.status}: ${response.statusText}`);
+                    }
+                    return response.text();
+                })
                 .then(text => {
                     document.getElementById('rdf-input').value = text;
                     document.getElementById('input-format').value = 'n-triples';
                     document.getElementById('visualization-mode').value = 'notation';
                     updateModeDescription();
-                    statusEl.textContent = 'NTriples.ttl успешно загружен';
+                    statusEl.textContent = `${filePath} успешно загружен`;
                     statusEl.style.backgroundColor = '#d4edda';
                     statusEl.style.borderColor = '#c3e6cb';
                     statusEl.style.color = '#155724';
-                    setTimeout(() => statusEl.style.display = 'none', 3000);
+                    // Убираем автоматическое скрытие статуса
                 })
                 .catch(error => {
-                    console.error('Error loading NTriples.ttl:', error);
-                    statusEl.textContent = 'Ошибка загрузки NTriples.ttl';
+                    console.error(`Error loading ${filePath}:`, error);
+                    statusEl.textContent = `Ошибка загрузки ${filePath}. Путь поиска: ${fullPath}. Ошибка: ${error.message}`;
                     statusEl.style.backgroundColor = '#f8d7da';
                     statusEl.style.borderColor = '#f5c6cb';
                     statusEl.style.color = '#721c24';
-                    setTimeout(() => statusEl.style.display = 'none', 5000);
+                    // Убираем автоматическое скрытие статуса
                 });
         }
 
         /**
          * Загружает пример RDF данных в формате N-Quads
+         * Алгоритм загрузки файла:
+         * 1. Отображает статус загрузки
+         * 2. Выполняет fetch запрос к файлу 'NQuads.ttl' (относительный путь от текущего расположения HTML файла)
+         * 3. При успехе: заполняет текстовое поле RDF данными, устанавливает формат ввода N-Quads и режим визуализации
+         * 4. При ошибке: отображает подробную информацию об ошибке с указанием пути поиска файла
          */
         function loadExampleNQuads() {
             const statusEl = document.getElementById('example-status');
-            statusEl.textContent = 'Загрузка NQuads.ttl...';
+            const filePath = 'NQuads.ttl';
+            const fullPath = window.location.origin + window.location.pathname.replace(/\/[^\/]*$/, '/') + filePath;
+
+            statusEl.textContent = `Загрузка ${filePath}...`;
             statusEl.style.display = 'block';
 
-            fetch('NQuads.ttl')
-                .then(response => response.text())
+            // Алгоритм загрузки: используем fetch API для асинхронной загрузки файла
+            fetch(filePath)
+                .then(response => {
+                    if (!response.ok) {
+                        throw new Error(`HTTP ${response.status}: ${response.statusText}`);
+                    }
+                    return response.text();
+                })
                 .then(text => {
                     document.getElementById('rdf-input').value = text;
                     document.getElementById('input-format').value = 'n-quads';
                     document.getElementById('visualization-mode').value = 'notation';
                     updateModeDescription();
-                    statusEl.textContent = 'NQuads.ttl успешно загружен';
+                    statusEl.textContent = `${filePath} успешно загружен`;
                     statusEl.style.backgroundColor = '#d4edda';
                     statusEl.style.borderColor = '#c3e6cb';
                     statusEl.style.color = '#155724';
-                    setTimeout(() => statusEl.style.display = 'none', 3000);
+                    // Убираем автоматическое скрытие статуса
                 })
                 .catch(error => {
-                    console.error('Error loading NQuads.ttl:', error);
-                    statusEl.textContent = 'Ошибка загрузки NQuads.ttl';
+                    console.error(`Error loading ${filePath}:`, error);
+                    statusEl.textContent = `Ошибка загрузки ${filePath}. Путь поиска: ${fullPath}. Ошибка: ${error.message}`;
                     statusEl.style.backgroundColor = '#f8d7da';
                     statusEl.style.borderColor = '#f5c6cb';
                     statusEl.style.color = '#721c24';
-                    setTimeout(() => statusEl.style.display = 'none', 5000);
+                    // Убираем автоматическое скрытие статуса
                 });
         }
 
         /**
          * Загружает пример RDF данных в формате TriG
+         * Алгоритм загрузки файла:
+         * 1. Отображает статус загрузки
+         * 2. Выполняет fetch запрос к файлу 'TriG.ttl' (относительный путь от текущего расположения HTML файла)
+         * 3. При успехе: заполняет текстовое поле RDF данными, устанавливает формат ввода TriG и режим визуализации
+         * 4. При ошибке: отображает подробную информацию об ошибке с указанием пути поиска файла
          */
         function loadExampleTriG() {
             const statusEl = document.getElementById('example-status');
-            statusEl.textContent = 'Загрузка TriG.ttl...';
+            const filePath = 'TriG.ttl';
+            const fullPath = window.location.origin + window.location.pathname.replace(/\/[^\/]*$/, '/') + filePath;
+
+            statusEl.textContent = `Загрузка ${filePath}...`;
             statusEl.style.display = 'block';
 
-            fetch('TriG.ttl')
-                .then(response => response.text())
+            // Алгоритм загрузки: используем fetch API для асинхронной загрузки файла
+            fetch(filePath)
+                .then(response => {
+                    if (!response.ok) {
+                        throw new Error(`HTTP ${response.status}: ${response.statusText}`);
+                    }
+                    return response.text();
+                })
                 .then(text => {
                     document.getElementById('rdf-input').value = text;
                     document.getElementById('input-format').value = 'trig';
                     document.getElementById('visualization-mode').value = 'notation';
                     updateModeDescription();
-                    statusEl.textContent = 'TriG.ttl успешно загружен';
+                    statusEl.textContent = `${filePath} успешно загружен`;
                     statusEl.style.backgroundColor = '#d4edda';
                     statusEl.style.borderColor = '#c3e6cb';
                     statusEl.style.color = '#155724';
-                    setTimeout(() => statusEl.style.display = 'none', 3000);
+                    // Убираем автоматическое скрытие статуса
                 })
                 .catch(error => {
-                    console.error('Error loading TriG.ttl:', error);
-                    statusEl.textContent = 'Ошибка загрузки TriG.ttl';
+                    console.error(`Error loading ${filePath}:`, error);
+                    statusEl.textContent = `Ошибка загрузки ${filePath}. Путь поиска: ${fullPath}. Ошибка: ${error.message}`;
                     statusEl.style.backgroundColor = '#f8d7da';
                     statusEl.style.borderColor = '#f5c6cb';
                     statusEl.style.color = '#721c24';
-                    setTimeout(() => statusEl.style.display = 'none', 5000);
+                    // Убираем автоматическое скрытие статуса
                 });
         }
 
         /**
          * Загружает пример TriG VAD - все объекты Turtle VAD в одном именованном графе
          * Имя графа (Trig1) и его label отображаются как название схемы вверху диаграммы
+         * Алгоритм загрузки файла:
+         * 1. Отображает статус загрузки
+         * 2. Выполняет fetch запрос к файлу 'Trig_VAD.ttl' (относительный путь от текущего расположения HTML файла)
+         * 3. При успехе: заполняет текстовое поле RDF данными, устанавливает формат ввода TriG и режим визуализации VAD
+         * 4. При ошибке: отображает подробную информацию об ошибке с указанием пути поиска файла
          */
         function loadExampleTrigVAD() {
             const statusEl = document.getElementById('example-status');
-            statusEl.textContent = 'Загрузка Trig_VAD.ttl...';
+            const filePath = 'Trig_VAD.ttl';
+            const fullPath = window.location.origin + window.location.pathname.replace(/\/[^\/]*$/, '/') + filePath;
+
+            statusEl.textContent = `Загрузка ${filePath}...`;
             statusEl.style.display = 'block';
 
-            fetch('Trig_VAD.ttl')
-                .then(response => response.text())
+            // Алгоритм загрузки: используем fetch API для асинхронной загрузки файла
+            fetch(filePath)
+                .then(response => {
+                    if (!response.ok) {
+                        throw new Error(`HTTP ${response.status}: ${response.statusText}`);
+                    }
+                    return response.text();
+                })
                 .then(exampleTrigVAD => {
                     document.getElementById('rdf-input').value = exampleTrigVAD;
                     document.getElementById('input-format').value = 'trig';
                     document.getElementById('visualization-mode').value = 'vad';
                     updateModeDescription();
-                    statusEl.textContent = 'Trig_VAD.ttl успешно загружен';
+                    statusEl.textContent = `${filePath} успешно загружен`;
                     statusEl.style.backgroundColor = '#d4edda';
                     statusEl.style.borderColor = '#c3e6cb';
                     statusEl.style.color = '#155724';
-                    setTimeout(() => statusEl.style.display = 'none', 3000);
+                    // Убираем автоматическое скрытие статуса
                 })
                 .catch(error => {
-                    console.error('Error loading Trig_VAD.ttl:', error);
-                    statusEl.textContent = 'Ошибка загрузки Trig_VAD.ttl';
+                    console.error(`Error loading ${filePath}:`, error);
+                    statusEl.textContent = `Ошибка загрузки ${filePath}. Путь поиска: ${fullPath}. Ошибка: ${error.message}`;
                     statusEl.style.backgroundColor = '#f8d7da';
                     statusEl.style.borderColor = '#f5c6cb';
                     statusEl.style.color = '#721c24';
-                    setTimeout(() => statusEl.style.display = 'none', 5000);
+                    // Убираем автоматическое скрытие статуса
                 });
         }
 
@@ -2672,32 +2762,46 @@ WHERE {
          * Содержит:
          * - Trig1: корневой граф (hasParentTrig = root)
          * - Trig11: дочерний граф (hasParentTrig = Trig1)
+         * Алгоритм загрузки файла:
+         * 1. Отображает статус загрузки
+         * 2. Выполняет fetch запрос к файлу 'Trig_VADv2.ttl' (относительный путь от текущего расположения HTML файла)
+         * 3. При успехе: заполняет текстовое поле RDF данными, устанавливает формат ввода TriG и режим визуализации VAD TriG
+         * 4. При ошибке: отображает подробную информацию об ошибке с указанием пути поиска файла
          */
         function loadExampleTrigVADv2() {
             const statusEl = document.getElementById('example-status');
-            statusEl.textContent = 'Загрузка Trig_VADv2.ttl...';
+            const filePath = 'Trig_VADv2.ttl';
+            const fullPath = window.location.origin + window.location.pathname.replace(/\/[^\/]*$/, '/') + filePath;
+
+            statusEl.textContent = `Загрузка ${filePath}...`;
             statusEl.style.display = 'block';
 
-            fetch('Trig_VADv2.ttl')
-                .then(response => response.text())
+            // Алгоритм загрузки: используем fetch API для асинхронной загрузки файла
+            fetch(filePath)
+                .then(response => {
+                    if (!response.ok) {
+                        throw new Error(`HTTP ${response.status}: ${response.statusText}`);
+                    }
+                    return response.text();
+                })
                 .then(exampleTrigVADv2 => {
                     document.getElementById('rdf-input').value = exampleTrigVADv2;
                     document.getElementById('input-format').value = 'trig';
                     document.getElementById('visualization-mode').value = 'vad-trig';
                     updateModeDescription();
-                    statusEl.textContent = 'Trig_VADv2.ttl успешно загружен';
+                    statusEl.textContent = `${filePath} успешно загружен`;
                     statusEl.style.backgroundColor = '#d4edda';
                     statusEl.style.borderColor = '#c3e6cb';
                     statusEl.style.color = '#155724';
-                    setTimeout(() => statusEl.style.display = 'none', 3000);
+                    // Убираем автоматическое скрытие статуса
                 })
                 .catch(error => {
-                    console.error('Error loading Trig_VADv2.ttl:', error);
-                    statusEl.textContent = 'Ошибка загрузки Trig_VADv2.ttl';
+                    console.error(`Error loading ${filePath}:`, error);
+                    statusEl.textContent = `Ошибка загрузки ${filePath}. Путь поиска: ${fullPath}. Ошибка: ${error.message}`;
                     statusEl.style.backgroundColor = '#f8d7da';
                     statusEl.style.borderColor = '#f5c6cb';
                     statusEl.style.color = '#721c24';
-                    setTimeout(() => statusEl.style.display = 'none', 5000);
+                    // Убираем автоматическое скрытие статуса
                 });
         }
 
@@ -6427,14 +6531,11 @@ ${triples.join('\n')}
             // Кодируем RDF данные для URL
             const encodedRdf = encodeURIComponent(rdfInput);
 
-            // Определяем базовый URL для GitHub Pages
+            // Определяем базовый URL динамически на основе текущего расположения HTML файла
+            // Это позволяет корректно работать как на GitHub Pages, так и локально
             let baseUrl;
-            if (window.location.hostname === 'bpmbpm.github.io') {
-                baseUrl = 'https://bpmbpm.github.io/rdf-grapher/ver6d/';
-            } else {
-                // Для локального тестирования используем текущий путь
-                baseUrl = window.location.origin + window.location.pathname;
-            }
+            // Используем текущую директорию HTML файла как базовый URL
+            baseUrl = window.location.origin + window.location.pathname.replace(/\/[^\/]*$/, '/');
 
             // Формируем URL с данными в хеше (избегает ошибки URI Too Long)
             const hashParams = `rdf=${encodedRdf}&from=${fromFormat}&to=${outputFormat}&mode=${visualizationMode}`;
