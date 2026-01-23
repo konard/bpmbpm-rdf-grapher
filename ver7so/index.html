@@ -2982,8 +2982,17 @@ WHERE {
 
             if (!nodeUri) return;
 
-            // Снимаем выделение с элементов TriG-дерева при клике на узел диаграммы
-            clearTriGTreeSelection();
+            // НЕ снимаем выделение с элемента TriG-дерева при клике на узел диаграммы.
+            // Выделенный элемент TriG дерева всегда должен отражать, чья схема отображается на диаграмме.
+            // Снимаем только выделение с процессов в списке "Состав объектов" и подсветку на диаграмме.
+            const processItems = document.querySelectorAll('.process-item.process-selected');
+            processItems.forEach(item => {
+                item.classList.remove('process-selected');
+            });
+            const highlightedProcesses = document.querySelectorAll('.node.process-highlighted');
+            highlightedProcesses.forEach(node => {
+                node.classList.remove('process-highlighted');
+            });
 
             if (selectedNodeElement) {
                 selectedNodeElement.classList.remove('selected');
@@ -3184,35 +3193,89 @@ WHERE {
         // ============================================================================
 
         /**
+         * Универсальная функция загрузки примера из файла.
+         * Пытается загрузить файл через fetch. При ошибке CORS (локальный файл)
+         * показывает информационное сообщение и использует встроенные данные как fallback.
+         * @param {string} filename - Имя файла для загрузки
+         * @param {string} exampleName - Человекочитаемое имя примера
+         * @param {string} inputFormat - Формат ввода (turtle, n-triples, n-quads, trig)
+         * @param {string} visualizationMode - Режим визуализации (notation, vad, vad-trig)
+         * @param {string} fallbackDataKey - Ключ для доступа к встроенным данным EXAMPLE_DATA
+         */
+        async function loadExampleFromFile(filename, exampleName, inputFormat, visualizationMode, fallbackDataKey) {
+            const statusEl = document.getElementById('example-status');
+
+            statusEl.textContent = `Загрузка примера ${exampleName}...`;
+            statusEl.style.display = 'block';
+            statusEl.style.backgroundColor = '#fff3cd';
+            statusEl.style.borderColor = '#ffc107';
+            statusEl.style.color = '#856404';
+
+            try {
+                const response = await fetch(filename);
+                if (!response.ok) {
+                    throw new Error(`HTTP ${response.status}: ${response.statusText}`);
+                }
+                const data = await response.text();
+
+                document.getElementById('rdf-input').value = data;
+                document.getElementById('input-format').value = inputFormat;
+                document.getElementById('visualization-mode').value = visualizationMode;
+                updateModeDescription();
+
+                statusEl.textContent = `Пример ${exampleName} успешно загружен из файла ${filename}`;
+                statusEl.style.backgroundColor = '#d4edda';
+                statusEl.style.borderColor = '#c3e6cb';
+                statusEl.style.color = '#155724';
+            } catch (error) {
+                console.warn(`Не удалось загрузить файл ${filename}:`, error.message);
+
+                // Проверяем, это ошибка CORS (локальный файл) или сетевая ошибка
+                const isCorsError = error.message.includes('Failed to fetch') ||
+                                    error.message.includes('NetworkError') ||
+                                    error.message.includes('CORS');
+
+                if (isCorsError) {
+                    // Для локальных файлов показываем информационное сообщение и используем встроенные данные
+                    statusEl.textContent = `Файл ${filename} недоступен (CORS). Используются встроенные данные.`;
+                    statusEl.style.backgroundColor = '#fff3cd';
+                    statusEl.style.borderColor = '#ffc107';
+                    statusEl.style.color = '#856404';
+                } else {
+                    // Для серверных ошибок показываем ошибку, но всё равно используем fallback
+                    statusEl.textContent = `Ошибка загрузки ${filename}: ${error.message}. Используются встроенные данные.`;
+                    statusEl.style.backgroundColor = '#fff3cd';
+                    statusEl.style.borderColor = '#ffc107';
+                    statusEl.style.color = '#856404';
+                }
+
+                // Используем встроенные данные как fallback
+                try {
+                    document.getElementById('rdf-input').value = EXAMPLE_DATA[fallbackDataKey];
+                    document.getElementById('input-format').value = inputFormat;
+                    document.getElementById('visualization-mode').value = visualizationMode;
+                    updateModeDescription();
+                } catch (fallbackError) {
+                    console.error(`Ошибка при использовании встроенных данных:`, fallbackError);
+                    statusEl.textContent = `Ошибка загрузки примера ${exampleName}: ${fallbackError.message}`;
+                    statusEl.style.backgroundColor = '#f8d7da';
+                    statusEl.style.borderColor = '#f5c6cb';
+                    statusEl.style.color = '#721c24';
+                }
+            }
+        }
+
+        /**
          * Загружает пример Turtle
          * Алгоритм загрузки файла:
          * 1. Отображает статус загрузки
          * 2. Выполняет fetch запрос к файлу 'Turtle.ttl' (относительный путь от текущего расположения HTML файла)
          * 3. При успехе: заполняет текстовое поле RDF данными, устанавливает формат ввода и режим визуализации
-         * 4. При ошибке: отображает подробную информацию об ошибке с указанием пути поиска файла
+         * 4. При ошибке CORS (локальный файл): показывает информацию и использует встроенные данные
+         * 5. При другой ошибке: отображает подробную информацию об ошибке
          */
         function loadExampleTurtle() {
-            const statusEl = document.getElementById('example-status');
-
-            statusEl.textContent = `Загрузка примера Turtle...`;
-            statusEl.style.display = 'block';
-
-            try {
-                document.getElementById('rdf-input').value = EXAMPLE_DATA.turtle;
-                document.getElementById('input-format').value = 'turtle';
-                document.getElementById('visualization-mode').value = 'notation';
-                updateModeDescription();
-                statusEl.textContent = `Пример Turtle успешно загружен`;
-                statusEl.style.backgroundColor = '#d4edda';
-                statusEl.style.borderColor = '#c3e6cb';
-                statusEl.style.color = '#155724';
-            } catch (error) {
-                console.error('Error loading Turtle example:', error);
-                statusEl.textContent = `Ошибка загрузки примера Turtle. Ошибка: ${error.message}`;
-                statusEl.style.backgroundColor = '#f8d7da';
-                statusEl.style.borderColor = '#f5c6cb';
-                statusEl.style.color = '#721c24';
-            }
+            loadExampleFromFile('Turtle.ttl', 'Turtle', 'turtle', 'notation', 'turtle');
         }
 
         /**
@@ -3221,30 +3284,11 @@ WHERE {
          * 1. Отображает статус загрузки
          * 2. Выполняет fetch запрос к файлу 'VAD.ttl' (относительный путь от текущего расположения HTML файла)
          * 3. При успехе: заполняет текстовое поле RDF данными, устанавливает формат ввода и режим визуализации VAD
-         * 4. При ошибке: отображает подробную информацию об ошибке с указанием пути поиска файла
+         * 4. При ошибке CORS (локальный файл): показывает информацию и использует встроенные данные
+         * 5. При другой ошибке: отображает подробную информацию об ошибке
          */
         function loadExampleVAD() {
-            const statusEl = document.getElementById('example-status');
-
-            statusEl.textContent = `Загрузка примера VAD...`;
-            statusEl.style.display = 'block';
-
-            try {
-                document.getElementById('rdf-input').value = EXAMPLE_DATA.vad;
-                document.getElementById('input-format').value = 'turtle';
-                document.getElementById('visualization-mode').value = 'vad';
-                updateModeDescription();
-                statusEl.textContent = `Пример VAD успешно загружен`;
-                statusEl.style.backgroundColor = '#d4edda';
-                statusEl.style.borderColor = '#c3e6cb';
-                statusEl.style.color = '#155724';
-            } catch (error) {
-                console.error('Error loading VAD example:', error);
-                statusEl.textContent = `Ошибка загрузки примера VAD. Ошибка: ${error.message}`;
-                statusEl.style.backgroundColor = '#f8d7da';
-                statusEl.style.borderColor = '#f5c6cb';
-                statusEl.style.color = '#721c24';
-            }
+            loadExampleFromFile('VAD.ttl', 'VAD', 'turtle', 'vad', 'vad');
         }
 
         /**
@@ -3253,30 +3297,11 @@ WHERE {
          * 1. Отображает статус загрузки
          * 2. Выполняет fetch запрос к файлу 'NTriples.ttl' (относительный путь от текущего расположения HTML файла)
          * 3. При успехе: заполняет текстовое поле RDF данными, устанавливает формат ввода N-Triples и режим визуализации
-         * 4. При ошибке: отображает подробную информацию об ошибке с указанием пути поиска файла
+         * 4. При ошибке CORS (локальный файл): показывает информацию и использует встроенные данные
+         * 5. При другой ошибке: отображает подробную информацию об ошибке
          */
         function loadExampleNTriples() {
-            const statusEl = document.getElementById('example-status');
-
-            statusEl.textContent = `Загрузка примера N-Triples...`;
-            statusEl.style.display = 'block';
-
-            try {
-                document.getElementById('rdf-input').value = EXAMPLE_DATA['n-triples'];
-                document.getElementById('input-format').value = 'n-triples';
-                document.getElementById('visualization-mode').value = 'notation';
-                updateModeDescription();
-                statusEl.textContent = `Пример N-Triples успешно загружен`;
-                statusEl.style.backgroundColor = '#d4edda';
-                statusEl.style.borderColor = '#c3e6cb';
-                statusEl.style.color = '#155724';
-            } catch (error) {
-                console.error('Error loading N-Triples example:', error);
-                statusEl.textContent = `Ошибка загрузки примера N-Triples. Ошибка: ${error.message}`;
-                statusEl.style.backgroundColor = '#f8d7da';
-                statusEl.style.borderColor = '#f5c6cb';
-                statusEl.style.color = '#721c24';
-            }
+            loadExampleFromFile('NTriples.ttl', 'N-Triples', 'n-triples', 'notation', 'n-triples');
         }
 
         /**
@@ -3285,30 +3310,11 @@ WHERE {
          * 1. Отображает статус загрузки
          * 2. Выполняет fetch запрос к файлу 'NQuads.ttl' (относительный путь от текущего расположения HTML файла)
          * 3. При успехе: заполняет текстовое поле RDF данными, устанавливает формат ввода N-Quads и режим визуализации
-         * 4. При ошибке: отображает подробную информацию об ошибке с указанием пути поиска файла
+         * 4. При ошибке CORS (локальный файл): показывает информацию и использует встроенные данные
+         * 5. При другой ошибке: отображает подробную информацию об ошибке
          */
         function loadExampleNQuads() {
-            const statusEl = document.getElementById('example-status');
-
-            statusEl.textContent = `Загрузка примера N-Quads...`;
-            statusEl.style.display = 'block';
-
-            try {
-                document.getElementById('rdf-input').value = EXAMPLE_DATA['n-quads'];
-                document.getElementById('input-format').value = 'n-quads';
-                document.getElementById('visualization-mode').value = 'notation';
-                updateModeDescription();
-                statusEl.textContent = `Пример N-Quads успешно загружен`;
-                statusEl.style.backgroundColor = '#d4edda';
-                statusEl.style.borderColor = '#c3e6cb';
-                statusEl.style.color = '#155724';
-            } catch (error) {
-                console.error('Error loading N-Quads example:', error);
-                statusEl.textContent = `Ошибка загрузки примера N-Quads. Ошибка: ${error.message}`;
-                statusEl.style.backgroundColor = '#f8d7da';
-                statusEl.style.borderColor = '#f5c6cb';
-                statusEl.style.color = '#721c24';
-            }
+            loadExampleFromFile('NQuads.ttl', 'N-Quads', 'n-quads', 'notation', 'n-quads');
         }
 
         /**
@@ -3317,30 +3323,11 @@ WHERE {
          * 1. Отображает статус загрузки
          * 2. Выполняет fetch запрос к файлу 'TriG.ttl' (относительный путь от текущего расположения HTML файла)
          * 3. При успехе: заполняет текстовое поле RDF данными, устанавливает формат ввода TriG и режим визуализации
-         * 4. При ошибке: отображает подробную информацию об ошибке с указанием пути поиска файла
+         * 4. При ошибке CORS (локальный файл): показывает информацию и использует встроенные данные
+         * 5. При другой ошибке: отображает подробную информацию об ошибке
          */
         function loadExampleTriG() {
-            const statusEl = document.getElementById('example-status');
-
-            statusEl.textContent = `Загрузка примера TriG...`;
-            statusEl.style.display = 'block';
-
-            try {
-                document.getElementById('rdf-input').value = EXAMPLE_DATA.trig;
-                document.getElementById('input-format').value = 'trig';
-                document.getElementById('visualization-mode').value = 'notation';
-                updateModeDescription();
-                statusEl.textContent = `Пример TriG успешно загружен`;
-                statusEl.style.backgroundColor = '#d4edda';
-                statusEl.style.borderColor = '#c3e6cb';
-                statusEl.style.color = '#155724';
-            } catch (error) {
-                console.error('Error loading TriG example:', error);
-                statusEl.textContent = `Ошибка загрузки примера TriG. Ошибка: ${error.message}`;
-                statusEl.style.backgroundColor = '#f8d7da';
-                statusEl.style.borderColor = '#f5c6cb';
-                statusEl.style.color = '#721c24';
-            }
+            loadExampleFromFile('TriG.ttl', 'TriG', 'trig', 'notation', 'trig');
         }
 
         /**
@@ -3350,30 +3337,11 @@ WHERE {
          * 1. Отображает статус загрузки
          * 2. Выполняет fetch запрос к файлу 'Trig_VAD.ttl' (относительный путь от текущего расположения HTML файла)
          * 3. При успехе: заполняет текстовое поле RDF данными, устанавливает формат ввода TriG и режим визуализации VAD
-         * 4. При ошибке: отображает подробную информацию об ошибке с указанием пути поиска файла
+         * 4. При ошибке CORS (локальный файл): показывает информацию и использует встроенные данные
+         * 5. При другой ошибке: отображает подробную информацию об ошибке
          */
         function loadExampleTrigVAD() {
-            const statusEl = document.getElementById('example-status');
-
-            statusEl.textContent = `Загрузка примера Trig VAD...`;
-            statusEl.style.display = 'block';
-
-            try {
-                document.getElementById('rdf-input').value = EXAMPLE_DATA['trig-vad'];
-                document.getElementById('input-format').value = 'trig';
-                document.getElementById('visualization-mode').value = 'vad';
-                updateModeDescription();
-                statusEl.textContent = `Пример Trig VAD успешно загружен`;
-                statusEl.style.backgroundColor = '#d4edda';
-                statusEl.style.borderColor = '#c3e6cb';
-                statusEl.style.color = '#155724';
-            } catch (error) {
-                console.error('Error loading Trig VAD example:', error);
-                statusEl.textContent = `Ошибка загрузки примера Trig VAD. Ошибка: ${error.message}`;
-                statusEl.style.backgroundColor = '#f8d7da';
-                statusEl.style.borderColor = '#f5c6cb';
-                statusEl.style.color = '#721c24';
-            }
+            loadExampleFromFile('Trig_VAD.ttl', 'Trig VAD', 'trig', 'vad', 'trig-vad');
         }
 
         /**
@@ -3385,30 +3353,11 @@ WHERE {
          * 1. Отображает статус загрузки
          * 2. Выполняет fetch запрос к файлу 'Trig_VADv2.ttl' (относительный путь от текущего расположения HTML файла)
          * 3. При успехе: заполняет текстовое поле RDF данными, устанавливает формат ввода TriG и режим визуализации VAD TriG
-         * 4. При ошибке: отображает подробную информацию об ошибке с указанием пути поиска файла
+         * 4. При ошибке CORS (локальный файл): показывает информацию и использует встроенные данные
+         * 5. При другой ошибке: отображает подробную информацию об ошибке
          */
         function loadExampleTrigVADv2() {
-            const statusEl = document.getElementById('example-status');
-
-            statusEl.textContent = `Загрузка примера Trig VADv2...`;
-            statusEl.style.display = 'block';
-
-            try {
-                document.getElementById('rdf-input').value = EXAMPLE_DATA['trig-vad-v2'];
-                document.getElementById('input-format').value = 'trig';
-                document.getElementById('visualization-mode').value = 'vad-trig';
-                updateModeDescription();
-                statusEl.textContent = `Пример Trig VADv2 успешно загружен`;
-                statusEl.style.backgroundColor = '#d4edda';
-                statusEl.style.borderColor = '#c3e6cb';
-                statusEl.style.color = '#155724';
-            } catch (error) {
-                console.error('Error loading Trig VADv2 example:', error);
-                statusEl.textContent = `Ошибка загрузки примера Trig VADv2. Ошибка: ${error.message}`;
-                statusEl.style.backgroundColor = '#f8d7da';
-                statusEl.style.borderColor = '#f5c6cb';
-                statusEl.style.color = '#721c24';
-            }
+            loadExampleFromFile('Trig_VADv2.ttl', 'Trig VADv2', 'trig', 'vad-trig', 'trig-vad-v2');
         }
 
         /**
@@ -4344,11 +4293,25 @@ WHERE {
         function showError(message) {
             const output = document.getElementById('output');
             const resultContainer = document.getElementById('result-container');
+            const vadTrigOutput = document.getElementById('vad-trig-output');
+            const vadTrigContainer = document.getElementById('vad-trig-container');
 
             resultContainer.style.display = 'block';
             // Заменяем переносы строк на <br> для корректного отображения в HTML
             const formattedMessage = message.replace(/\n/g, '<br>');
-            output.innerHTML = `<div class="error"><strong>Ошибка:</strong> ${formattedMessage}</div>`;
+            const errorHtml = `<div class="error"><strong>Ошибка:</strong> ${formattedMessage}</div>`;
+
+            // Если активен режим VAD-TriG, показываем ошибку также в его контейнере
+            const isVadTrigMode = vadTrigContainer && vadTrigContainer.style.display !== 'none';
+            if (isVadTrigMode && vadTrigOutput) {
+                vadTrigOutput.innerHTML = errorHtml;
+            }
+
+            // Всегда показываем ошибку в основном output (для не-VAD-TriG режимов или при переключении)
+            output.innerHTML = errorHtml;
+
+            // Скрываем VAD-TriG панели при ошибке, чтобы показать основной output
+            toggleVADTriGPanels(false);
 
             document.getElementById('export-buttons').style.display = 'none';
             document.getElementById('zoom-controls').style.display = 'none';
@@ -4360,9 +4323,23 @@ WHERE {
         function showValidationError(message) {
             const output = document.getElementById('output');
             const resultContainer = document.getElementById('result-container');
+            const vadTrigOutput = document.getElementById('vad-trig-output');
+            const vadTrigContainer = document.getElementById('vad-trig-container');
 
             resultContainer.style.display = 'block';
-            output.innerHTML = `<div class="validation-error">${message}</div>`;
+            const errorHtml = `<div class="validation-error">${message}</div>`;
+
+            // Если активен режим VAD-TriG, показываем ошибку также в его контейнере
+            const isVadTrigMode = vadTrigContainer && vadTrigContainer.style.display !== 'none';
+            if (isVadTrigMode && vadTrigOutput) {
+                vadTrigOutput.innerHTML = errorHtml;
+            }
+
+            // Всегда показываем ошибку в основном output (для не-VAD-TriG режимов или при переключении)
+            output.innerHTML = errorHtml;
+
+            // Скрываем VAD-TriG панели при ошибке, чтобы показать основной output
+            toggleVADTriGPanels(false);
 
             document.getElementById('export-buttons').style.display = 'none';
             document.getElementById('zoom-controls').style.display = 'none';
