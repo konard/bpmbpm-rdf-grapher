@@ -1,0 +1,21 @@
+# Пример RDF данных в формате Turtle
+@prefix foaf: <http://xmlns.com/foaf/0.1/> .
+@prefix ex: <http://example.org/> .
+@prefix rdf: <http://www.w3.org/1999/02/22-rdf-syntax-ns#> .
+@prefix rdfs: <http://www.w3.org/2000/01/rdf-schema#> .
+
+ex:john rdf:type foaf:Person ;
+    foaf:name "John Doe" ;
+    foaf:age 30 ;
+    foaf:knows ex:jane, ex:bob .
+
+ex:jane rdf:type foaf:Person ;
+    foaf:name "Jane Smith" ;
+    foaf:knows ex:john .
+
+ex:bob rdf:type foaf:Person ;
+    foaf:name "Bob Wilson" .
+
+ex:company rdf:type foaf:Organization ;
+    foaf:name "Example Corp" ;
+    foaf:member ex:bob, ex:jane .
