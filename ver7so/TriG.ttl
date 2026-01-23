@@ -1,0 +1,23 @@
+# Пример RDF данных в формате TriG
+# TriG расширяет Turtle добавлением именованных графов
+@prefix foaf: <http://xmlns.com/foaf/0.1/> .
+@prefix ex: <http://example.org/> .
+@prefix rdf: <http://www.w3.org/1999/02/22-rdf-syntax-ns#> .
+
+# Граф с информацией о людях
+ex:people {
+    ex:john rdf:type foaf:Person ;
+        foaf:name "John Doe" ;
+        foaf:knows ex:jane .
+
+    ex:jane rdf:type foaf:Person ;
+        foaf:name "Jane Smith" ;
+        foaf:knows ex:john .
+}
+
+# Граф с информацией об организациях
+ex:organizations {
+    ex:company rdf:type foaf:Organization ;
+        foaf:name "Example Corp" ;
+        foaf:member ex:john, ex:jane .
+}

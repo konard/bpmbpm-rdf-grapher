@@ -1,0 +1,138 @@
+# Пример TriG VAD (Value Added Chain Diagram)
+# Все объекты VAD находятся в одном именованном графе
+
+@prefix rdf: <http://www.w3.org/1999/02/22-rdf-syntax-ns#> .
+@prefix rdfs: <http://www.w3.org/2000/01/rdf-schema#> .
+@prefix dcterms: <http://purl.org/dc/terms/> .
+@prefix vad: <http://example.org/vad#> .
+
+# Именованный граф Trig1 с меткой схемы
+vad:Trig1 rdfs:label "Схема процесса TriG1" .
+
+vad:Trig1 {
+    # Материнский процесс (не отображается в VAD режиме)
+    vad:Process0 rdf:type vad:TypeProcess ;
+        rdfs:label "Процесс 0" ;
+        dcterms:description "Материнский процесс для всей цепочки" .
+
+    # Процесс 1
+    vad:Process1 rdf:type vad:TypeProcess ;
+        rdfs:label "Процесс 1" ;
+        dcterms:description "Первый процесс в цепочке добавленной стоимости" ;
+        vad:hasExecutor vad:ExecutorGroup1 ;
+        vad:hasParentTrig vad:Process0 ;
+        vad:hasNext vad:Process2 .
+
+    # Процесс 2
+    vad:Process2 rdf:type vad:TypeProcess ;
+        rdfs:label "Процесс 2" ;
+        dcterms:description "Второй процесс, выполняется после Процесса 1" ;
+        vad:hasExecutor vad:ExecutorGroup2 ;
+        vad:hasParentTrig vad:Process0 ;
+        vad:hasNext vad:Process3, vad:Process4 .
+
+    # Процесс 3
+    vad:Process3 rdf:type vad:TypeProcess ;
+        rdfs:label "Процесс 3" ;
+        dcterms:description "Третий процесс в цепочке" ;
+        vad:hasExecutor vad:ExecutorGroup3 ;
+        vad:hasParentTrig vad:Process0 ;
+        vad:hasNext vad:Process4 .
+
+    # Процесс 4
+    vad:Process4 rdf:type vad:TypeProcess ;
+        rdfs:label "Процесс 4" ;
+        dcterms:description "Четвёртый процесс в цепочке" ;
+        vad:hasExecutor vad:ExecutorGroup4 ;
+        vad:hasParentTrig vad:Process0 ;
+        vad:hasNext vad:Process5 .
+
+    # Процесс 5
+    vad:Process5 rdf:type vad:TypeProcess ;
+        rdfs:label "Процесс 5" ;
+        dcterms:description "Пятый процесс в цепочке" ;
+        vad:hasExecutor vad:ExecutorGroup5 ;
+        vad:hasParentTrig vad:Process0 ;
+        vad:hasNext vad:Process6 .
+
+    # Процесс 6
+    vad:Process6 rdf:type vad:TypeProcess ;
+        rdfs:label "Процесс 6" ;
+        dcterms:description "Шестой процесс в цепочке" ;
+        vad:hasExecutor vad:ExecutorGroup6 ;
+        vad:hasParentTrig vad:Process0 ;
+        vad:hasNext vad:Process7 .
+
+    # Процесс 7
+    vad:Process7 rdf:type vad:TypeProcess ;
+        rdfs:label "Процесс 7" ;
+        dcterms:description "Седьмой процесс в цепочке" ;
+        vad:hasExecutor vad:ExecutorGroup7 ;
+        vad:hasParentTrig vad:Process0 ;
+        vad:hasNext vad:Process8 .
+
+    # Процесс 8
+    vad:Process8 rdf:type vad:TypeProcess ;
+        rdfs:label "Процесс 8" ;
+        dcterms:description "Заключительный процесс в цепочке" ;
+        vad:hasExecutor vad:ExecutorGroup8 ;
+        vad:hasParentTrig vad:Process0 .
+
+    # Группы исполнителей
+    vad:ExecutorGroup1 rdf:type vad:ExecutorGroup ;
+        rdfs:label "Группа исполнителей процесса Процесс 1" ;
+        vad:includes vad:Executor1 .
+
+    vad:ExecutorGroup2 rdf:type vad:ExecutorGroup ;
+        rdfs:label "Группа исполнителей процесса Процесс 2" ;
+        vad:includes vad:Executor1, vad:Executor2 .
+
+    vad:ExecutorGroup3 rdf:type vad:ExecutorGroup ;
+        rdfs:label "Группа исполнителей процесса Процесс 3" ;
+        vad:includes vad:Executor3 .
+
+    vad:ExecutorGroup4 rdf:type vad:ExecutorGroup ;
+        rdfs:label "Группа исполнителей процесса Процесс 4" ;
+        vad:includes vad:Executor3, vad:Executor4 .
+
+    vad:ExecutorGroup5 rdf:type vad:ExecutorGroup ;
+        rdfs:label "Группа исполнителей процесса Процесс 5" ;
+        vad:includes vad:Executor5, vad:Executor6 .
+
+    vad:ExecutorGroup6 rdf:type vad:ExecutorGroup ;
+        rdfs:label "Группа исполнителей процесса Процесс 6" ;
+        vad:includes vad:Executor7, vad:Executor8 .
+
+    vad:ExecutorGroup7 rdf:type vad:ExecutorGroup ;
+        rdfs:label "Группа исполнителей процесса Процесс 7" ;
+        vad:includes vad:Executor1, vad:Executor5 .
+
+    vad:ExecutorGroup8 rdf:type vad:ExecutorGroup ;
+        rdfs:label "Группа исполнителей процесса Процесс 8" ;
+        vad:includes vad:Executor2, vad:Executor7 .
+
+    # Исполнители
+    vad:Executor1 rdf:type vad:TypeExecutor ;
+        rdfs:label "Исполнитель 1" .
+
+    vad:Executor2 rdf:type vad:TypeExecutor ;
+        rdfs:label "Исполнитель 2" .
+
+    vad:Executor3 rdf:type vad:TypeExecutor ;
+        rdfs:label "Исполнитель 3" .
+
+    vad:Executor4 rdf:type vad:TypeExecutor ;
+        rdfs:label "Исполнитель 4" .
+
+    vad:Executor5 rdf:type vad:TypeExecutor ;
+        rdfs:label "Исполнитель 5" .
+
+    vad:Executor6 rdf:type vad:TypeExecutor ;
+        rdfs:label "Исполнитель 6" .
+
+    vad:Executor7 rdf:type vad:TypeExecutor ;
+        rdfs:label "Исполнитель 7" .
+
+    vad:Executor8 rdf:type vad:TypeExecutor ;
+        rdfs:label "Исполнитель 8" .
+}

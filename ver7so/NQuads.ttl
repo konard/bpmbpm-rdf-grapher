@@ -1,0 +1,11 @@
+# Пример RDF данных в формате N-Quads
+# Формат: субъект предикат объект граф .
+# N-Quads расширяет N-Triples добавлением именованных графов
+<http://example.org/john> <http://www.w3.org/1999/02/22-rdf-syntax-ns#type> <http://xmlns.com/foaf/0.1/Person> <http://example.org/people> .
+<http://example.org/john> <http://xmlns.com/foaf/0.1/name> "John Doe" <http://example.org/people> .
+<http://example.org/john> <http://xmlns.com/foaf/0.1/knows> <http://example.org/jane> <http://example.org/people> .
+<http://example.org/jane> <http://www.w3.org/1999/02/22-rdf-syntax-ns#type> <http://xmlns.com/foaf/0.1/Person> <http://example.org/people> .
+<http://example.org/jane> <http://xmlns.com/foaf/0.1/name> "Jane Smith" <http://example.org/people> .
+<http://example.org/company> <http://www.w3.org/1999/02/22-rdf-syntax-ns#type> <http://xmlns.com/foaf/0.1/Organization> <http://example.org/organizations> .
+<http://example.org/company> <http://xmlns.com/foaf/0.1/name> "Example Corp" <http://example.org/organizations> .
+<http://example.org/company> <http://xmlns.com/foaf/0.1/member> <http://example.org/john> <http://example.org/organizations> .
