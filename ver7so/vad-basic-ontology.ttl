@@ -101,6 +101,61 @@ vad:Process
     dcterms:description "Бизнес-процесс в цепочке добавленной стоимости" .
 
 # ------------------------------------------------------------------------------
+# Класс TypeProcess - Синоним класса Process
+# ------------------------------------------------------------------------------
+# TypeProcess используется в JavaScript-коде как псевдоним для vad:Process.
+# Это позволяет использовать единое имя типа для всех процессов,
+# включая подтипы Basic, Detailed, DetailedChild, DetailedExternal.
+#
+# Связь с JS-кодом: входит в константу VAD_ALLOWED_TYPES
+# ------------------------------------------------------------------------------
+
+vad:TypeProcess
+    a rdfs:Class, owl:Class ;
+    owl:equivalentClass vad:Process ;
+    rdfs:label "TypeProcess" ;
+    rdfs:comment """
+        TypeProcess - синоним (эквивалентный класс) для vad:Process.
+
+        Используется в JavaScript-коде для унификации типов объектов.
+        Включает все подтипы процессов:
+        - vad:Basic - базовый процесс
+        - vad:Detailed - детализированный процесс
+        - vad:DetailedChild - детализированный подпроцесс
+        - vad:DetailedExternal - детализированный внешний процесс
+
+        Связь с JS-кодом: входит в VAD_ALLOWED_TYPES
+    """ ;
+    dcterms:description "Синоним класса Process для использования в JavaScript-коде" .
+
+# ------------------------------------------------------------------------------
+# Класс TriG - Базовый класс для всех типов TriG-графов
+# ------------------------------------------------------------------------------
+# Базовый класс, объединяющий все типы TriG-графов, используемых в проекте.
+# Подклассы: VADProcessDia, ProcessTree, ExecutorTree
+#
+# Связь с JS-кодом: используется для определения списка всех типов TriG в проекте
+# ------------------------------------------------------------------------------
+
+vad:TriG
+    a rdfs:Class, owl:Class ;
+    rdfs:label "TriG" ;
+    rdfs:comment """
+        Базовый класс TriG (TriG) - объединяет все типы TriG-графов в проекте.
+
+        Подклассы:
+        - vad:VADProcessDia - схема процесса в нотации VAD
+        - vad:ProcessTree - дерево процессов (единственный экземпляр vad:ptree)
+        - vad:ExecutorTree - дерево исполнителей (единственный экземпляр vad:rtree)
+
+        Данный класс позволяет:
+        - Получить список всех типов TriG, используемых в проекте
+        - Определить общие свойства для всех TriG-графов
+        - Организовать иерархию классов для лучшей структуризации
+    """ ;
+    dcterms:description "Базовый класс для всех типов TriG-графов (именованных графов)" .
+
+# ------------------------------------------------------------------------------
 # Класс VADProcessDia - Схема процесса (TriG-граф)
 # ------------------------------------------------------------------------------
 # Формализует схему процесса как именованный граф (TriG).
@@ -112,6 +167,7 @@ vad:Process
 
 vad:VADProcessDia
     a rdfs:Class, owl:Class ;
+    rdfs:subClassOf vad:TriG ;
     rdfs:label "VADProcessDia" ;
     rdfs:comment """
         Схема процесса (VADProcessDia) - именованный граф TriG,
@@ -144,6 +200,7 @@ vad:VADProcessDia
 
 vad:ProcessTree
     a rdfs:Class, owl:Class ;
+    rdfs:subClassOf vad:TriG ;
     rdfs:label "ProcessTree" ;
     rdfs:comment """
         Дерево процессов (ProcessTree) - специальный класс,
@@ -230,6 +287,29 @@ vad:Executor
     dcterms:description "Исполнитель (роль, подразделение или должность)" .
 
 # ------------------------------------------------------------------------------
+# Класс TypeExecutor - Синоним класса Executor
+# ------------------------------------------------------------------------------
+# TypeExecutor используется в JavaScript-коде как псевдоним для vad:Executor.
+# Это позволяет использовать единое имя типа для всех исполнителей.
+#
+# Связь с JS-кодом: входит в константу VAD_ALLOWED_TYPES
+# ------------------------------------------------------------------------------
+
+vad:TypeExecutor
+    a rdfs:Class, owl:Class ;
+    owl:equivalentClass vad:Executor ;
+    rdfs:label "TypeExecutor" ;
+    rdfs:comment """
+        TypeExecutor - синоним (эквивалентный класс) для vad:Executor.
+
+        Используется в JavaScript-коде для унификации типов объектов.
+        Представляет исполнителей всех видов (роли, должности, подразделения).
+
+        Связь с JS-кодом: входит в VAD_ALLOWED_TYPES
+    """ ;
+    dcterms:description "Синоним класса Executor для использования в JavaScript-коде" .
+
+# ------------------------------------------------------------------------------
 # Класс ExecutorTree - Дерево исполнителей
 # ------------------------------------------------------------------------------
 # Аналогично ProcessTree - единственный экземпляр данного класса - vad:rtree
@@ -240,6 +320,7 @@ vad:Executor
 
 vad:ExecutorTree
     a rdfs:Class, owl:Class ;
+    rdfs:subClassOf vad:TriG ;
     rdfs:label "ExecutorTree" ;
     rdfs:comment """
         Дерево исполнителей (ExecutorTree) - специальный класс,
@@ -382,6 +463,192 @@ vad:DetailedExternal
         Связь с JS-кодом: входит в VAD_ALLOWED_TYPES
     """ ;
     dcterms:description "Детализированный внешний процесс (дочерняя схема НЕ имеет hasParent на текущую)" .
+
+# ==============================================================================
+# ТЕХНОЛОГИЧЕСКИЕ КЛАССЫ И ОБЪЕКТЫ (TECH CLASSES AND OBJECTS)
+# ==============================================================================
+# Технологические объекты используются для явного определения групп предикатов,
+# применяемых для различных типов объектов в системе.
+# Имена классов Tech начинаются с Concept (концептуальные) или Individ (индивидуальные).
+# ==============================================================================
+
+# ------------------------------------------------------------------------------
+# Класс Tech - Технологический класс
+# ------------------------------------------------------------------------------
+# Базовый класс для технологических объектов, определяющих группы предикатов.
+# ------------------------------------------------------------------------------
+
+vad:Tech
+    a rdfs:Class, owl:Class ;
+    rdfs:label "Tech" ;
+    rdfs:comment """
+        Технологический класс (Tech) - базовый класс для технологических объектов.
+
+        Технологические объекты используются для явного определения групп предикатов,
+        применяемых для различных типов объектов в системе. Это позволяет:
+        - Использовать явно заданный список предикатов для анализа
+        - Формировать справочники на основе определённых групп предикатов
+        - Документировать структуру данных в онтологии
+
+        Подклассы именуются по правилу:
+        - Concept* - для концептуальных (общих) свойств объектов
+        - Individ* - для индивидуальных свойств объектов
+
+        Связь с JS-кодом: PTREE_PREDICATES, RTREE_PREDICATES и другие константы
+    """ ;
+    dcterms:description "Базовый класс для технологических объектов, определяющих группы предикатов" .
+
+# ------------------------------------------------------------------------------
+# vad:includePredicate - Предикат включения предиката в группу
+# ------------------------------------------------------------------------------
+# Связывает технологический объект с предикатами, которые он включает
+# ------------------------------------------------------------------------------
+
+vad:includePredicate
+    a rdf:Property, owl:ObjectProperty ;
+    rdfs:label "includePredicate" ;
+    rdfs:domain vad:Tech ;
+    rdfs:range rdf:Property ;
+    rdfs:comment """
+        Предикат includePredicate связывает технологический объект
+        с предикатами (как RDF-объектами), которые он включает.
+
+        Пример:
+        vad:ConceptProcessPredicate vad:includePredicate rdf:type, rdfs:label .
+
+        Это позволяет явно перечислить все предикаты, входящие в группу,
+        и использовать эту информацию для анализа или формирования справочников.
+    """ ;
+    dcterms:description "Связывает технологический объект с включаемыми предикатами" .
+
+# ------------------------------------------------------------------------------
+# vad:ConceptProcessPredicate - Общие свойства процессов (PTREE_PREDICATES)
+# ------------------------------------------------------------------------------
+# Группа «Общие свойства процессов для всех схем процессов»
+# Свойства концепта - хранятся в vad:ptree
+# ------------------------------------------------------------------------------
+
+vad:ConceptProcessPredicate
+    a vad:Tech ;
+    rdfs:label "ConceptProcessPredicate" ;
+    vad:includePredicate rdf:type, rdfs:label, dcterms:description, vad:hasTrig ;
+    rdfs:comment """
+        Группа «Общие свойства процессов для всех схем процессов» (PTREE_PREDICATES).
+
+        Объект ConceptProcessPredicate (класса Tech) включает предикаты,
+        которые используются для объектов типа TypeProcess в vad:ptree:
+        - rdf:type - тип объекта (vad:Process)
+        - rdfs:label - название процесса
+        - dcterms:description - описание процесса
+        - vad:hasTrig - ссылка на TriG-схему детализации
+
+        Это свойства концепта процесса, общие для всех схем.
+
+        Связь с JS-кодом: константа PTREE_PREDICATES
+    """ ;
+    dcterms:description "Группа общих свойств процессов для всех схем (PTREE_PREDICATES)" .
+
+# ------------------------------------------------------------------------------
+# vad:IndividProcessPredicate - Индивидуальные свойства процесса
+# ------------------------------------------------------------------------------
+# Группа «Индивидуальные свойства процесса для конкретной схемы»
+# Свойства индивида - хранятся в VADProcessDia
+# ------------------------------------------------------------------------------
+
+vad:IndividProcessPredicate
+    a vad:Tech ;
+    rdfs:label "IndividProcessPredicate" ;
+    vad:includePredicate vad:isSubprocessTrig, vad:hasExecutor, vad:processSubtype, vad:hasNext ;
+    rdfs:comment """
+        Группа «Индивидуальные свойства процесса для конкретной схемы».
+
+        Объект IndividProcessPredicate (класса Tech) включает предикаты,
+        которые используются для объектов типа Process в конкретной схеме
+        (VADProcessDia):
+        - vad:isSubprocessTrig - связь с TriG (добавляется первым)
+        - vad:hasExecutor - группа исполнителей
+        - vad:processSubtype - подтип процесса (Basic, Detailed, DetailedChild, DetailedExternal)
+        - vad:hasNext - следующий процесс в цепочке
+
+        Это индивидуальные свойства процесса для конкретной схемы.
+
+        Связь с JS-кодом: входят в VAD_ALLOWED_PREDICATES, но НЕ в PTREE_PREDICATES
+    """ ;
+    dcterms:description "Группа индивидуальных свойств процесса для конкретной схемы" .
+
+# ------------------------------------------------------------------------------
+# vad:ConceptExecutorPredicate - Общие свойства исполнителей (RTREE_PREDICATES)
+# ------------------------------------------------------------------------------
+# Группа «Общие свойства исполнителя для всех схем процессов»
+# Хранятся в vad:rtree
+# ------------------------------------------------------------------------------
+
+vad:ConceptExecutorPredicate
+    a vad:Tech ;
+    rdfs:label "ConceptExecutorPredicate" ;
+    vad:includePredicate rdf:type, rdfs:label ;
+    rdfs:comment """
+        Группа «Общие свойства исполнителя для всех схем процессов» (RTREE_PREDICATES).
+
+        Объект ConceptExecutorPredicate (класса Tech) включает предикаты,
+        которые используются для объектов типа TypeExecutor в vad:rtree:
+        - rdf:type - тип объекта (vad:Executor)
+        - rdfs:label - название исполнителя
+
+        Это свойства концепта исполнителя, общие для всех схем.
+
+        Связь с JS-кодом: константа RTREE_PREDICATES
+    """ ;
+    dcterms:description "Группа общих свойств исполнителей для всех схем (RTREE_PREDICATES)" .
+
+# ------------------------------------------------------------------------------
+# vad:ConceptExecutorGroupPredicate - Свойства группы исполнителей
+# ------------------------------------------------------------------------------
+# Группа «Свойства группы исполнителей»
+# Хранятся в VADProcessDia
+# ------------------------------------------------------------------------------
+
+vad:ConceptExecutorGroupPredicate
+    a vad:Tech ;
+    rdfs:label "ConceptExecutorGroupPredicate" ;
+    vad:includePredicate rdf:type, rdfs:label, vad:includes ;
+    rdfs:comment """
+        Группа «Свойства группы исполнителей».
+
+        Объект ConceptExecutorGroupPredicate (класса Tech) включает предикаты,
+        которые используются для объектов типа ExecutorGroup:
+        - rdf:type - тип объекта (vad:ExecutorGroup)
+        - rdfs:label - название группы (генерируется автоматически)
+        - vad:includes - включённые исполнители
+
+        Хранятся в соответствующем VADProcessDia.
+    """ ;
+    dcterms:description "Группа свойств группы исполнителей" .
+
+# ------------------------------------------------------------------------------
+# vad:ConceptTriGPredicate - Свойства схемы процесса (TriG)
+# ------------------------------------------------------------------------------
+# Группа «Свойства схемы процесса»
+# Хранятся в соответствующем TriG (VADProcessDia)
+# ------------------------------------------------------------------------------
+
+vad:ConceptTriGPredicate
+    a vad:Tech ;
+    rdfs:label "ConceptTriGPredicate" ;
+    vad:includePredicate rdf:type, rdfs:label, vad:hasParentTrig, vad:definesProcess ;
+    rdfs:comment """
+        Группа «Свойства схемы процесса» (TriG).
+
+        Объект ConceptTriGPredicate (класса Tech) включает предикаты,
+        которые используются для объектов типа VADProcessDia:
+        - rdf:type - тип объекта (vad:VADProcessDia)
+        - rdfs:label - название схемы
+        - vad:hasParentTrig - родительский TriG
+        - vad:definesProcess - связь с процессом, который схема детализирует
+
+        Хранятся в соответствующем TriG (VADProcessDia).
+    """ ;
+    dcterms:description "Группа свойств схемы процесса (TriG)" .
 
 # ==============================================================================
 # ТЕХНИЧЕСКИЕ ЭКЗЕМПЛЯРЫ (TECHNICAL INSTANCES)
@@ -782,16 +1049,22 @@ vad:includes
 #
 # | Тип объекта (Subject Type)    | Допустимые предикаты                                        | Граф хранения     |
 # |-------------------------------|-------------------------------------------------------------|-------------------|
-# | vad:Process (в ptree)         | rdf:type, rdfs:label, dcterms:description, vad:hasTrig      | vad:ptree         |
-# | vad:Process (в VADProcessDia) | vad:isSubprocessTrig, vad:hasExecutor, vad:processSubtype,  | VADProcessDia     |
-# |                               | vad:hasNext                                                 |                   |
-# | vad:Executor (в rtree)        | rdf:type, rdfs:label                                        | vad:rtree         |
-# | vad:ExecutorGroup             | rdf:type, rdfs:label, vad:includes                          | VADProcessDia     |
+# | --- Типы TriG (подклассы vad:TriG) ---                                                                         |
 # | vad:VADProcessDia             | rdf:type, rdfs:label, vad:hasParentTrig, vad:definesProcess | VADProcessDia     |
 # | vad:ProcessTree               | rdf:type, rdfs:label, vad:hasParentTrig                     | vad:ptree         |
 # | vad:ExecutorTree              | rdf:type, rdfs:label, vad:hasParentTrig                     | vad:rtree         |
+# | --- Типы Process (TypeProcess) ---                                                                             |
+# | vad:Process (в ptree)         | rdf:type, rdfs:label, dcterms:description, vad:hasTrig      | vad:ptree         |
+# | vad:Process (в VADProcessDia) | vad:isSubprocessTrig, vad:hasExecutor, vad:processSubtype,  | VADProcessDia     |
+# |                               | vad:hasNext                                                 |                   |
+# | --- Типы Executor (TypeExecutor) ---                                                                           |
+# | vad:Executor (в rtree)        | rdf:type, rdfs:label                                        | vad:rtree         |
+# | vad:ExecutorGroup             | rdf:type, rdfs:label, vad:includes                          | VADProcessDia     |
 #
 # Примечание:
+# - TypeProcess = vad:Process и его подтипы (Basic, Detailed, DetailedChild, DetailedExternal)
+# - TypeExecutor = vad:Executor
+# - vad:TriG - базовый класс для VADProcessDia, ProcessTree, ExecutorTree
 # - Process имеет разный набор предикатов в зависимости от контекста (ptree или VADProcessDia)
 # - ProcessTree и ExecutorTree - это специальные типы для деревьев ptree и rtree
 # - Подтипы Process (Basic, Detailed, DetailedChild, DetailedExternal) наследуют предикаты Process
