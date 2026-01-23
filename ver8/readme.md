@@ -4,7 +4,7 @@ only SPARQL Smart Design + Ontology + file
 
 ### run
 
-https://bpmbpm.github.io/rdf-grapher/ver8/
+https://bpmbpm.github.io/rdf-grapher/ver8/  
 
 
 *Загрузить пример RDF данных:*  
