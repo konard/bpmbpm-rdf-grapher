@@ -1,6 +1,6 @@
 ### ver7sof
 SPARQL Smart Design + Ontology + file  
-переход от моно файла 
+переход от моно файла и загрузка файла онтологии как конфигуратора
 
 ### run
 https://bpmbpm.github.io/rdf-grapher/ver7sof/
