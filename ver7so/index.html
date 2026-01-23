@@ -175,7 +175,7 @@
                 </div>
             </div>
             <div class="smart-design-buttons">
-                <button class="new-trig-btn" onclick="openNewTrigModal()">New TriG</button>
+                <button class="new-trig-btn" onclick="openNewTrigModal()">New TriG (VADProcessDia)</button>
                 <button onclick="smartDesignCreate()">Создать SPARQL</button>
                 <button onclick="smartDesignCreateWithPrefix()" style="background-color: #1565C0;">Создать SPARQL (prefix)</button>
                 <button class="delete-btn" onclick="smartDesignDelete()">Удалить триплет</button>
@@ -5998,6 +5998,11 @@ WHERE {
                 // Это позволит корректно обнаруживать дубликаты при последующих операциях
                 await reparseRdfData();
 
+                // Сбрасываем флаг New TriG после успешного добавления,
+                // чтобы при повторном нажатии работала проверка на дубликаты
+                isNewTrigQuery = false;
+                updateSimpleTripleButtonState();
+
                 showResultSparqlMessage('Триплеты успешно добавлены в RDF данные. Нажмите "Визуализировать" для обновления графа.', 'success');
 
             } else if (isDelete) {
@@ -6337,6 +6342,10 @@ WHERE {
                 currentRdfText += newGraph;
                 rdfInput.value = currentRdfText;
 
+                // Переразбираем RDF данные для обновления currentQuads и кэша типов
+                // Это позволит корректно обнаруживать дубликаты при последующих операциях
+                reparseRdfData();
+
                 // Сбрасываем флаг New TriG
                 isNewTrigQuery = false;
                 updateSimpleTripleButtonState();
@@ -6530,8 +6539,8 @@ WHERE {
 
             let triples = [];
 
-            // Всегда добавляем rdf:type
-            triples.push(`        ${trigUri} rdf:type vad:TriG .`);
+            // Всегда добавляем rdf:type VADProcessDia (тип схемы процесса)
+            triples.push(`        ${trigUri} rdf:type vad:VADProcessDia .`);
 
             // rdfs:label (обязательно)
             if (label) {
