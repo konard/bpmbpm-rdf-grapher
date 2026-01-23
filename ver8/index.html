@@ -35,12 +35,6 @@
     <div class="description">
         <p>
             <strong>Загрузить пример RDF данных:</strong>
-            <span class="example-link" onclick="loadExampleTurtle()">Turtle</span> |
-            <span class="example-link" onclick="loadExampleVAD()">Turtle VAD</span> |
-            <span class="example-link" onclick="loadExampleNTriples()">N-Triples</span> |
-            <span class="example-link" onclick="loadExampleNQuads()">N-Quads</span> |
-            <span class="example-link" onclick="loadExampleTriG()">TriG</span> |
-            <span class="example-link" onclick="loadExampleTrigVAD()">Trig VAD</span> |
             <span class="example-link" onclick="loadExampleTrigVADv2()">Trig VADv2</span>
         </p>
         <div id="example-status" class="example-status" style="display: none;"></div>
@@ -61,10 +55,7 @@
             <div class="form-group">
                 <label for="input-format">Входной формат:</label>
                 <select id="input-format">
-                    <option value="turtle" selected>Turtle</option>
-                    <option value="n-triples">N-Triples</option>
-                    <option value="n-quads">N-Quads</option>
-                    <option value="trig">TriG</option>
+                    <option value="trig" selected>TriG</option>
                 </select>
             </div>
 
@@ -90,26 +81,20 @@
             <div class="form-group">
                 <label for="visualization-mode">Режим визуализации:</label>
                 <select id="visualization-mode" onchange="updateModeDescription()">
-                    <option value="notation" selected>Режим нотации</option>
-                    <option value="base">Базовый режим</option>
-                    <option value="aggregation">Режим агрегации</option>
-                    <option value="vad">Режим VAD</option>
-                    <option value="vad-trig">Режим VAD TriG</option>
+                    <option value="vad-trig" selected>Режим VAD TriG</option>
                 </select>
                 <div class="mode-description" id="mode-description">
-                    С выделением типов объектов и предикатов цветом и формами
+                    VAD диаграмма с поддержкой иерархии TriG графов
                 </div>
             </div>
 
             <div class="form-group">
                 <label for="sparql-mode">Режим SPARQL:</label>
                 <select id="sparql-mode" onchange="toggleSparqlPanel()">
-                    <option value="no" selected>No</option>
-                    <option value="yes">Yes</option>
-                    <option value="smart-design">SPARQL Smart Design</option>
+                    <option value="smart-design" selected>SPARQL Smart Design</option>
                 </select>
                 <div class="mode-description" id="sparql-mode-description">
-                    Включите для выполнения SPARQL запросов к графу
+                    Smart Design для создания SPARQL запросов
                 </div>
             </div>
 
@@ -318,14 +303,6 @@ WHERE {
                 <div id="sparql-results-content"></div>
             </div>
         </div>
-        <div class="filter-panel" id="filter-panel" style="display: none;">
-            <h3>Фильтры типов:</h3>
-            <div class="filter-controls">
-                <button onclick="selectAllFilters()">Выделить все</button>
-                <button onclick="deselectAllFilters()">Снять все</button>
-            </div>
-            <div class="filter-content" id="filter-content"></div>
-        </div>
     </div>
 
     <!-- Подключение библиотеки N3.js для парсинга RDF -->
@@ -353,343 +330,7 @@ WHERE {
         // ============================================================================
 
         const EXAMPLE_DATA = {
-            turtle: `# Пример RDF данных в формате Turtle
-@prefix foaf: <http://xmlns.com/foaf/0.1/> .
-@prefix ex: <http://example.org/> .
-@prefix rdf: <http://www.w3.org/1999/02/22-rdf-syntax-ns#> .
-@prefix rdfs: <http://www.w3.org/2000/01/rdf-schema#> .
-
-ex:john rdf:type foaf:Person ;
-    foaf:name "John Doe" ;
-    foaf:age 30 ;
-    foaf:knows ex:jane, ex:bob .
-
-ex:jane rdf:type foaf:Person ;
-    foaf:name "Jane Smith" ;
-    foaf:knows ex:john .
-
-ex:bob rdf:type foaf:Person ;
-    foaf:name "Bob Wilson" .
-
-ex:company rdf:type foaf:Organization ;
-    foaf:name "Example Corp" ;
-    foaf:member ex:bob, ex:jane .`,
-
-            vad: `# Пример VAD (Value Added Chain Diagram)
-# Цепочка добавленной стоимости с процессами и исполнителями
-
-@prefix rdf: <http://www.w3.org/1999/02/22-rdf-syntax-ns#> .
-@prefix rdfs: <http://www.w3.org/2000/01/rdf-schema#> .
-@prefix dcterms: <http://purl.org/dc/terms/> .
-@prefix vad: <http://example.org/vad#> .
-
-# Материнский процесс (не отображается в VAD режиме)
-vad:Process0 rdf:type vad:TypeProcess ;
-    rdfs:label "Процесс 0" ;
-    dcterms:description "Материнский процесс для всей цепочки" .
-
-# Процесс 1
-vad:Process1 rdf:type vad:TypeProcess ;
-    rdfs:label "Процесс 1" ;
-    dcterms:description "Первый процесс в цепочке добавленной стоимости" ;
-    vad:hasExecutor vad:ExecutorGroup1 ;
-    vad:hasParentTrig vad:Process0 ;
-    vad:hasNext vad:Process2 .
-
-# Процесс 2
-vad:Process2 rdf:type vad:TypeProcess ;
-    rdfs:label "Процесс 2" ;
-    dcterms:description "Второй процесс, выполняется после Процесса 1" ;
-    vad:hasExecutor vad:ExecutorGroup2 ;
-    vad:hasParentTrig vad:Process0 ;
-    vad:hasNext vad:Process3, vad:Process4 .
-
-# Процесс 3
-vad:Process3 rdf:type vad:TypeProcess ;
-    rdfs:label "Процесс 3" ;
-    dcterms:description "Третий процесс в цепочке" ;
-    vad:hasExecutor vad:ExecutorGroup3 ;
-    vad:hasParentTrig vad:Process0 ;
-    vad:hasNext vad:Process4 .
-
-# Процесс 4
-vad:Process4 rdf:type vad:TypeProcess ;
-    rdfs:label "Процесс 4" ;
-    dcterms:description "Четвёртый процесс в цепочке" ;
-    vad:hasExecutor vad:ExecutorGroup4 ;
-    vad:hasParentTrig vad:Process0 ;
-    vad:hasNext vad:Process5 .
-
-# Процесс 5
-vad:Process5 rdf:type vad:TypeProcess ;
-    rdfs:label "Процесс 5" ;
-    dcterms:description "Пятый процесс в цепочке" ;
-    vad:hasExecutor vad:ExecutorGroup5 ;
-    vad:hasParentTrig vad:Process0 ;
-    vad:hasNext vad:Process6 .
-
-# Процесс 6
-vad:Process6 rdf:type vad:TypeProcess ;
-    rdfs:label "Процесс 6" ;
-    dcterms:description "Шестой процесс в цепочке" ;
-    vad:hasExecutor vad:ExecutorGroup6 ;
-    vad:hasParentTrig vad:Process0 ;
-    vad:hasNext vad:Process7 .
-
-# Процесс 7
-vad:Process7 rdf:type vad:TypeProcess ;
-    rdfs:label "Процесс 7" ;
-    dcterms:description "Седьмой процесс в цепочке" ;
-    vad:hasExecutor vad:ExecutorGroup7 ;
-    vad:hasParentTrig vad:Process0 ;
-    vad:hasNext vad:Process8 .
-
-# Процесс 8
-vad:Process8 rdf:type vad:TypeProcess ;
-    rdfs:label "Процесс 8" ;
-    dcterms:description "Заключительный процесс в цепочке" ;
-    vad:hasExecutor vad:ExecutorGroup8 ;
-    vad:hasParentTrig vad:Process0 .
-
-# Группы исполнителей
-vad:ExecutorGroup1 rdf:type vad:ExecutorGroup ;
-    rdfs:label "Группа исполнителей процесса Процесс 1" ;
-    vad:includes vad:Executor1 .
-
-vad:ExecutorGroup2 rdf:type vad:ExecutorGroup ;
-    rdfs:label "Группа исполнителей процесса Процесс 2" ;
-    vad:includes vad:Executor1, vad:Executor2 .
-
-vad:ExecutorGroup3 rdf:type vad:ExecutorGroup ;
-    rdfs:label "Группа исполнителей процесса Процесс 3" ;
-    vad:includes vad:Executor3 .
-
-vad:ExecutorGroup4 rdf:type vad:ExecutorGroup ;
-    rdfs:label "Группа исполнителей процесса Процесс 4" ;
-    vad:includes vad:Executor3, vad:Executor4 .
-
-vad:ExecutorGroup5 rdf:type vad:ExecutorGroup ;
-    rdfs:label "Группа исполнителей процесса Процесс 5" ;
-    vad:includes vad:Executor5, vad:Executor6 .
-
-vad:ExecutorGroup6 rdf:type vad:ExecutorGroup ;
-    rdfs:label "Группа исполнителей процесса Процесс 6" ;
-    vad:includes vad:Executor7, vad:Executor8 .
-
-vad:ExecutorGroup7 rdf:type vad:ExecutorGroup ;
-    rdfs:label "Группа исполнителей процесса Процесс 7" ;
-    vad:includes vad:Executor1, vad:Executor5 .
-
-vad:ExecutorGroup8 rdf:type vad:ExecutorGroup ;
-    rdfs:label "Группа исполнителей процесса Процесс 8" ;
-    vad:includes vad:Executor2, vad:Executor7 .
-
-# Исполнители
-vad:Executor1 rdf:type vad:TypeExecutor ;
-    rdfs:label "Исполнитель 1" .
-
-vad:Executor2 rdf:type vad:TypeExecutor ;
-    rdfs:label "Исполнитель 2" .
-
-vad:Executor3 rdf:type vad:TypeExecutor ;
-    rdfs:label "Исполнитель 3" .
-
-vad:Executor4 rdf:type vad:TypeExecutor ;
-    rdfs:label "Исполнитель 4" .
-
-vad:Executor5 rdf:type vad:TypeExecutor ;
-    rdfs:label "Исполнитель 5" .
-
-vad:Executor6 rdf:type vad:TypeExecutor ;
-    rdfs:label "Исполнитель 6" .
-
-vad:Executor7 rdf:type vad:TypeExecutor ;
-    rdfs:label "Исполнитель 7" .
-
-vad:Executor8 rdf:type vad:TypeExecutor ;
-    rdfs:label "Исполнитель 8" .`,
-
-            'n-triples': `<http://example.org/john> <http://www.w3.org/1999/02/22-rdf-syntax-ns#type> <http://xmlns.com/foaf/0.1/Person> .
-<http://example.org/john> <http://xmlns.com/foaf/0.1/name> "John Doe" .
-<http://example.org/john> <http://xmlns.com/foaf/0.1/knows> <http://example.org/jane> .
-<http://example.org/jane> <http://www.w3.org/1999/02/22-rdf-syntax-ns#type> <http://xmlns.com/foaf/0.1/Person> .
-<http://example.org/jane> <http://xmlns.com/foaf/0.1/name> "Jane Smith" .`,
-
-            'n-quads': `# Пример RDF данных в формате N-Quads
-# Формат: субъект предикат объект граф .
-# N-Quads расширяет N-Triples добавлением именованных графов
-<http://example.org/john> <http://www.w3.org/1999/02/22-rdf-syntax-ns#type> <http://xmlns.com/foaf/0.1/Person> <http://example.org/people> .
-<http://example.org/john> <http://xmlns.com/foaf/0.1/name> "John Doe" <http://example.org/people> .
-<http://example.org/john> <http://xmlns.com/foaf/0.1/knows> <http://example.org/jane> <http://example.org/people> .
-<http://example.org/jane> <http://www.w3.org/1999/02/22-rdf-syntax-ns#type> <http://xmlns.com/foaf/0.1/Person> <http://example.org/people> .
-<http://example.org/jane> <http://xmlns.com/foaf/0.1/name> "Jane Smith" <http://example.org/people> .
-<http://example.org/company> <http://www.w3.org/1999/02/22-rdf-syntax-ns#type> <http://xmlns.com/foaf/0.1/Organization> <http://example.org/organizations> .
-<http://example.org/company> <http://xmlns.com/foaf/0.1/name> "Example Corp" <http://example.org/organizations> .
-<http://example.org/company> <http://xmlns.com/foaf/0.1/member> <http://example.org/john> <http://example.org/organizations> .`,
-
-            trig: `# Пример RDF данных в формате TriG
-# TriG расширяет Turtle добавлением именованных графов
-@prefix foaf: <http://xmlns.com/foaf/0.1/> .
-@prefix ex: <http://example.org/> .
-@prefix rdf: <http://www.w3.org/1999/02/22-rdf-syntax-ns#> .
-
-# Граф с информацией о людях
-ex:people {
-    ex:john rdf:type foaf:Person ;
-        foaf:name "John Doe" ;
-        foaf:knows ex:jane .
-
-    ex:jane rdf:type foaf:Person ;
-        foaf:name "Jane Smith" ;
-        foaf:knows ex:john .
-}
-
-# Граф с информацией об организациях
-ex:organizations {
-    ex:company rdf:type foaf:Organization ;
-        foaf:name "Example Corp" ;
-        foaf:member ex:john, ex:jane .
-}`,
-
-            'trig-vad': `# Пример TriG VAD (Value Added Chain Diagram)
-# Все объекты VAD находятся в одном именованном графе
-
-@prefix rdf: <http://www.w3.org/1999/02/22-rdf-syntax-ns#> .
-@prefix rdfs: <http://www.w3.org/2000/01/rdf-schema#> .
-@prefix dcterms: <http://purl.org/dc/terms/> .
-@prefix vad: <http://example.org/vad#> .
-
-# Именованный граф Trig1 с меткой схемы
-vad:Trig1 rdfs:label "Схема процесса TriG1" .
-
-vad:Trig1 {
-    # Материнский процесс (не отображается в VAD режиме)
-    vad:Process0 rdf:type vad:TypeProcess ;
-        rdfs:label "Процесс 0" ;
-        dcterms:description "Материнский процесс для всей цепочки" .
-
-    # Процесс 1
-    vad:Process1 rdf:type vad:TypeProcess ;
-        rdfs:label "Процесс 1" ;
-        dcterms:description "Первый процесс в цепочке добавленной стоимости" ;
-        vad:hasExecutor vad:ExecutorGroup1 ;
-        vad:hasParentTrig vad:Process0 ;
-        vad:hasNext vad:Process2 .
-
-    # Процесс 2
-    vad:Process2 rdf:type vad:TypeProcess ;
-        rdfs:label "Процесс 2" ;
-        dcterms:description "Второй процесс, выполняется после Процесса 1" ;
-        vad:hasExecutor vad:ExecutorGroup2 ;
-        vad:hasParentTrig vad:Process0 ;
-        vad:hasNext vad:Process3, vad:Process4 .
-
-    # Процесс 3
-    vad:Process3 rdf:type vad:TypeProcess ;
-        rdfs:label "Процесс 3" ;
-        dcterms:description "Третий процесс в цепочке" ;
-        vad:hasExecutor vad:ExecutorGroup3 ;
-        vad:hasParentTrig vad:Process0 ;
-        vad:hasNext vad:Process4 .
-
-    # Процесс 4
-    vad:Process4 rdf:type vad:TypeProcess ;
-        rdfs:label "Процесс 4" ;
-        dcterms:description "Четвёртый процесс в цепочке" ;
-        vad:hasExecutor vad:ExecutorGroup4 ;
-        vad:hasParentTrig vad:Process0 ;
-        vad:hasNext vad:Process5 .
-
-    # Процесс 5
-    vad:Process5 rdf:type vad:TypeProcess ;
-        rdfs:label "Процесс 5" ;
-        dcterms:description "Пятый процесс в цепочке" ;
-        vad:hasExecutor vad:ExecutorGroup5 ;
-        vad:hasParentTrig vad:Process0 ;
-        vad:hasNext vad:Process6 .
-
-    # Процесс 6
-    vad:Process6 rdf:type vad:TypeProcess ;
-        rdfs:label "Процесс 6" ;
-        dcterms:description "Шестой процесс в цепочке" ;
-        vad:hasExecutor vad:ExecutorGroup6 ;
-        vad:hasParentTrig vad:Process0 ;
-        vad:hasNext vad:Process7 .
-
-    # Процесс 7
-    vad:Process7 rdf:type vad:TypeProcess ;
-        rdfs:label "Процесс 7" ;
-        dcterms:description "Седьмой процесс в цепочке" ;
-        vad:hasExecutor vad:ExecutorGroup7 ;
-        vad:hasParentTrig vad:Process0 ;
-        vad:hasNext vad:Process8 .
-
-    # Процесс 8
-    vad:Process8 rdf:type vad:TypeProcess ;
-        rdfs:label "Процесс 8" ;
-        dcterms:description "Заключительный процесс в цепочке" ;
-        vad:hasExecutor vad:ExecutorGroup8 ;
-        vad:hasParentTrig vad:Process0 .
-
-    # Группы исполнителей
-    vad:ExecutorGroup1 rdf:type vad:ExecutorGroup ;
-        rdfs:label "Группа исполнителей процесса Процесс 1" ;
-        vad:includes vad:Executor1 .
-
-    vad:ExecutorGroup2 rdf:type vad:ExecutorGroup ;
-        rdfs:label "Группа исполнителей процесса Процесс 2" ;
-        vad:includes vad:Executor1, vad:Executor2 .
-
-    vad:ExecutorGroup3 rdf:type vad:ExecutorGroup ;
-        rdfs:label "Группа исполнителей процесса Процесс 3" ;
-        vad:includes vad:Executor3 .
-
-    vad:ExecutorGroup4 rdf:type vad:ExecutorGroup ;
-        rdfs:label "Группа исполнителей процесса Процесс 4" ;
-        vad:includes vad:Executor3, vad:Executor4 .
-
-    vad:ExecutorGroup5 rdf:type vad:ExecutorGroup ;
-        rdfs:label "Группа исполнителей процесса Процесс 5" ;
-        vad:includes vad:Executor5, vad:Executor6 .
-
-    vad:ExecutorGroup6 rdf:type vad:ExecutorGroup ;
-        rdfs:label "Группа исполнителей процесса Процесс 6" ;
-        vad:includes vad:Executor7, vad:Executor8 .
-
-    vad:ExecutorGroup7 rdf:type vad:ExecutorGroup ;
-        rdfs:label "Группа исполнителей процесса Процесс 7" ;
-        vad:includes vad:Executor1, vad:Executor5 .
-
-    vad:ExecutorGroup8 rdf:type vad:ExecutorGroup ;
-        rdfs:label "Группа исполнителей процесса Процесс 8" ;
-        vad:includes vad:Executor2, vad:Executor7 .
-
-    # Исполнители
-    vad:Executor1 rdf:type vad:TypeExecutor ;
-        rdfs:label "Исполнитель 1" .
-
-    vad:Executor2 rdf:type vad:TypeExecutor ;
-        rdfs:label "Исполнитель 2" .
-
-    vad:Executor3 rdf:type vad:TypeExecutor ;
-        rdfs:label "Исполнитель 3" .
-
-    vad:Executor4 rdf:type vad:TypeExecutor ;
-        rdfs:label "Исполнитель 4" .
-
-    vad:Executor5 rdf:type vad:TypeExecutor ;
-        rdfs:label "Исполнитель 5" .
-
-    vad:Executor6 rdf:type vad:TypeExecutor ;
-        rdfs:label "Исполнитель 6" .
-
-    vad:Executor7 rdf:type vad:TypeExecutor ;
-        rdfs:label "Исполнитель 7" .
-
-    vad:Executor8 rdf:type vad:TypeExecutor ;
-        rdfs:label "Исполнитель 8" .
-}`,
-
+            // Только TriG VADv2 пример (остальные форматы удалены при минимизации)
             'trig-vad-v2': `# Пример TriG VADv2 (Value Added Chain Diagram с иерархией TriG)
 # Демонстрация иерархии TriG графов через hasParentTrig
 # Процесс p1 имеет подтип "DetailedChild" (подпроцесс с детализацией)
@@ -3098,8 +2739,8 @@ WHERE {
         }
 
         function displayFilters() {
-            const filterPanel = document.getElementById('filter-panel');
-            const filterContent = document.getElementById('filter-content');
+            // filter-panel removed in minimization - function kept for compatibility
+            return;
 
             allPredicates = [];
             const predicateSet = new Set();
@@ -3274,76 +2915,6 @@ WHERE {
          * 4. При ошибке CORS (локальный файл): показывает информацию и использует встроенные данные
          * 5. При другой ошибке: отображает подробную информацию об ошибке
          */
-        function loadExampleTurtle() {
-            loadExampleFromFile('Turtle.ttl', 'Turtle', 'turtle', 'notation', 'turtle');
-        }
-
-        /**
-         * Загружает пример VAD (Value Added Chain Diagram)
-         * Алгоритм загрузки файла:
-         * 1. Отображает статус загрузки
-         * 2. Выполняет fetch запрос к файлу 'VAD.ttl' (относительный путь от текущего расположения HTML файла)
-         * 3. При успехе: заполняет текстовое поле RDF данными, устанавливает формат ввода и режим визуализации VAD
-         * 4. При ошибке CORS (локальный файл): показывает информацию и использует встроенные данные
-         * 5. При другой ошибке: отображает подробную информацию об ошибке
-         */
-        function loadExampleVAD() {
-            loadExampleFromFile('VAD.ttl', 'VAD', 'turtle', 'vad', 'vad');
-        }
-
-        /**
-         * Загружает пример RDF данных в формате N-Triples
-         * Алгоритм загрузки файла:
-         * 1. Отображает статус загрузки
-         * 2. Выполняет fetch запрос к файлу 'NTriples.ttl' (относительный путь от текущего расположения HTML файла)
-         * 3. При успехе: заполняет текстовое поле RDF данными, устанавливает формат ввода N-Triples и режим визуализации
-         * 4. При ошибке CORS (локальный файл): показывает информацию и использует встроенные данные
-         * 5. При другой ошибке: отображает подробную информацию об ошибке
-         */
-        function loadExampleNTriples() {
-            loadExampleFromFile('NTriples.ttl', 'N-Triples', 'n-triples', 'notation', 'n-triples');
-        }
-
-        /**
-         * Загружает пример RDF данных в формате N-Quads
-         * Алгоритм загрузки файла:
-         * 1. Отображает статус загрузки
-         * 2. Выполняет fetch запрос к файлу 'NQuads.ttl' (относительный путь от текущего расположения HTML файла)
-         * 3. При успехе: заполняет текстовое поле RDF данными, устанавливает формат ввода N-Quads и режим визуализации
-         * 4. При ошибке CORS (локальный файл): показывает информацию и использует встроенные данные
-         * 5. При другой ошибке: отображает подробную информацию об ошибке
-         */
-        function loadExampleNQuads() {
-            loadExampleFromFile('NQuads.ttl', 'N-Quads', 'n-quads', 'notation', 'n-quads');
-        }
-
-        /**
-         * Загружает пример RDF данных в формате TriG
-         * Алгоритм загрузки файла:
-         * 1. Отображает статус загрузки
-         * 2. Выполняет fetch запрос к файлу 'TriG.ttl' (относительный путь от текущего расположения HTML файла)
-         * 3. При успехе: заполняет текстовое поле RDF данными, устанавливает формат ввода TriG и режим визуализации
-         * 4. При ошибке CORS (локальный файл): показывает информацию и использует встроенные данные
-         * 5. При другой ошибке: отображает подробную информацию об ошибке
-         */
-        function loadExampleTriG() {
-            loadExampleFromFile('TriG.ttl', 'TriG', 'trig', 'notation', 'trig');
-        }
-
-        /**
-         * Загружает пример TriG VAD - все объекты Turtle VAD в одном именованном графе
-         * Имя графа (Trig1) и его label отображаются как название схемы вверху диаграммы
-         * Алгоритм загрузки файла:
-         * 1. Отображает статус загрузки
-         * 2. Выполняет fetch запрос к файлу 'Trig_VAD.ttl' (относительный путь от текущего расположения HTML файла)
-         * 3. При успехе: заполняет текстовое поле RDF данными, устанавливает формат ввода TriG и режим визуализации VAD
-         * 4. При ошибке CORS (локальный файл): показывает информацию и использует встроенные данные
-         * 5. При другой ошибке: отображает подробную информацию об ошибке
-         */
-        function loadExampleTrigVAD() {
-            loadExampleFromFile('Trig_VAD.ttl', 'Trig VAD', 'trig', 'vad', 'trig-vad');
-        }
-
         /**
          * Загружает пример TriG VADv2 с иерархией TriG графов
          * Содержит:
@@ -3361,10 +2932,10 @@ WHERE {
         }
 
         /**
-         * Для обратной совместимости: вызывает загрузку примера Turtle
+         * Для обратной совместимости: вызывает загрузку примера Trig VADv2
          */
         function loadExample() {
-            loadExampleTurtle();
+            loadExampleTrigVADv2();
         }
 
         /**
@@ -4267,7 +3838,7 @@ WHERE {
             document.getElementById('zoom-controls').style.display = 'none';
             document.getElementById('prefixes-panel').style.display = 'none';
             document.getElementById('legend-panel').style.display = 'none';
-            document.getElementById('filter-panel').style.display = 'none';
+            // filter-panel removed in minimization
         }
 
         /**
@@ -4317,7 +3888,7 @@ WHERE {
             document.getElementById('zoom-controls').style.display = 'none';
             document.getElementById('prefixes-panel').style.display = 'none';
             document.getElementById('legend-panel').style.display = 'none';
-            document.getElementById('filter-panel').style.display = 'none';
+            // filter-panel removed in minimization
         }
 
         function showValidationError(message) {
@@ -4345,7 +3916,7 @@ WHERE {
             document.getElementById('zoom-controls').style.display = 'none';
             document.getElementById('prefixes-panel').style.display = 'none';
             document.getElementById('legend-panel').style.display = 'none';
-            document.getElementById('filter-panel').style.display = 'none';
+            // filter-panel removed in minimization
         }
 
         function displayPrefixes(prefixes) {
@@ -4378,19 +3949,10 @@ WHERE {
 
             let html = '';
 
-            // Выбираем источник стилей в зависимости от режима
+            // Используем только VAD стили (режим VAD TriG)
             let nodeStylesSource, edgeStylesSource;
-
-            if (currentMode === 'vad') {
-                nodeStylesSource = VADNodeStyles;
-                edgeStylesSource = VADEdgeStyles;
-            } else if (currentMode === 'aggregation') {
-                nodeStylesSource = AggregationNodeStyles;
-                edgeStylesSource = StyleName.edgeStyles;
-            } else {
-                nodeStylesSource = StyleName.nodeStyles;
-                edgeStylesSource = StyleName.edgeStyles;
-            }
+            nodeStylesSource = VADNodeStyles;
+            edgeStylesSource = VADEdgeStyles;
 
             html += '<div class="legend-section">';
             html += '<h4>Стили узлов (Node Styles)</h4>';
@@ -6716,12 +6278,12 @@ ${triples.join('\n')}
             sparqlPanel.classList.remove('visible');
             smartDesignContainer.classList.remove('visible');
 
-            if (sparqlMode === 'yes') {
-                sparqlPanel.classList.add('visible');
-            } else if (sparqlMode === 'smart-design') {
+            if (sparqlMode === 'smart-design') {
                 // SPARQL Smart Design отображается только в режиме VAD TriG
                 if (visualizationMode === 'vad-trig') {
                     smartDesignContainer.classList.add('visible');
+                    // В режиме SPARQL Smart Design всегда также отображается окно SPARQL запрос
+                    sparqlPanel.classList.add('visible');
                     // Заполняем выпадающие списки при активации Smart Design
                     populateSmartDesignDropdowns();
                     // Показываем справочные сообщения при открытии панели
