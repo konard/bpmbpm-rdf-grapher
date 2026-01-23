@@ -8,7 +8,7 @@ https://bpmbpm.github.io/rdf-grapher/ver8/
 
 
 *Загрузить пример RDF данных:*  
-выбрать (choose): **TrigVADfile1**  
+выбрать (choose): **Trig VADv2**  
 Нажать кнопку (press the button) **Визуализировать**
 
 Выбор режима:  "SPARQL Smart Design"
