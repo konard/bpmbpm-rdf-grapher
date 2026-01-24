@@ -56,10 +56,10 @@ vad:ptree {
         dcterms:description "p2 Процесс 2" ;
         vad:hasTrig vad:t_p2 .
 
-    vad:p2.1 rdf:type vad:TypeProcess ;
+   vad:p2.1 rdf:type vad:TypeProcess ;
         rdfs:label "p2.1 Процесс 2.1" ;
-        dcterms:description "Первый процесс в цепочке добавленной стоимости" .
-#       vad:hasTrig vad:t_p1.1 .
+        dcterms:description "Первый процесс в цепочке добавленной стоимости" ;
+  #     vad:hasTrig vad:t_p1.1 .
 
     vad:p2.2 rdf:type vad:TypeProcess ;
         rdfs:label "Процесс 2.2" ;
@@ -221,7 +221,7 @@ vad:t_p2 {
     # isSubprocessTrig указывается первым для явной связи с TriG
     vad:p2.1 vad:isSubprocessTrig vad:t_p2 ;
         vad:hasExecutor vad:ExecutorGroup_p2.1 ;
-        vad:processSubtype vad:Basic ;
+        vad:processSubtype vad:Basic .
         vad:hasNext vad:p2.2 .
 
     # Процесс p2.2 - Базовый
@@ -229,7 +229,7 @@ vad:t_p2 {
         vad:hasExecutor vad:ExecutorGroup_p2.2 ;
         vad:processSubtype vad:Basic .
 
-    # Группы исполнителей (ID формируется как ExecutorGroup_ + ID процесса)
+   # Группы исполнителей (ID формируется как ExecutorGroup_ + ID процесса)
     vad:ExecutorGroup_p2.1 rdf:type vad:ExecutorGroup ;
         rdfs:label "Группа исполнителей процесса p2.1" ;
         vad:includes vad:Executor1 .
