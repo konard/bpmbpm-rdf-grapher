@@ -1410,3 +1410,59 @@
                 grid-template-columns: 1fr;
             }
         }
+
+        /* Copy-to-clipboard button styles for Smart Design fields */
+        .smart-design-field-wrapper {
+            position: relative;
+            display: flex;
+            align-items: stretch;
+        }
+
+        .smart-design-field-wrapper select {
+            flex: 1;
+            border-radius: 4px 0 0 4px;
+        }
+
+        .copy-to-clipboard-btn {
+            padding: 8px 10px;
+            border: 1px solid #90CAF9;
+            border-left: none;
+            border-radius: 0 4px 4px 0;
+            background-color: #E3F2FD;
+            cursor: pointer;
+            font-size: 14px;
+            transition: background-color 0.2s;
+        }
+
+        .copy-to-clipboard-btn:hover {
+            background-color: #BBDEFB;
+        }
+
+        .copy-to-clipboard-btn:active {
+            background-color: #90CAF9;
+        }
+
+        .copy-to-clipboard-btn.copied {
+            background-color: #C8E6C9;
+        }
+
+        /* Field hint styles */
+        .field-hint {
+            display: block;
+            margin-top: 4px;
+            font-size: 11px;
+            color: #666;
+            font-style: italic;
+        }
+
+        /* Disabled option styles in select */
+        select option:disabled {
+            color: #999;
+            font-style: italic;
+        }
+
+        /* Auto-generated predicate indicator */
+        .auto-generated-indicator {
+            color: #999;
+            font-style: italic;
+        }

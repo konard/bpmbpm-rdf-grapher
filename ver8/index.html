@@ -136,27 +136,39 @@
             <div class="smart-design-fields">
                 <div class="smart-design-field">
                     <label for="smart-design-subject-type">Subject Type:</label>
-                    <select id="smart-design-subject-type">
-                        <option value="">-- Выберите тип Subject --</option>
-                    </select>
+                    <div class="smart-design-field-wrapper">
+                        <select id="smart-design-subject-type">
+                            <option value="">-- Выберите тип Subject --</option>
+                        </select>
+                        <button class="copy-to-clipboard-btn" onclick="copyFieldValue('smart-design-subject-type')" title="Копировать значение">📋</button>
+                    </div>
                 </div>
                 <div class="smart-design-field">
                     <label for="smart-design-subject">Subject:</label>
-                    <select id="smart-design-subject">
-                        <option value="">-- Выберите Subject --</option>
-                    </select>
+                    <div class="smart-design-field-wrapper">
+                        <select id="smart-design-subject">
+                            <option value="">-- Выберите Subject --</option>
+                        </select>
+                        <button class="copy-to-clipboard-btn" onclick="copyFieldValue('smart-design-subject')" title="Копировать значение">📋</button>
+                    </div>
                 </div>
                 <div class="smart-design-field">
                     <label for="smart-design-predicate">Predicate:</label>
-                    <select id="smart-design-predicate">
-                        <option value="">-- Выберите Predicate --</option>
-                    </select>
+                    <div class="smart-design-field-wrapper">
+                        <select id="smart-design-predicate">
+                            <option value="">-- Выберите Predicate --</option>
+                        </select>
+                        <button class="copy-to-clipboard-btn" onclick="copyFieldValue('smart-design-predicate')" title="Копировать значение">📋</button>
+                    </div>
                 </div>
                 <div class="smart-design-field">
                     <label for="smart-design-object">Object:</label>
-                    <select id="smart-design-object">
-                        <option value="">-- Выберите Object --</option>
-                    </select>
+                    <div class="smart-design-field-wrapper">
+                        <select id="smart-design-object">
+                            <option value="">-- Выберите Object --</option>
+                        </select>
+                        <button class="copy-to-clipboard-btn" onclick="copyFieldValue('smart-design-object')" title="Копировать значение">📋</button>
+                    </div>
                 </div>
             </div>
             <div class="smart-design-buttons">
@@ -165,7 +177,6 @@
                 <button onclick="smartDesignCreateWithPrefix()" style="background-color: #1565C0;">Создать SPARQL (prefix)</button>
                 <button class="delete-btn" onclick="smartDesignDelete()">Удалить триплет</button>
                 <button class="clear-btn" onclick="smartDesignClear()">Очистить</button>
-                <button id="smart-design-mode-toggle" onclick="toggleSmartDesignMode()" style="background-color: #607D8B; margin-left: 10px;">Режим: Фильтр</button>
             </div>
             <div id="smart-design-message" class="smart-design-message" style="display: none;"></div>
         </div>
@@ -185,27 +196,30 @@
     <div id="new-trig-modal" class="new-trig-modal">
         <div class="new-trig-modal-content">
             <div class="new-trig-modal-header">
-                <h3>Создание нового TriG контейнера</h3>
+                <h3>Создание нового TriG контейнера (VADProcessDia)</h3>
                 <button class="new-trig-modal-close" onclick="closeNewTrigModal()">&times;</button>
             </div>
             <div class="new-trig-modal-body">
                 <div class="new-trig-field">
-                    <label for="new-trig-id">ID нового TriG:</label>
-                    <input type="text" id="new-trig-id" placeholder="Введите ID (например: myNewGraph)">
+                    <label for="new-trig-process-concept">Концепт процесса:</label>
+                    <select id="new-trig-process-concept" onchange="updateNewTrigFields()">
+                        <option value="">-- Выберите концепт процесса --</option>
+                    </select>
+                    <small class="field-hint">ID и label TriG формируются автоматически на основе выбранного концепта</small>
                 </div>
                 <div class="new-trig-field">
-                    <label for="new-trig-label">rdfs:label (название):</label>
-                    <input type="text" id="new-trig-label" placeholder="Введите название">
+                    <label for="new-trig-id">ID нового TriG (автоматически):</label>
+                    <input type="text" id="new-trig-id" placeholder="t_{processId}" readonly style="background-color: #f5f5f5;">
+                </div>
+                <div class="new-trig-field">
+                    <label for="new-trig-label">rdfs:label (автоматически):</label>
+                    <input type="text" id="new-trig-label" placeholder="Схема процесса {processLabel}" readonly style="background-color: #f5f5f5;">
                 </div>
                 <div class="new-trig-field">
                     <label for="new-trig-parent">vad:hasParentTrig (родитель):</label>
                     <select id="new-trig-parent">
                         <option value="">-- Выберите родителя --</option>
                     </select>
-                </div>
-                <div class="new-trig-field">
-                    <label for="new-trig-type">vad:typeOfScheme (тип схемы):</label>
-                    <input type="text" id="new-trig-type" placeholder="Введите тип схемы">
                 </div>
             </div>
             <div class="new-trig-modal-buttons">
@@ -4265,21 +4279,53 @@ WHERE {
 
             let availableTypes = [];
 
-            if (isPtree) {
-                // В ptree можно добавлять только TypeProcess и ProcessTree
-                availableTypes = ['vad:TypeProcess', 'vad:ProcessTree'];
-            } else if (isRtree) {
-                // В rtree можно добавлять только TypeExecutor и ExecutorTree
-                availableTypes = ['vad:TypeExecutor', 'vad:ExecutorTree'];
-            } else if (trigValue) {
-                // В VADProcessDia можно добавлять TypeProcess (индивиды), ExecutorGroup, VADProcessDia
-                availableTypes = ['vad:TypeProcess', 'vad:ExecutorGroup', 'vad:VADProcessDia'];
+            // Используем данные из Tech appendix, если они загружены
+            if (techAppendixData && techAppendixData.predicateGroups) {
+                if (isPtree) {
+                    // В ptree: ConceptProcessPredicate, ConceptTreePredicate
+                    availableTypes = [
+                        { value: 'vad:TypeProcess', label: 'vad:TypeProcess (концепт процесса)' },
+                        { value: 'vad:ProcessTree', label: 'vad:ProcessTree (дерево процессов)' }
+                    ];
+                } else if (isRtree) {
+                    // В rtree: ConceptExecutorPredicate, ExecutorTreePredicate
+                    availableTypes = [
+                        { value: 'vad:TypeExecutor', label: 'vad:TypeExecutor (концепт исполнителя)' },
+                        { value: 'vad:ExecutorTree', label: 'vad:ExecutorTree (дерево исполнителей)' }
+                    ];
+                } else if (trigValue) {
+                    // В VADProcessDia: IndividProcessPredicate, ExecutorGroupPredicate, DiagramPredicate
+                    availableTypes = [
+                        { value: 'vad:TypeProcess', label: 'vad:TypeProcess (индивид процесса)' },
+                        { value: 'vad:ExecutorGroup', label: 'vad:ExecutorGroup (группа исполнителей)' },
+                        { value: 'vad:VADProcessDia', label: 'vad:VADProcessDia (диаграмма)' }
+                    ];
+                }
+            } else {
+                // Fallback: исходная логика, если Tech appendix не загружен
+                if (isPtree) {
+                    availableTypes = [
+                        { value: 'vad:TypeProcess', label: 'vad:TypeProcess' },
+                        { value: 'vad:ProcessTree', label: 'vad:ProcessTree' }
+                    ];
+                } else if (isRtree) {
+                    availableTypes = [
+                        { value: 'vad:TypeExecutor', label: 'vad:TypeExecutor' },
+                        { value: 'vad:ExecutorTree', label: 'vad:ExecutorTree' }
+                    ];
+                } else if (trigValue) {
+                    availableTypes = [
+                        { value: 'vad:TypeProcess', label: 'vad:TypeProcess' },
+                        { value: 'vad:ExecutorGroup', label: 'vad:ExecutorGroup' },
+                        { value: 'vad:VADProcessDia', label: 'vad:VADProcessDia' }
+                    ];
+                }
             }
 
             availableTypes.forEach(type => {
                 const option = document.createElement('option');
-                option.value = type;
-                option.textContent = type;
+                option.value = type.value;
+                option.textContent = type.label;
                 subjectTypeSelect.appendChild(option);
             });
         }
@@ -4325,6 +4371,7 @@ WHERE {
 
         /**
          * Обновляет выпадающий список Predicate на основе выбранного Subject Type
+         * Автогенерируемые предикаты (isSubprocessTrig, hasExecutor) отображаются как disabled
          */
         function updatePredicateBySubjectType() {
             const subjectTypeSelect = document.getElementById('smart-design-subject-type');
@@ -4340,9 +4387,9 @@ WHERE {
             // Сохраняем текущее выбранное значение
             const currentPredicateValue = predicateSelect.value;
 
-            // В режиме 'full' не фильтруем предикаты
-            if (smartDesignMode === 'full' || !subjectType) {
-                // Восстанавливаем полный список предикатов
+            // Всегда показываем допустимые предикаты для выбранного типа
+            if (!subjectType) {
+                // Если тип не выбран - показываем все предикаты
                 predicateSelect.innerHTML = '<option value="">-- Выберите Predicate --</option>';
                 const allPredicates = getAllPredicates();
                 allPredicates.forEach(p => {
@@ -4352,7 +4399,7 @@ WHERE {
                     predicateSelect.appendChild(option);
                 });
             } else {
-                // Режим 'filtered' - показываем только допустимые предикаты
+                // Показываем допустимые предикаты с учетом автогенерируемых
                 const allowedPredicates = getPredicatesForSubjectType(subjectType, trigContext);
 
                 predicateSelect.innerHTML = '<option value="">-- Выберите Predicate --</option>';
@@ -4368,14 +4415,29 @@ WHERE {
                         }
                     }
                     option.value = fullUri;
-                    option.textContent = pred;
+
+                    // Проверяем, является ли предикат автогенерируемым
+                    const isAutoGen = isAutoGeneratedPredicate(pred);
+                    if (isAutoGen) {
+                        option.textContent = pred + ' (автогенерируемый)';
+                        option.disabled = true;
+                        option.style.color = '#999';
+                    } else {
+                        option.textContent = pred;
+                    }
+
                     predicateSelect.appendChild(option);
                 });
             }
 
-            // Восстанавливаем выбор если значение все еще доступно
-            if (currentPredicateValue && Array.from(predicateSelect.options).some(o => o.value === currentPredicateValue)) {
-                predicateSelect.value = currentPredicateValue;
+            // Восстанавливаем выбор если значение все еще доступно и не disabled
+            if (currentPredicateValue) {
+                const matchingOption = Array.from(predicateSelect.options).find(o => o.value === currentPredicateValue && !o.disabled);
+                if (matchingOption) {
+                    predicateSelect.value = currentPredicateValue;
+                } else {
+                    predicateSelect.value = '';
+                }
             } else {
                 predicateSelect.value = '';
             }
@@ -4588,15 +4650,14 @@ WHERE {
          * в режиме Filter (smartDesignMode === 'filtered')
          */
         function updateSubjectsBySubjectType() {
-            // Если режим не Filter, ничего не делаем
-            if (smartDesignMode !== 'filtered') return;
-
             const subjectSelect = document.getElementById('smart-design-subject');
             const subjectTypeSelect = document.getElementById('smart-design-subject-type');
+            const trigSelect = document.getElementById('smart-design-trig');
 
             if (!subjectSelect || !subjectTypeSelect) return;
 
             const selectedType = subjectTypeSelect.value;
+            const trigUri = trigSelect ? trigSelect.value : '';
             if (!selectedType) return; // Если тип не выбран, не фильтруем
 
             // Сохраняем текущее выбранное значение
@@ -4606,12 +4667,40 @@ WHERE {
             subjectSelect.innerHTML = '<option value="">-- Выберите Subject --</option>';
             subjectSelect.innerHTML += '<option value="__NEW__">New (создать новый)</option>';
 
-            // В режиме Filter фильтруем субъекты по выбранному типу
-            const subjects = getSubjectsByType(selectedType);
-            subjects.forEach(s => {
+            // Используем SPARQL-based подход для заполнения субъектов
+            // в зависимости от выбранного типа и контекста TriG
+            const trigContext = getTrigContext(trigUri);
+            let subjects = [];
+
+            if (selectedType === 'vad:TypeProcess') {
+                if (trigContext === 'ptree') {
+                    // В ptree показываем концепты процессов (Process rdf:type vad:TypeProcess)
+                    subjects = funSPARQLvalues(SPARQL_QUERIES.PROCESS_CONCEPTS_IN_PTREE, 'process');
+                } else {
+                    // В VADProcessDia показываем индивиды процессов из текущего TriG
+                    subjects = getProcessIndividualsInTriG(trigUri);
+                }
+            } else if (selectedType === 'vad:ExecutorGroup') {
+                // Группы исполнителей из текущего TriG
+                subjects = getExecutorGroupsInTriG(trigUri);
+            } else if (selectedType === 'vad:TypeExecutor') {
+                // Концепты исполнителей из rtree
+                subjects = funSPARQLvalues(SPARQL_QUERIES.EXECUTOR_CONCEPTS_IN_RTREE, 'executor');
+            } else if (selectedType === 'vad:ProcessTree' || selectedType === 'vad:ExecutorTree' || selectedType === 'vad:VADProcessDia') {
+                // Для структурных типов используем старый подход
+                subjects = getSubjectsByType(selectedType);
+            }
+
+            // Преобразуем URI в отображаемый формат
+            subjects.forEach(uri => {
                 const option = document.createElement('option');
-                option.value = s.uri;
-                option.textContent = s.label;
+                if (typeof uri === 'object' && uri.uri) {
+                    option.value = uri.uri;
+                    option.textContent = uri.label || getPrefixedName(uri.uri, currentPrefixes);
+                } else {
+                    option.value = uri;
+                    option.textContent = getPrefixedName(uri, currentPrefixes);
+                }
                 subjectSelect.appendChild(option);
             });
 
@@ -6048,7 +6137,15 @@ WHERE {
             // Очищаем поля ввода
             document.getElementById('new-trig-id').value = '';
             document.getElementById('new-trig-label').value = '';
-            document.getElementById('new-trig-type').value = '';
+
+            // Очищаем выбор концепта процесса
+            const processConceptSelect = document.getElementById('new-trig-process-concept');
+            if (processConceptSelect) {
+                processConceptSelect.value = '';
+            }
+
+            // Заполняем выпадающий список концептов процессов
+            populateNewTrigProcessConcepts();
 
             modal.style.display = 'block';
 
@@ -6069,21 +6166,42 @@ WHERE {
 
         /**
          * Создает новый TriG контейнер и генерирует SPARQL запрос
+         * Использует выбранный концепт процесса для генерации ID
          */
         function createNewTrig() {
+            const processConcept = document.getElementById('new-trig-process-concept').value;
             const trigId = document.getElementById('new-trig-id').value.trim();
             const label = document.getElementById('new-trig-label').value.trim();
             const parentUri = document.getElementById('new-trig-parent').value;
-            const typeOfScheme = document.getElementById('new-trig-type').value.trim();
 
-            if (!trigId) {
-                alert('Ошибка: Введите ID для нового TriG');
+            // Проверяем, что выбран концепт процесса
+            if (!processConcept) {
+                alert('Ошибка: Выберите концепт процесса');
                 return;
+            }
+
+            // Проверяем, что ID заполнен
+            if (!trigId) {
+                alert('Ошибка: ID нового TriG не может быть пустым');
+                return;
+            }
+
+            // Получаем локальное имя процесса из URI
+            // processConcept может быть в форме "vad:ProcessX" или "<http://...#ProcessX>"
+            let processLocalName;
+            if (processConcept.startsWith('vad:')) {
+                processLocalName = processConcept.substring(4);
+            } else if (processConcept.includes('#')) {
+                processLocalName = processConcept.split('#').pop().replace('>', '');
+            } else if (processConcept.includes('/')) {
+                processLocalName = processConcept.split('/').pop().replace('>', '');
+            } else {
+                processLocalName = processConcept;
             }
 
             // Проверяем, не существует ли уже такой TriG
             if (trigExists(trigId)) {
-                alert('Ошибка: TriG с таким ID уже существует');
+                alert(`Ошибка: TriG с ID "${trigId}" уже существует. Выберите другой концепт процесса.`);
                 return;
             }
 
@@ -6116,10 +6234,22 @@ WHERE {
                 triples.push(`        ${trigUri} vad:hasParentTrig ${parentPrefixed} .`);
             }
 
-            // vad:typeOfScheme (опционально)
-            if (typeOfScheme) {
-                const escapedType = typeOfScheme.replace(/\\/g, '\\\\').replace(/"/g, '\\"');
-                triples.push(`        ${trigUri} vad:typeOfScheme "${escapedType}" .`);
+            // Добавляем автогенерируемые триплы для индивидуального процесса
+            // Получаем полный URI триГа для функции generateAutoTriples
+            const fullTrigUri = currentPrefixes['vad']
+                ? currentPrefixes['vad'] + trigId
+                : `http://example.org/vad#${trigId}`;
+
+            // Получаем полный URI процесса
+            const processUri = currentPrefixes['vad']
+                ? currentPrefixes['vad'] + processLocalName
+                : processConcept.replace(/^<|>$/g, '');
+
+            // Получаем автоматические триплеты (возвращается строка)
+            const autoTriplesStr = generateAutoTriples(processUri, fullTrigUri);
+            // Добавляем автотриплеты напрямую в массив (они уже отформатированы)
+            if (autoTriplesStr && autoTriplesStr.trim().length > 0) {
+                triples.push(autoTriplesStr);
             }
 
             const sparqlQuery = `${prefixDeclarations}INSERT DATA {
@@ -7063,6 +7193,978 @@ ${triples.join('\n')}
                     visualize();
                 }, 100);
             }
+        });
+
+        // ==============================================================================
+        // МОДУЛЬ SPARQL ЗАПРОСОВ ДЛЯ SMART DESIGN
+        // ==============================================================================
+        // Данный модуль содержит функции и запросы для динамического формирования
+        // справочников в окне Smart Design на основе RDF-данных и технологических
+        // объектов из vad-basic-ontology_tech_Appendix.ttl
+        // ==============================================================================
+
+        /**
+         * Хранилище загруженных технологических объектов из vad-basic-ontology_tech_Appendix.ttl
+         * Загружается при старте приложения
+         */
+        let techAppendixData = {
+            loaded: false,
+            predicateGroups: {}, // Группы предикатов по типам объектов
+            autoGeneratedPredicates: {}, // Автоматически генерируемые предикаты
+            contextTriGTypes: {} // Связь технологических объектов с контекстами
+        };
+
+        /**
+         * funSPARQLvalues - Выполняет SPARQL-запрос и возвращает значения результата
+         * Используется для формирования справочников окна Smart Design
+         *
+         * @param {string} sparqlQuery - SPARQL SELECT запрос
+         * @param {string} variableName - Имя переменной для извлечения значений (по умолчанию 'value')
+         * @returns {Array} - Массив объектов {uri, label} с результатами запроса
+         *
+         * Связь с онтологией: Используется для динамического формирования справочников
+         * на основе данных из TriG и vad-basic-ontology_tech_Appendix.ttl
+         */
+        function funSPARQLvalues(sparqlQuery, variableName = 'value') {
+            const results = [];
+
+            // Если нет текущего store, возвращаем пустой массив
+            if (!currentStore || currentQuads.length === 0) {
+                console.log('funSPARQLvalues: No data in store');
+                return results;
+            }
+
+            try {
+                // Простая реализация через анализ текущих квадов
+                // Для сложных SPARQL запросов нужно использовать Comunica
+                // Но для базовых SELECT запросов можно обойтись анализом квадов
+
+                // Парсим тип запроса
+                const selectMatch = sparqlQuery.match(/SELECT\s+(\?[\w]+(?:\s+\?[\w]+)*)/i);
+                if (!selectMatch) {
+                    console.log('funSPARQLvalues: Not a SELECT query');
+                    return results;
+                }
+
+                const variables = selectMatch[1].split(/\s+/).map(v => v.substring(1));
+
+                // Парсим WHERE условие (простой парсинг)
+                const whereMatch = sparqlQuery.match(/WHERE\s*\{([^}]+)\}/i);
+                if (!whereMatch) {
+                    console.log('funSPARQLvalues: No WHERE clause found');
+                    return results;
+                }
+
+                const whereClause = whereMatch[1].trim();
+
+                // Парсим triple patterns (упрощенно)
+                const triplePatterns = parseTriplePatterns(whereClause);
+
+                // Выполняем запрос через сопоставление паттернов
+                const bindings = executeSimpleSelect(triplePatterns, variables);
+
+                // Формируем результаты
+                const seen = new Set();
+                bindings.forEach(binding => {
+                    const valueVar = variableName in binding ? variableName : variables[0];
+                    const value = binding[valueVar];
+                    if (value && !seen.has(value)) {
+                        seen.add(value);
+                        const label = binding['label'] || getPrefixedName(value, currentPrefixes);
+                        results.push({
+                            uri: value,
+                            label: label
+                        });
+                    }
+                });
+
+            } catch (error) {
+                console.error('funSPARQLvalues error:', error);
+            }
+
+            return results;
+        }
+
+        /**
+         * Парсит простые triple patterns из WHERE клаузы
+         * @param {string} whereClause - Строка с triple patterns
+         * @returns {Array} - Массив паттернов {subject, predicate, object, graph}
+         */
+        function parseTriplePatterns(whereClause) {
+            const patterns = [];
+
+            // Упрощенный парсинг: разбиваем по точкам и точкам с запятыми
+            const statements = whereClause.split(/\s*\.\s*/).filter(s => s.trim());
+
+            statements.forEach(statement => {
+                // Проверяем GRAPH блок
+                const graphMatch = statement.match(/GRAPH\s+(\S+)\s*\{([^}]+)\}/i);
+                if (graphMatch) {
+                    const graphUri = resolveValue(graphMatch[1]);
+                    const innerStatements = graphMatch[2].split(/\s*\.\s*/).filter(s => s.trim());
+                    innerStatements.forEach(inner => {
+                        const parts = inner.trim().split(/\s+/);
+                        if (parts.length >= 3) {
+                            patterns.push({
+                                subject: resolveValue(parts[0]),
+                                predicate: resolveValue(parts[1]),
+                                object: resolveValue(parts.slice(2).join(' ')),
+                                graph: graphUri
+                            });
+                        }
+                    });
+                } else {
+                    const parts = statement.trim().split(/\s+/);
+                    if (parts.length >= 3) {
+                        patterns.push({
+                            subject: resolveValue(parts[0]),
+                            predicate: resolveValue(parts[1]),
+                            object: resolveValue(parts.slice(2).join(' ')),
+                            graph: null
+                        });
+                    }
+                }
+            });
+
+            return patterns;
+        }
+
+        /**
+         * Разрешает значение (prefix:local -> полный URI, или оставляет переменную)
+         */
+        function resolveValue(value) {
+            if (!value) return null;
+            value = value.trim();
+
+            // Если переменная
+            if (value.startsWith('?')) {
+                return { type: 'variable', name: value.substring(1) };
+            }
+
+            // Если полный URI в угловых скобках
+            if (value.startsWith('<') && value.endsWith('>')) {
+                return { type: 'uri', value: value.slice(1, -1) };
+            }
+
+            // Если prefixed name
+            const colonIndex = value.indexOf(':');
+            if (colonIndex > 0) {
+                const prefix = value.substring(0, colonIndex);
+                const local = value.substring(colonIndex + 1);
+                const namespace = currentPrefixes[prefix];
+                if (namespace) {
+                    return { type: 'uri', value: namespace + local };
+                }
+            }
+
+            // Если литерал в кавычках
+            if (value.startsWith('"') || value.startsWith("'")) {
+                return { type: 'literal', value: value.replace(/^["']|["']$/g, '') };
+            }
+
+            // Иначе считаем что это prefixed name без разрешения
+            return { type: 'uri', value: value };
+        }
+
+        /**
+         * Выполняет простой SELECT запрос через сопоставление паттернов с квадами
+         */
+        function executeSimpleSelect(patterns, variables) {
+            const bindings = [{}];
+
+            patterns.forEach(pattern => {
+                const newBindings = [];
+
+                bindings.forEach(binding => {
+                    // Фильтруем квады по паттерну
+                    currentQuads.forEach(quad => {
+                        const match = matchQuadToPattern(quad, pattern, binding);
+                        if (match) {
+                            newBindings.push({...binding, ...match});
+                        }
+                    });
+                });
+
+                // Заменяем bindings новыми
+                bindings.length = 0;
+                bindings.push(...newBindings);
+            });
+
+            return bindings;
+        }
+
+        /**
+         * Сопоставляет квад с паттерном
+         */
+        function matchQuadToPattern(quad, pattern, currentBinding) {
+            const newBinding = {};
+
+            // Проверяем граф
+            if (pattern.graph) {
+                if (pattern.graph.type === 'variable') {
+                    const boundValue = currentBinding[pattern.graph.name];
+                    if (boundValue && boundValue !== quad.graph.value) return null;
+                    newBinding[pattern.graph.name] = quad.graph.value;
+                } else if (pattern.graph.type === 'uri') {
+                    if (quad.graph.value !== pattern.graph.value) return null;
+                }
+            }
+
+            // Проверяем субъект
+            if (pattern.subject) {
+                if (pattern.subject.type === 'variable') {
+                    const boundValue = currentBinding[pattern.subject.name];
+                    if (boundValue && boundValue !== quad.subject.value) return null;
+                    newBinding[pattern.subject.name] = quad.subject.value;
+                } else if (pattern.subject.type === 'uri') {
+                    if (quad.subject.value !== pattern.subject.value) return null;
+                }
+            }
+
+            // Проверяем предикат
+            if (pattern.predicate) {
+                if (pattern.predicate.type === 'variable') {
+                    const boundValue = currentBinding[pattern.predicate.name];
+                    if (boundValue && boundValue !== quad.predicate.value) return null;
+                    newBinding[pattern.predicate.name] = quad.predicate.value;
+                } else if (pattern.predicate.type === 'uri') {
+                    if (quad.predicate.value !== pattern.predicate.value) return null;
+                }
+            }
+
+            // Проверяем объект
+            if (pattern.object) {
+                if (pattern.object.type === 'variable') {
+                    const boundValue = currentBinding[pattern.object.name];
+                    const quadObjectValue = quad.object.value;
+                    if (boundValue && boundValue !== quadObjectValue) return null;
+                    newBinding[pattern.object.name] = quadObjectValue;
+                } else if (pattern.object.type === 'uri') {
+                    if (quad.object.value !== pattern.object.value) return null;
+                } else if (pattern.object.type === 'literal') {
+                    if (quad.object.value !== pattern.object.value) return null;
+                }
+            }
+
+            return newBinding;
+        }
+
+        // ==============================================================================
+        // SPARQL ЗАПРОСЫ ДЛЯ SMART DESIGN
+        // ==============================================================================
+
+        /**
+         * SPARQL_QUERIES - Коллекция SPARQL запросов для формирования справочников
+         * Каждый запрос имеет описание и место использования
+         */
+        const SPARQL_QUERIES = {
+            /**
+             * Запрос для получения всех индивидов процессов (TypeProcess) в конкретном TriG
+             * Используется: Smart Design -> Subject Type = TypeProcess -> Subject dropdown
+             * Контекст: VADProcessDia
+             */
+            PROCESS_INDIVIDUALS_IN_TRIG: (trigUri) => `
+                SELECT ?process ?label WHERE {
+                    GRAPH <${trigUri}> {
+                        ?process vad:isSubprocessTrig <${trigUri}> .
+                    }
+                    GRAPH vad:ptree {
+                        ?process rdfs:label ?label .
+                    }
+                }
+            `,
+
+            /**
+             * Запрос для получения всех концептов процессов из ptree
+             * Используется: Smart Design -> TriG = ptree -> Subject dropdown
+             *               New TriG Modal -> Process Concept dropdown
+             * Контекст: ProcessTree (ptree)
+             */
+            PROCESS_CONCEPTS_IN_PTREE: `
+                SELECT ?process ?label WHERE {
+                    GRAPH vad:ptree {
+                        ?process rdf:type vad:Process .
+                        ?process rdfs:label ?label .
+                    }
+                }
+            `,
+
+            /**
+             * Запрос для получения всех групп исполнителей в конкретном TriG
+             * Используется: Smart Design -> Subject Type = ExecutorGroup -> Subject dropdown
+             * Контекст: VADProcessDia
+             */
+            EXECUTOR_GROUPS_IN_TRIG: (trigUri) => `
+                SELECT ?group ?label WHERE {
+                    GRAPH <${trigUri}> {
+                        ?group rdf:type vad:ExecutorGroup .
+                        OPTIONAL { ?group rdfs:label ?label }
+                    }
+                }
+            `,
+
+            /**
+             * Запрос для получения всех исполнителей из rtree
+             * Используется: Smart Design -> TriG = rtree -> Subject dropdown
+             * Контекст: ExecutorTree (rtree)
+             */
+            EXECUTORS_IN_RTREE: `
+                SELECT ?executor ?label WHERE {
+                    GRAPH vad:rtree {
+                        ?executor rdf:type vad:Executor .
+                        ?executor rdfs:label ?label .
+                    }
+                }
+            `,
+
+            /**
+             * Запрос для получения предикатов из технологического объекта
+             * Используется: Загрузка предикатов из vad-basic-ontology_tech_Appendix.ttl
+             * @param {string} techObjectUri - URI технологического объекта (например, vad:IndividProcessPredicate)
+             */
+            PREDICATES_FROM_TECH_OBJECT: (techObjectUri) => `
+                SELECT ?predicate WHERE {
+                    <${techObjectUri}> vad:includePredicate ?predicate .
+                }
+            `,
+
+            /**
+             * Запрос для получения автоматически генерируемых предикатов
+             * Используется: Определение disabled опций в Predicate dropdown
+             * @param {string} techObjectUri - URI технологического объекта
+             */
+            AUTO_GENERATED_PREDICATES: (techObjectUri) => `
+                SELECT ?predicate WHERE {
+                    <${techObjectUri}> vad:autoGeneratedPredicate ?predicate .
+                }
+            `,
+
+            /**
+             * Запрос для получения концептов процессов без TriG схемы
+             * Используется: New TriG Modal - показывает процессы, которые ещё не имеют схемы
+             */
+            PROCESS_CONCEPTS_WITHOUT_TRIG: `
+                SELECT ?process ?label WHERE {
+                    GRAPH vad:ptree {
+                        ?process rdf:type vad:Process .
+                        ?process rdfs:label ?label .
+                        FILTER NOT EXISTS { ?process vad:hasTrig ?trig }
+                    }
+                }
+            `
+        };
+
+        // ==============================================================================
+        // ФУНКЦИИ КОПИРОВАНИЯ В БУФЕР ОБМЕНА
+        // ==============================================================================
+
+        /**
+         * Копирует значение выбранного поля в буфер обмена
+         * @param {string} selectId - ID элемента select
+         */
+        async function copyFieldValue(selectId) {
+            const select = document.getElementById(selectId);
+            if (!select) return;
+
+            const value = select.value;
+            if (!value || value === '' || value === '__NEW__') {
+                showSmartDesignMessage('Выберите значение для копирования', 'info');
+                return;
+            }
+
+            // Получаем текст выбранной опции
+            const selectedOption = select.options[select.selectedIndex];
+            const textToCopy = selectedOption ? selectedOption.textContent : value;
+
+            try {
+                await navigator.clipboard.writeText(textToCopy);
+
+                // Визуальная индикация успеха
+                const btn = select.parentElement.querySelector('.copy-to-clipboard-btn');
+                if (btn) {
+                    btn.classList.add('copied');
+                    btn.textContent = '✓';
+                    setTimeout(() => {
+                        btn.classList.remove('copied');
+                        btn.textContent = '📋';
+                    }, 1500);
+                }
+
+                showSmartDesignMessage(`Скопировано: ${textToCopy}`, 'success');
+            } catch (error) {
+                console.error('Copy failed:', error);
+                showSmartDesignMessage('Ошибка копирования в буфер обмена', 'error');
+            }
+        }
+
+        // ==============================================================================
+        // ФУНКЦИИ ДЛЯ МОДАЛЬНОГО ОКНА NEW TRIG
+        // ==============================================================================
+
+        /**
+         * Обновляет поля ID и label в модальном окне New TriG
+         * на основе выбранного концепта процесса
+         */
+        function updateNewTrigFields() {
+            const processConceptSelect = document.getElementById('new-trig-process-concept');
+            const trigIdInput = document.getElementById('new-trig-id');
+            const trigLabelInput = document.getElementById('new-trig-label');
+
+            if (!processConceptSelect || !trigIdInput || !trigLabelInput) return;
+
+            const selectedUri = processConceptSelect.value;
+            if (!selectedUri) {
+                trigIdInput.value = '';
+                trigLabelInput.value = '';
+                return;
+            }
+
+            // Получаем ID процесса (например, из vad:p1 -> p1)
+            const processId = getPrefixedName(selectedUri, currentPrefixes).replace('vad:', '');
+
+            // Формируем ID TriG
+            const trigId = `t_${processId}`;
+            trigIdInput.value = trigId;
+
+            // Получаем label процесса
+            const selectedOption = processConceptSelect.options[processConceptSelect.selectedIndex];
+            const processLabel = selectedOption ? selectedOption.textContent : processId;
+
+            // Формируем label TriG
+            trigLabelInput.value = `Схема процесса "${processLabel}"`;
+        }
+
+        /**
+         * Заполняет выпадающий список концептов процессов в модальном окне New TriG
+         * Загружает из ptree только те процессы, у которых ещё нет TriG схемы
+         */
+        function populateNewTrigProcessConcepts() {
+            const processConceptSelect = document.getElementById('new-trig-process-concept');
+            if (!processConceptSelect) return;
+
+            processConceptSelect.innerHTML = '<option value="">-- Выберите концепт процесса --</option>';
+
+            // Получаем все концепты процессов из ptree
+            const processConcepts = getProcessSubjects();
+
+            // Получаем процессы, которые уже имеют TriG схему
+            const processesWithTrig = new Set();
+            currentQuads.forEach(quad => {
+                const predicate = quad.predicate.value;
+                if (predicate === 'http://example.org/vad#hasTrig' ||
+                    predicate.endsWith('#hasTrig')) {
+                    processesWithTrig.add(quad.subject.value);
+                }
+            });
+
+            // Фильтруем - показываем только процессы без TriG
+            processConcepts.forEach(p => {
+                // Показываем все процессы, но помечаем те, у которых уже есть TriG
+                const option = document.createElement('option');
+                option.value = p.uri;
+
+                if (processesWithTrig.has(p.uri)) {
+                    option.textContent = `${p.label} (уже имеет TriG)`;
+                    option.disabled = true;
+                    option.style.color = '#999';
+                } else {
+                    option.textContent = p.label;
+                }
+
+                processConceptSelect.appendChild(option);
+            });
+        }
+
+        // ==============================================================================
+        // ЗАГРУЗКА ТЕХНОЛОГИЧЕСКОГО ПРИЛОЖЕНИЯ
+        // ==============================================================================
+
+        /**
+         * Загружает vad-basic-ontology_tech_Appendix.ttl и парсит технологические объекты
+         * Вызывается при старте приложения
+         */
+        async function loadTechAppendix() {
+            try {
+                const response = await fetch('vad-basic-ontology_tech_Appendix.ttl');
+                if (!response.ok) {
+                    console.warn('Tech appendix file not found, using default configuration');
+                    return;
+                }
+
+                const ttlContent = await response.text();
+
+                // Парсим TTL файл с использованием Promise для ожидания завершения
+                const techQuads = await new Promise((resolve, reject) => {
+                    const parser = new N3.Parser({ format: 'text/turtle' });
+                    const quads = [];
+
+                    parser.parse(ttlContent, (error, quad, prefixes) => {
+                        if (error) {
+                            reject(error);
+                            return;
+                        }
+                        if (quad) {
+                            quads.push(quad);
+                        } else {
+                            // quad is null, parsing is complete
+                            resolve(quads);
+                        }
+                    });
+                });
+
+                // Извлекаем группы предикатов
+                extractPredicateGroups(techQuads);
+
+                techAppendixData.loaded = true;
+                console.log('Tech appendix loaded successfully');
+                console.log('Predicate groups:', Object.keys(techAppendixData.predicateGroups).length);
+                console.log('Auto-generated predicates:', Object.keys(techAppendixData.autoGeneratedPredicates).length);
+
+            } catch (error) {
+                console.error('Error loading tech appendix:', error);
+            }
+        }
+
+        /**
+         * Извлекает группы предикатов из технологических объектов
+         */
+        function extractPredicateGroups(quads) {
+            const VAD_NS = 'http://example.org/vad#';
+
+            quads.forEach(quad => {
+                const subject = quad.subject.value;
+                const predicate = quad.predicate.value;
+                const object = quad.object.value;
+
+                // Извлекаем includePredicate
+                if (predicate === VAD_NS + 'includePredicate' ||
+                    predicate.endsWith('#includePredicate')) {
+                    if (!techAppendixData.predicateGroups[subject]) {
+                        techAppendixData.predicateGroups[subject] = [];
+                    }
+                    techAppendixData.predicateGroups[subject].push(object);
+                }
+
+                // Извлекаем autoGeneratedPredicate
+                if (predicate === VAD_NS + 'autoGeneratedPredicate' ||
+                    predicate.endsWith('#autoGeneratedPredicate')) {
+                    if (!techAppendixData.autoGeneratedPredicates[subject]) {
+                        techAppendixData.autoGeneratedPredicates[subject] = [];
+                    }
+                    techAppendixData.autoGeneratedPredicates[subject].push(object);
+                }
+
+                // Извлекаем contextTriGType
+                if (predicate === VAD_NS + 'contextTriGType' ||
+                    predicate.endsWith('#contextTriGType')) {
+                    techAppendixData.contextTriGTypes[subject] = object;
+                }
+            });
+        }
+
+        /**
+         * Получает предикаты для заданного технологического объекта
+         * @param {string} techObjectUri - URI технологического объекта
+         * @returns {Array} - Массив URI предикатов
+         */
+        function getPredicatesFromTechObject(techObjectUri) {
+            // Нормализуем URI
+            let normalizedUri = techObjectUri;
+            if (techObjectUri.startsWith('vad:')) {
+                normalizedUri = 'http://example.org/vad#' + techObjectUri.substring(4);
+            }
+
+            return techAppendixData.predicateGroups[normalizedUri] || [];
+        }
+
+        /**
+         * Проверяет, является ли предикат автоматически генерируемым
+         * Если techObjectUri не указан, проверяет во всех технологических объектах
+         * @param {string} predicateUri - URI предиката
+         * @param {string} [techObjectUri] - URI технологического объекта (опционально)
+         * @returns {boolean}
+         */
+        function isAutoGeneratedPredicate(predicateUri, techObjectUri) {
+            if (!predicateUri) return false;
+
+            let normalizedPredUri = predicateUri;
+            if (predicateUri.startsWith('vad:')) {
+                normalizedPredUri = 'http://example.org/vad#' + predicateUri.substring(4);
+            }
+
+            // Если techObjectUri указан, проверяем только в этом объекте
+            if (techObjectUri) {
+                let normalizedTechUri = techObjectUri;
+                if (techObjectUri.startsWith('vad:')) {
+                    normalizedTechUri = 'http://example.org/vad#' + techObjectUri.substring(4);
+                }
+                const autoGenerated = techAppendixData.autoGeneratedPredicates[normalizedTechUri] || [];
+                return autoGenerated.includes(normalizedPredUri);
+            }
+
+            // Если techObjectUri не указан, проверяем во всех технологических объектах
+            for (const techUri in techAppendixData.autoGeneratedPredicates) {
+                const autoGenerated = techAppendixData.autoGeneratedPredicates[techUri];
+                if (autoGenerated && autoGenerated.includes(normalizedPredUri)) {
+                    return true;
+                }
+            }
+            return false;
+        }
+
+        // ==============================================================================
+        // ОБНОВЛЕННЫЕ ФУНКЦИИ SMART DESIGN
+        // ==============================================================================
+
+        /**
+         * Обновленная функция заполнения Subject dropdown
+         * Использует SPARQL запросы для динамического формирования справочника
+         */
+        function updateSubjectsBySubjectTypeWithSPARQL() {
+            const subjectSelect = document.getElementById('smart-design-subject');
+            const subjectTypeSelect = document.getElementById('smart-design-subject-type');
+            const trigSelect = document.getElementById('smart-design-trig');
+
+            if (!subjectSelect || !subjectTypeSelect || !trigSelect) return;
+
+            const subjectType = subjectTypeSelect.value;
+            const trigUri = trigSelect.value;
+
+            subjectSelect.innerHTML = '<option value="">-- Выберите Subject --</option>';
+            subjectSelect.innerHTML += '<option value="__NEW__">New (создать новый)</option>';
+
+            if (!subjectType || !trigUri) return;
+
+            const trigContext = getTrigContext(trigUri);
+            let subjects = [];
+
+            // Используем SPARQL-подобный запрос к данным
+            if (subjectType === 'vad:TypeProcess') {
+                if (trigContext === 'ptree') {
+                    // Получаем концепты процессов из ptree
+                    subjects = getProcessSubjects();
+                } else if (trigContext === 'vadProcessDia') {
+                    // Получаем индивиды процессов из текущего TriG
+                    subjects = getProcessIndividualsInTriG(trigUri);
+                }
+            } else if (subjectType === 'vad:ExecutorGroup') {
+                // Получаем группы исполнителей из текущего TriG
+                subjects = getExecutorGroupsInTriG(trigUri);
+            } else if (subjectType === 'vad:TypeExecutor') {
+                if (trigContext === 'rtree') {
+                    // Получаем исполнителей из rtree
+                    subjects = getExecutorSubjects();
+                }
+            } else if (subjectType === 'vad:VADProcessDia') {
+                // Для редактирования самого TriG
+                subjects = [{
+                    uri: trigUri,
+                    label: getPrefixedName(trigUri, currentPrefixes)
+                }];
+            } else if (subjectType === 'vad:ProcessTree') {
+                subjects = [{
+                    uri: 'http://example.org/vad#ptree',
+                    label: 'vad:ptree'
+                }];
+            } else if (subjectType === 'vad:ExecutorTree') {
+                subjects = [{
+                    uri: 'http://example.org/vad#rtree',
+                    label: 'vad:rtree'
+                }];
+            }
+
+            subjects.forEach(s => {
+                const option = document.createElement('option');
+                option.value = s.uri;
+                option.textContent = s.label;
+                subjectSelect.appendChild(option);
+            });
+        }
+
+        /**
+         * Получает индивиды процессов в конкретном TriG (VADProcessDia)
+         * Индивиды определяются наличием предиката vad:isSubprocessTrig
+         */
+        function getProcessIndividualsInTriG(trigUri) {
+            const individuals = [];
+            const seen = new Set();
+
+            // Нормализуем URI
+            const normalizedTrigUri = normalizeUri(trigUri);
+
+            currentQuads.forEach(quad => {
+                const predicate = quad.predicate.value;
+
+                // Ищем триплеты с vad:isSubprocessTrig
+                if (predicate === 'http://example.org/vad#isSubprocessTrig' ||
+                    predicate.endsWith('#isSubprocessTrig')) {
+
+                    const objectUri = normalizeUri(quad.object.value);
+
+                    if (objectUri === normalizedTrigUri) {
+                        const subjectUri = quad.subject.value;
+                        if (!seen.has(subjectUri)) {
+                            seen.add(subjectUri);
+
+                            // Получаем label из ptree
+                            const label = getLabelFromPtree(subjectUri) ||
+                                         getPrefixedName(subjectUri, currentPrefixes);
+
+                            individuals.push({
+                                uri: subjectUri,
+                                label: label
+                            });
+                        }
+                    }
+                }
+            });
+
+            return individuals;
+        }
+
+        /**
+         * Получает группы исполнителей в конкретном TriG
+         */
+        function getExecutorGroupsInTriG(trigUri) {
+            const groups = [];
+            const seen = new Set();
+
+            const normalizedTrigUri = normalizeUri(trigUri);
+
+            currentQuads.forEach(quad => {
+                if (quad.graph.value === normalizedTrigUri) {
+                    const predicate = quad.predicate.value;
+
+                    // Ищем rdf:type vad:ExecutorGroup
+                    if ((predicate === 'http://www.w3.org/1999/02/22-rdf-syntax-ns#type' ||
+                         predicate.endsWith('#type')) &&
+                        (quad.object.value === 'http://example.org/vad#ExecutorGroup' ||
+                         quad.object.value.endsWith('#ExecutorGroup'))) {
+
+                        const subjectUri = quad.subject.value;
+                        if (!seen.has(subjectUri)) {
+                            seen.add(subjectUri);
+
+                            // Ищем label
+                            const label = getLabelInGraph(subjectUri, normalizedTrigUri) ||
+                                         getPrefixedName(subjectUri, currentPrefixes);
+
+                            groups.push({
+                                uri: subjectUri,
+                                label: label
+                            });
+                        }
+                    }
+                }
+            });
+
+            return groups;
+        }
+
+        /**
+         * Получает label объекта из ptree
+         */
+        function getLabelFromPtree(subjectUri) {
+            const ptreeUri = 'http://example.org/vad#ptree';
+
+            for (const quad of currentQuads) {
+                if (quad.graph.value === ptreeUri &&
+                    quad.subject.value === subjectUri &&
+                    (quad.predicate.value === 'http://www.w3.org/2000/01/rdf-schema#label' ||
+                     quad.predicate.value.endsWith('#label'))) {
+                    return quad.object.value;
+                }
+            }
+            return null;
+        }
+
+        /**
+         * Получает label объекта в конкретном графе
+         */
+        function getLabelInGraph(subjectUri, graphUri) {
+            for (const quad of currentQuads) {
+                if (quad.graph.value === graphUri &&
+                    quad.subject.value === subjectUri &&
+                    (quad.predicate.value === 'http://www.w3.org/2000/01/rdf-schema#label' ||
+                     quad.predicate.value.endsWith('#label'))) {
+                    return quad.object.value;
+                }
+            }
+            return null;
+        }
+
+        /**
+         * Нормализует URI (убирает prefix, если нужно)
+         */
+        function normalizeUri(uri) {
+            if (!uri) return '';
+
+            // Если уже полный URI
+            if (uri.startsWith('http://') || uri.startsWith('https://')) {
+                return uri;
+            }
+
+            // Если prefixed name
+            const colonIndex = uri.indexOf(':');
+            if (colonIndex > 0) {
+                const prefix = uri.substring(0, colonIndex);
+                const local = uri.substring(colonIndex + 1);
+                const namespace = currentPrefixes[prefix];
+                if (namespace) {
+                    return namespace + local;
+                }
+            }
+
+            return uri;
+        }
+
+        /**
+         * Получает субъекты-исполнители из rtree
+         */
+        function getExecutorSubjects() {
+            const subjects = [];
+            const seen = new Set();
+            const rtreeUri = 'http://example.org/vad#rtree';
+
+            currentQuads.forEach(quad => {
+                if (quad.graph.value === rtreeUri) {
+                    const predicate = quad.predicate.value;
+
+                    // Ищем rdf:type vad:Executor
+                    if ((predicate === 'http://www.w3.org/1999/02/22-rdf-syntax-ns#type' ||
+                         predicate.endsWith('#type')) &&
+                        (quad.object.value === 'http://example.org/vad#Executor' ||
+                         quad.object.value.endsWith('#Executor'))) {
+
+                        const subjectUri = quad.subject.value;
+                        if (!seen.has(subjectUri)) {
+                            seen.add(subjectUri);
+
+                            const label = getLabelInGraph(subjectUri, rtreeUri) ||
+                                         getPrefixedName(subjectUri, currentPrefixes);
+
+                            subjects.push({
+                                uri: subjectUri,
+                                label: label
+                            });
+                        }
+                    }
+                }
+            });
+
+            return subjects;
+        }
+
+        /**
+         * Обновленная функция заполнения Predicate dropdown с учетом автогенерируемых предикатов
+         */
+        function updatePredicateBySubjectTypeWithAutoGen() {
+            const subjectTypeSelect = document.getElementById('smart-design-subject-type');
+            const predicateSelect = document.getElementById('smart-design-predicate');
+            const trigSelect = document.getElementById('smart-design-trig');
+
+            if (!subjectTypeSelect || !predicateSelect || !trigSelect) return;
+
+            const subjectType = subjectTypeSelect.value;
+            const trigUri = trigSelect.value;
+            const trigContext = getTrigContext(trigUri);
+
+            // Сохраняем текущее выбранное значение
+            const currentPredicateValue = predicateSelect.value;
+
+            predicateSelect.innerHTML = '<option value="">-- Выберите Predicate --</option>';
+
+            if (!subjectType) {
+                // Показываем все предикаты если тип не выбран
+                const allPredicates = getAllPredicates();
+                allPredicates.forEach(p => {
+                    const option = document.createElement('option');
+                    option.value = p.uri;
+                    option.textContent = p.label;
+                    predicateSelect.appendChild(option);
+                });
+                return;
+            }
+
+            // Получаем допустимые предикаты для типа
+            const allowedPredicates = getPredicatesForSubjectType(subjectType, trigContext);
+
+            // Определяем технологический объект для проверки автогенерации
+            let techObjectUri = '';
+            if (subjectType === 'vad:TypeProcess' && trigContext === 'vadProcessDia') {
+                techObjectUri = 'http://example.org/vad#IndividProcessPredicate';
+            } else if (subjectType === 'vad:ExecutorGroup') {
+                techObjectUri = 'http://example.org/vad#ConceptExecutorGroupPredicate';
+            } else if (subjectType === 'vad:VADProcessDia') {
+                techObjectUri = 'http://example.org/vad#ConceptTriGPredicate';
+            }
+
+            allowedPredicates.forEach(pred => {
+                const option = document.createElement('option');
+
+                // Разворачиваем в полный URI
+                let fullUri = pred;
+                for (const [prefix, namespace] of Object.entries(currentPrefixes)) {
+                    if (pred.startsWith(prefix + ':')) {
+                        fullUri = namespace + pred.substring(prefix.length + 1);
+                        break;
+                    }
+                }
+                option.value = fullUri;
+
+                // Проверяем, является ли предикат автогенерируемым
+                const isAutoGen = techObjectUri && isAutoGeneratedPredicate(techObjectUri, fullUri);
+
+                if (isAutoGen) {
+                    option.textContent = pred + ' (авто)';
+                    option.disabled = true;
+                    option.style.color = '#999';
+                    option.style.fontStyle = 'italic';
+                } else {
+                    option.textContent = pred;
+                }
+
+                predicateSelect.appendChild(option);
+            });
+
+            // Восстанавливаем выбор если значение все еще доступно и не disabled
+            const availableOption = Array.from(predicateSelect.options).find(
+                o => o.value === currentPredicateValue && !o.disabled
+            );
+            if (availableOption) {
+                predicateSelect.value = currentPredicateValue;
+            }
+        }
+
+        /**
+         * Генерирует автоматические триплеты при создании нового индивида процесса
+         * @param {string} processUri - URI нового процесса
+         * @param {string} trigUri - URI текущего TriG
+         * @returns {string} - Дополнительные триплеты для SPARQL INSERT
+         */
+        function generateAutoTriples(processUri, trigUri) {
+            // Извлекаем ID процесса для создания ExecutorGroup
+            const processId = getPrefixedName(processUri, currentPrefixes).replace('vad:', '');
+            const executorGroupUri = `vad:ExecutorGroup_${processId}`;
+
+            // Генерируем автоматические триплеты
+            const autoTriples = `
+    # Автоматически созданные триплеты для нового индивида процесса
+    ${getPrefixedName(processUri, currentPrefixes)} vad:isSubprocessTrig ${getPrefixedName(trigUri, currentPrefixes)} .
+    ${getPrefixedName(processUri, currentPrefixes)} vad:hasExecutor ${executorGroupUri} .
+    ${executorGroupUri} rdf:type vad:ExecutorGroup .
+    ${executorGroupUri} rdfs:label "Группа исполнителей процесса ${processId}" .`;
+
+            return autoTriples;
+        }
+
+        // ==============================================================================
+        // ИНИЦИАЛИЗАЦИЯ
+        // ==============================================================================
+
+        // Загружаем технологическое приложение при старте
+        document.addEventListener('DOMContentLoaded', function() {
+            loadTechAppendix();
         });
     </script>
 </body>
