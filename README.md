@@ -31,6 +31,14 @@ https://bpmbpm.github.io/rdf-grapher/ver5t/
 https://bpmbpm.github.io/rdf-grapher/ver6d/
 Выбираем пример **Trig VADv2**
 
+### current
+https://github.com/bpmbpm/rdf-grapher/tree/main/ver8
+
+Если "глобально", то сюда:
+- [Semantic BPM. Семантика и синтаксис бизнес-процессов](https://habr.com/ru/articles/795883/)
+- [Semantic BPM. Онтологическое моделирование верхнеуровневых процессов. VAD](https://habr.com/ru/articles/828266/)
+- https://github.com/bpmbpm/SemanticBPM
+
 ---
 ## doc
 - [НеОсознанный вайб-кодинг (с примером RDF Grapher)](https://habr.com/ru/articles/982634/)
