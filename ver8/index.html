@@ -27,6 +27,7 @@
         <p>
             <strong>Загрузить пример RDF данных:</strong>
             <span class="example-link" onclick="loadExampleTrigVADv2()">Trig VADv2</span>
+            <span class="example-link" onclick="loadExampleTrigVADv2tree()">Trig VADv2tree</span>
         </p>
         <div id="example-status" class="example-status" style="display: none;"></div>
     </div>
@@ -695,6 +696,233 @@ vad:t_p1 {
         vad:includes vad:Executor22, vad:Executor27 .
 
     # Примечание: Исполнители (vad:Executor21..28) определены в vad:rtree
+}`,
+            // TriG VADv2tree пример с множественной иерархией (t_pGA, t_pGA2, t_pGA3 на одном уровне)
+            'trig-vad-v2tree': `# Пример TriG VADv2tree (Value Added Chain Diagram с множественной иерархией TriG)
+# Демонстрация нескольких TriG графов на одном уровне иерархии
+# t_pGA, t_pGA2, t_pGA3 - корневые графы (hasParentTrig = root)
+# t_p1 - дочерний граф (hasParentTrig = t_pGA)
+#
+# ВАЖНЫЕ ПРАВИЛА:
+# 1. vad:isSubprocessTrig указывается первым для явной связи индивида с TriG
+# 2. ID группы исполнителей формируется как: ExecutorGroup_ + ID процесса
+
+@prefix rdf: <http://www.w3.org/1999/02/22-rdf-syntax-ns#> .
+@prefix rdfs: <http://www.w3.org/2000/01/rdf-schema#> .
+@prefix dcterms: <http://purl.org/dc/terms/> .
+@prefix vad: <http://example.org/vad#> .
+
+# ============================================================================
+# Дерево Процессов (ptree) - общий граф с метаданными всех процессов
+# ============================================================================
+
+vad:ptree {
+    vad:ptree rdf:type vad:ProcessTree ;
+        rdfs:label "Дерево Процессов (TriG)" ;
+        vad:hasParentTrig vad:root .
+
+    # Метаданные групп процессов (корневые)
+
+    vad:pGA rdf:type vad:TypeProcess ;
+        rdfs:label "Группа Процессов А" ;
+        dcterms:description "Группа Процессов А" ;
+        vad:hasTrig vad:t_pGA .
+
+    vad:pGA2 rdf:type vad:TypeProcess ;
+        rdfs:label "Группа Процессов А2" ;
+        dcterms:description "Группа Процессов А2" ;
+        vad:hasTrig vad:t_pGA2 .
+
+    vad:pGA3 rdf:type vad:TypeProcess ;
+        rdfs:label "Группа Процессов А3" ;
+        dcterms:description "Группа Процессов А3" ;
+        vad:hasTrig vad:t_pGA3 .
+
+    # Метаданные процессов из vad:t_pGA
+
+    vad:p1 rdf:type vad:TypeProcess ;
+        rdfs:label "p1 Процесс 1" ;
+        dcterms:description "Первый процесс в цепочке" ;
+        vad:hasTrig vad:t_p1 .
+
+    vad:Process2 rdf:type vad:TypeProcess ;
+        rdfs:label "Процесс 2" ;
+        dcterms:description "Второй процесс" .
+
+    vad:Process3 rdf:type vad:TypeProcess ;
+        rdfs:label "Процесс 3" ;
+        dcterms:description "Третий процесс" .
+
+    # Метаданные процессов из vad:t_pGA2
+
+    vad:Process2_1 rdf:type vad:TypeProcess ;
+        rdfs:label "Процесс 2.1" ;
+        dcterms:description "Первый процесс группы А2" .
+
+    vad:Process2_2 rdf:type vad:TypeProcess ;
+        rdfs:label "Процесс 2.2" ;
+        dcterms:description "Второй процесс группы А2" .
+
+    # Метаданные процессов из vad:t_pGA3
+
+    vad:Process3_1 rdf:type vad:TypeProcess ;
+        rdfs:label "Процесс 3.1" ;
+        dcterms:description "Первый процесс группы А3" .
+
+    vad:Process3_2 rdf:type vad:TypeProcess ;
+        rdfs:label "Процесс 3.2" ;
+        dcterms:description "Второй процесс группы А3" .
+
+    # Метаданные процессов из vad:t_p1
+
+    vad:Process21 rdf:type vad:TypeProcess ;
+        rdfs:label "Процесс 21" ;
+        dcterms:description "Первый процесс детализации p1" .
+
+    vad:Process22 rdf:type vad:TypeProcess ;
+        rdfs:label "Процесс 22" ;
+        dcterms:description "Второй процесс детализации p1" .
+}
+
+# ============================================================================
+# Дерево Исполнителей (rtree)
+# ============================================================================
+
+vad:rtree {
+    vad:rtree rdf:type vad:ExecutorTree ;
+        rdfs:label "Дерево Исполнителей (TriG)" ;
+        vad:hasParentTrig vad:root .
+
+    vad:Executor1 rdf:type vad:TypeExecutor ;
+        rdfs:label "Исполнитель 1" .
+
+    vad:Executor2 rdf:type vad:TypeExecutor ;
+        rdfs:label "Исполнитель 2" .
+
+    vad:Executor3 rdf:type vad:TypeExecutor ;
+        rdfs:label "Исполнитель 3" .
+}
+
+# ============================================================================
+# Корневой TriG граф: t_pGA (hasParentTrig = root)
+# ============================================================================
+
+vad:t_pGA {
+    vad:t_pGA rdf:type vad:VADProcessDia ;
+        rdfs:label "Схема t_pGA процесса pGA" ;
+        vad:hasParentTrig vad:root ;
+        vad:definesProcess vad:pGA .
+
+    vad:p1 vad:isSubprocessTrig vad:t_pGA ;
+        vad:hasExecutor vad:ExecutorGroup_p1 ;
+        vad:processSubtype vad:DetailedChild ;
+        vad:hasNext vad:Process2 .
+
+    vad:Process2 vad:isSubprocessTrig vad:t_pGA ;
+        vad:hasExecutor vad:ExecutorGroup_Process2 ;
+        vad:processSubtype vad:Basic ;
+        vad:hasNext vad:Process3 .
+
+    vad:Process3 vad:isSubprocessTrig vad:t_pGA ;
+        vad:hasExecutor vad:ExecutorGroup_Process3 ;
+        vad:processSubtype vad:Basic .
+
+    vad:ExecutorGroup_p1 rdf:type vad:ExecutorGroup ;
+        rdfs:label "Группа исполнителей p1" ;
+        vad:includes vad:Executor1 .
+
+    vad:ExecutorGroup_Process2 rdf:type vad:ExecutorGroup ;
+        rdfs:label "Группа исполнителей Process2" ;
+        vad:includes vad:Executor1, vad:Executor2 .
+
+    vad:ExecutorGroup_Process3 rdf:type vad:ExecutorGroup ;
+        rdfs:label "Группа исполнителей Process3" ;
+        vad:includes vad:Executor2 .
+}
+
+# ============================================================================
+# Корневой TriG граф: t_pGA2 (hasParentTrig = root) - на одном уровне с t_pGA
+# ============================================================================
+
+vad:t_pGA2 {
+    vad:t_pGA2 rdf:type vad:VADProcessDia ;
+        rdfs:label "Схема t_pGA2 процесса pGA2" ;
+        vad:hasParentTrig vad:root ;
+        vad:definesProcess vad:pGA2 .
+
+    vad:Process2_1 vad:isSubprocessTrig vad:t_pGA2 ;
+        vad:hasExecutor vad:ExecutorGroup_Process2_1 ;
+        vad:processSubtype vad:Basic ;
+        vad:hasNext vad:Process2_2 .
+
+    vad:Process2_2 vad:isSubprocessTrig vad:t_pGA2 ;
+        vad:hasExecutor vad:ExecutorGroup_Process2_2 ;
+        vad:processSubtype vad:Basic .
+
+    vad:ExecutorGroup_Process2_1 rdf:type vad:ExecutorGroup ;
+        rdfs:label "Группа исполнителей Process2_1" ;
+        vad:includes vad:Executor1 .
+
+    vad:ExecutorGroup_Process2_2 rdf:type vad:ExecutorGroup ;
+        rdfs:label "Группа исполнителей Process2_2" ;
+        vad:includes vad:Executor2 .
+}
+
+# ============================================================================
+# Корневой TriG граф: t_pGA3 (hasParentTrig = root) - на одном уровне с t_pGA
+# ============================================================================
+
+vad:t_pGA3 {
+    vad:t_pGA3 rdf:type vad:VADProcessDia ;
+        rdfs:label "Схема t_pGA3 процесса pGA3" ;
+        vad:hasParentTrig vad:root ;
+        vad:definesProcess vad:pGA3 .
+
+    vad:Process3_1 vad:isSubprocessTrig vad:t_pGA3 ;
+        vad:hasExecutor vad:ExecutorGroup_Process3_1 ;
+        vad:processSubtype vad:Basic ;
+        vad:hasNext vad:Process3_2 .
+
+    vad:Process3_2 vad:isSubprocessTrig vad:t_pGA3 ;
+        vad:hasExecutor vad:ExecutorGroup_Process3_2 ;
+        vad:processSubtype vad:Basic .
+
+    vad:ExecutorGroup_Process3_1 rdf:type vad:ExecutorGroup ;
+        rdfs:label "Группа исполнителей Process3_1" ;
+        vad:includes vad:Executor3 .
+
+    vad:ExecutorGroup_Process3_2 rdf:type vad:ExecutorGroup ;
+        rdfs:label "Группа исполнителей Process3_2" ;
+        vad:includes vad:Executor1, vad:Executor3 .
+}
+
+# ============================================================================
+# Дочерний TriG граф: t_p1 (hasParentTrig = t_pGA)
+# Детализация процесса p1 из родительского графа t_pGA
+# ============================================================================
+
+vad:t_p1 {
+    vad:t_p1 rdf:type vad:VADProcessDia ;
+        rdfs:label "Схема t_p1 процесса p1" ;
+        vad:hasParentTrig vad:t_pGA ;
+        vad:definesProcess vad:p1 .
+
+    vad:Process21 vad:isSubprocessTrig vad:t_p1 ;
+        vad:hasExecutor vad:ExecutorGroup_Process21 ;
+        vad:processSubtype vad:Basic ;
+        vad:hasNext vad:Process22 .
+
+    vad:Process22 vad:isSubprocessTrig vad:t_p1 ;
+        vad:hasExecutor vad:ExecutorGroup_Process22 ;
+        vad:processSubtype vad:Basic .
+
+    vad:ExecutorGroup_Process21 rdf:type vad:ExecutorGroup ;
+        rdfs:label "Группа исполнителей Process21" ;
+        vad:includes vad:Executor1 .
+
+    vad:ExecutorGroup_Process22 rdf:type vad:ExecutorGroup ;
+        rdfs:label "Группа исполнителей Process22" ;
+        vad:includes vad:Executor2 .
 }`
         };
 
@@ -1725,9 +1953,9 @@ WHERE {
 
                 // Проверяем, является ли родитель "root"
                 if (parentUri === rootUri || parentLabel === 'vad:root') {
-                    // vad:ptree - это специальный граф для метаданных процессов,
-                    // он не должен быть включен в rootTrigUris для отображения дерева
-                    if (graphInfo.uri !== PTREE_GRAPH_URI) {
+                    // vad:ptree и vad:rtree - это специальные графы для метаданных процессов и исполнителей,
+                    // они не должны быть включены в rootTrigUris для отображения дерева
+                    if (graphInfo.uri !== PTREE_GRAPH_URI && graphInfo.uri !== RTREE_GRAPH_URI) {
                         rootTrigUris.push(graphInfo.uri);
                     }
                 } else if (hierarchy[parentUri]) {
@@ -2970,6 +3198,17 @@ WHERE {
          */
         function loadExampleTrigVADv2() {
             loadExampleFromFile('Trig_VADv2.ttl', 'Trig VADv2', 'trig', 'vad-trig', 'trig-vad-v2');
+        }
+
+        /**
+         * Загружает пример TriG VADv2tree с множественной иерархией TriG графов
+         * Содержит:
+         * - t_pGA, t_pGA2, t_pGA3: корневые графы (hasParentTrig = root)
+         * - t_p1: дочерний граф (hasParentTrig = t_pGA)
+         * Демонстрирует отображение нескольких TriG на одном уровне иерархии
+         */
+        function loadExampleTrigVADv2tree() {
+            loadExampleFromFile('Trig_VADv2tree.ttl', 'Trig VADv2tree', 'trig', 'vad-trig', 'trig-vad-v2tree');
         }
 
         /**
