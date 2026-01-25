@@ -3,3 +3,6 @@
 
 ### Aris
 - [ARIS Architecture and Reference Models for Business Process Management](https://www.researchgate.net/publication/221585916_ARIS_Architecture_and_Reference_Models_for_Business_Process_Management) 2000
+
+### also
+- https://github.com/bpmbpm/vadtordf
