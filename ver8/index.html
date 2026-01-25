@@ -1712,12 +1712,12 @@ WHERE {
             });
 
             if (errors.length > 0) {
-                return { valid: false, errors, hierarchy: null, rootTrigUri: null };
+                return { valid: false, errors, hierarchy: null, rootTrigUris: [] };
             }
 
             // Строим дерево: находим корневые элементы (hasParentTrig = vad:root)
             const rootUri = 'http://example.org/vad#root';
-            let rootTrigUri = null;
+            const rootTrigUris = [];
 
             Object.values(hierarchy).forEach(graphInfo => {
                 const parentUri = graphInfo.hasParent;
@@ -1726,9 +1726,9 @@ WHERE {
                 // Проверяем, является ли родитель "root"
                 if (parentUri === rootUri || parentLabel === 'vad:root') {
                     // vad:ptree - это специальный граф для метаданных процессов,
-                    // он не должен быть выбран как rootTrigUri для отображения схемы
+                    // он не должен быть включен в rootTrigUris для отображения дерева
                     if (graphInfo.uri !== PTREE_GRAPH_URI) {
-                        rootTrigUri = graphInfo.uri;
+                        rootTrigUris.push(graphInfo.uri);
                     }
                 } else if (hierarchy[parentUri]) {
                     // Добавляем как дочерний элемент к родителю
@@ -1790,7 +1790,7 @@ WHERE {
                 graphInfo.processes = Array.from(processesInGraph);
             });
 
-            return { valid: true, errors: [], hierarchy, rootTrigUri };
+            return { valid: true, errors: [], hierarchy, rootTrigUris };
         }
 
         /**
@@ -2022,16 +2022,21 @@ WHERE {
          * @param {string} rootUri - URI корневого TriG
          * @param {Object} prefixes - Словарь префиксов
          */
-        function displayTriGTree(hierarchy, rootUri, prefixes) {
+        function displayTriGTree(hierarchy, rootUris, prefixes) {
             const treeContent = document.getElementById('trig-tree-content');
             if (!treeContent) return;
 
-            if (!rootUri || !hierarchy[rootUri]) {
+            if (!rootUris || rootUris.length === 0) {
                 treeContent.innerHTML = '<div class="trig-properties-empty">Нет доступных TriG графов</div>';
                 return;
             }
 
-            const html = buildTriGTreeHtml(rootUri, hierarchy, prefixes, 0);
+            let html = '';
+            rootUris.forEach(rootUri => {
+                if (hierarchy[rootUri]) {
+                    html += buildTriGTreeHtml(rootUri, hierarchy, prefixes, 0);
+                }
+            });
             treeContent.innerHTML = html;
         }
 
@@ -3027,6 +3032,17 @@ WHERE {
                 else if (extension === 'trig') format = 'trig';
 
                 document.getElementById('input-format').value = format;
+
+                // Обновляем статус загрузки
+                const statusEl = document.getElementById('example-status');
+                statusEl.textContent = `Файл ${file.name} успешно загружен`;
+                statusEl.style.display = 'block';
+                statusEl.style.backgroundColor = '#d4edda';
+                statusEl.style.borderColor = '#c3e6cb';
+                statusEl.style.color = '#155724';
+
+                // Сбрасываем значение input для возможности повторной загрузки того же файла
+                event.target.value = '';
             };
             reader.readAsText(file);
         }
@@ -6632,16 +6648,19 @@ ${triples.join('\n')}
                     trigHierarchy = hierarchyResult.hierarchy;
 
                     // Выбираем корневой TriG для начального отображения
-                    selectedTrigUri = hierarchyResult.rootTrigUri;
+                    // Используем первый из корневых TriG, если есть
+                    selectedTrigUri = hierarchyResult.rootTrigUris.length > 0 ? hierarchyResult.rootTrigUris[0] : null;
 
                     // Показываем панели VAD TriG
                     toggleVADTriGPanels(true);
 
-                    // Отображаем дерево TriG
-                    displayTriGTree(trigHierarchy, selectedTrigUri, prefixes);
+                    // Отображаем дерево TriG (передаём массив всех корневых TriG)
+                    displayTriGTree(trigHierarchy, hierarchyResult.rootTrigUris, prefixes);
 
                     // Отображаем свойства корневого TriG
-                    displayTriGProperties(selectedTrigUri, trigHierarchy, prefixes);
+                    if (selectedTrigUri) {
+                        displayTriGProperties(selectedTrigUri, trigHierarchy, prefixes);
+                    }
 
                     // Валидация VAD для квадов корневого графа
                     const rootGraphInfo = trigHierarchy[selectedTrigUri];
