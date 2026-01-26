@@ -237,5 +237,63 @@ const SPARQL_CODE_QUERIES = {
                 ) AS ?subtype
             )
         }
+    `,
+
+    /**
+     * Query to check if a TriG has child TriGs that reference it as parent
+     * Used: Validation before deleting a TriG - parent TriG cannot be deleted
+     * @param {string} trigUri - URI of the TriG to check
+     */
+    CHECK_HAS_CHILD_TRIGS: (trigUri) => `
+        SELECT ?childTrig ?childProcess WHERE {
+            ?childTrig vad:hasParentTrig <${trigUri}> .
+            OPTIONAL {
+                ?childTrig vad:definesProcess ?childProcess .
+            }
+        }
+    `,
+
+    /**
+     * Query to get the process that is defined by a TriG
+     * Used: When deleting a TriG, we need to update the process in ptree
+     * @param {string} trigUri - URI of the TriG
+     */
+    GET_TRIG_PROCESS: (trigUri) => `
+        SELECT ?process WHERE {
+            GRAPH <${trigUri}> {
+                <${trigUri}> vad:definesProcess ?process .
+            }
+        }
+    `,
+
+    /**
+     * Query to delete a TriG and update process in ptree
+     * This removes vad:hasTrig from ptree and adds vad:hasParentProcess
+     * @param {string} trigUri - URI of the TriG to delete
+     * @param {string} processUri - URI of the process defined by this TriG
+     * @param {string} parentTrigUri - URI of the parent TriG
+     */
+    DELETE_TRIG_SPARQL: (trigUri, processUri, parentTrigUri) => `
+        # Remove vad:hasTrig from ptree
+        DELETE {
+            GRAPH vad:ptree {
+                <${processUri}> vad:hasTrig <${trigUri}> .
+            }
+        }
+        WHERE {
+            GRAPH vad:ptree {
+                <${processUri}> vad:hasTrig <${trigUri}> .
+            }
+        };
+
+        # Add vad:hasParentProcess to ptree (parent process from parent TriG)
+        INSERT DATA {
+            GRAPH vad:ptree {
+                <${processUri}> vad:hasParentProcess <${parentTrigUri}> .
+            }
+        };
+
+        # Delete the TriG graph contents
+        DROP GRAPH <${trigUri}>
     `
 };
