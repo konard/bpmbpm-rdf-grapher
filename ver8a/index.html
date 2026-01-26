@@ -321,8 +321,11 @@ WHERE {
     <!-- Подключение библиотеки Comunica для SPARQL запросов -->
     <script src="https://rdf.js.org/comunica-browser/versions/v4/engines/query-sparql-rdfjs/comunica-browser.js"></script>
 
-    <!-- Подключение SPARQL запросов для Smart Design -->
-    <script src="sparql-queries.js"></script>
+    <!-- Подключение SPARQL запросов для Smart Design (справочники) -->
+    <script src="sparql-queries-choice.js"></script>
+
+    <!-- Подключение SPARQL запросов для логики кода -->
+    <script src="sparql-queries-code.js"></script>
 
     <!-- Подключение правил валидации VAD схемы -->
     <script src="vad-validation-rules.js"></script>
@@ -346,13 +349,19 @@ WHERE {
             // Только TriG VADv2 пример (остальные форматы удалены при минимизации)
             'trig-vad-v2': `# Пример TriG VADv2 (Value Added Chain Diagram с иерархией TriG)
 # Демонстрация иерархии TriG графов через hasParentTrig
-# Процесс p1 имеет подтип "DetailedChild" (подпроцесс с детализацией)
-# Остальные процессы имеют подтип "Basic"
-# Исполнители определены в vad:rtree (Дерево Исполнителей)
+# Демонстрация различных подтипов процессов (вычисляются автоматически):
+#
+# - vad:DetailedChild (голубой): процесс с vad:hasTrig, где дочерний TriG указывает на текущий
+# - vad:DetailedExternal (оранжевый): процесс с vad:hasTrig, где дочерний TriG НЕ указывает на текущий
+# - vad:notDetailedChild (зелёный): процесс с vad:hasParentProcess, совпадающим с родителем текущей схемы
+# - vad:notDetailedExternal (серый): процесс с vad:hasParentProcess, НЕ совпадающим с родителем
+# - vad:NotDefinedType (красноватый): процесс с vad:hasParentProcess = vad:NotDefined
 #
 # ВАЖНЫЕ ПРАВИЛА:
-# 1. vad:isSubprocessTrig указывается первым для явной связи индивида с TriG
-# 2. ID группы исполнителей формируется как: ExecutorGroup_ + ID процесса
+# 1. vad:hasTrig и vad:hasParentProcess - взаимоисключающие предикаты
+# 2. vad:processSubtype вычисляется автоматически в virtualRDFdata
+# 3. vad:isSubprocessTrig указывается первым для явной связи индивида с TriG
+# 4. ID группы исполнителей формируется как: ExecutorGroup_ + ID процесса
 
 @prefix rdf: <http://www.w3.org/1999/02/22-rdf-syntax-ns#> .
 @prefix rdfs: <http://www.w3.org/2000/01/rdf-schema#> .
@@ -383,66 +392,93 @@ vad:ptree {
         dcterms:description "Первый процесс в цепочке добавленной стоимости" ;
         vad:hasTrig vad:t_p1 .
 
+    # notDetailedChild - родитель совпадает с текущим процессом (зеленые)
     vad:Process2 rdf:type vad:TypeProcess ;
         rdfs:label "Процесс 2" ;
-        dcterms:description "Второй процесс, выполняется после Процесса 1" .
+        dcterms:description "Второй процесс, выполняется после Процесса 1" ;
+        vad:hasParentProcess vad:pGA .
 
     vad:Process3 rdf:type vad:TypeProcess ;
         rdfs:label "Процесс 3" ;
-        dcterms:description "Третий процесс в цепочке" .
+        dcterms:description "Третий процесс в цепочке" ;
+        vad:hasParentProcess vad:pGA .
 
     vad:Process4 rdf:type vad:TypeProcess ;
         rdfs:label "Процесс 4" ;
-        dcterms:description "Четвёртый процесс в цепочке" .
+        dcterms:description "Четвёртый процесс в цепочке" ;
+        vad:hasParentProcess vad:pGA .
 
+    # notDetailedExternal - родитель НЕ совпадает (серый)
     vad:Process5 rdf:type vad:TypeProcess ;
-        rdfs:label "Процесс 5" ;
-        dcterms:description "Пятый процесс в цепочке" .
+        rdfs:label "Процесс 5 (внешний)" ;
+        dcterms:description "Пятый процесс - внешний (hasParentProcess не совпадает)" ;
+        vad:hasParentProcess vad:pOther .
 
+    # notDetailedChild - родитель совпадает (зеленый)
     vad:Process6 rdf:type vad:TypeProcess ;
         rdfs:label "Процесс 6" ;
-        dcterms:description "Шестой процесс в цепочке" .
+        dcterms:description "Шестой процесс в цепочке" ;
+        vad:hasParentProcess vad:pGA .
 
+    # NotDefinedType - родитель не определен (красноватый)
     vad:Process7 rdf:type vad:TypeProcess ;
-        rdfs:label "Процесс 7" ;
-        dcterms:description "Седьмой процесс в цепочке" .
+        rdfs:label "Процесс 7 (не определен)" ;
+        dcterms:description "Седьмой процесс - тип не определен" ;
+        vad:hasParentProcess vad:NotDefined .
 
+    # notDetailedChild - родитель совпадает (зеленый)
     vad:Process8 rdf:type vad:TypeProcess ;
         rdfs:label "Процесс 8" ;
-        dcterms:description "Заключительный процесс в цепочке" .
+        dcterms:description "Заключительный процесс в цепочке" ;
+        vad:hasParentProcess vad:pGA .
 
-    # Метаданные процессов из vad:t_p1 (rdf:type, rdfs:label, dcterms:description)
+    # Внешний процесс (родитель для Process5)
+    vad:pOther rdf:type vad:TypeProcess ;
+        rdfs:label "Внешний процесс" ;
+        dcterms:description "Внешний родительский процесс" ;
+        vad:hasTrig vad:t_pOther .
+
+    # Метаданные процессов из vad:t_p1
+    # Все имеют hasParentProcess = p1 (родитель текущей схемы t_p1)
     vad:Process21 rdf:type vad:TypeProcess ;
         rdfs:label "Процесс 21" ;
-        dcterms:description "Первый процесс в цепочке vad:t_p1" .
+        dcterms:description "Первый процесс в цепочке vad:t_p1" ;
+        vad:hasParentProcess vad:p1 .
 
     vad:Process22 rdf:type vad:TypeProcess ;
         rdfs:label "Процесс 22" ;
-        dcterms:description "Второй процесс в цепочке vad:t_p1" .
+        dcterms:description "Второй процесс в цепочке vad:t_p1" ;
+        vad:hasParentProcess vad:p1 .
 
     vad:Process23 rdf:type vad:TypeProcess ;
         rdfs:label "Процесс 23" ;
-        dcterms:description "Третий процесс в цепочке vad:t_p1" .
+        dcterms:description "Третий процесс в цепочке vad:t_p1" ;
+        vad:hasParentProcess vad:p1 .
 
     vad:Process24 rdf:type vad:TypeProcess ;
         rdfs:label "Процесс 24" ;
-        dcterms:description "Четвёртый процесс в цепочке vad:t_p1" .
+        dcterms:description "Четвёртый процесс в цепочке vad:t_p1" ;
+        vad:hasParentProcess vad:p1 .
 
     vad:Process25 rdf:type vad:TypeProcess ;
         rdfs:label "Процесс 25" ;
-        dcterms:description "Пятый процесс в цепочке vad:t_p1" .
+        dcterms:description "Пятый процесс в цепочке vad:t_p1" ;
+        vad:hasParentProcess vad:p1 .
 
     vad:Process26 rdf:type vad:TypeProcess ;
         rdfs:label "Процесс 26" ;
-        dcterms:description "Шестой процесс в цепочке vad:t_p1" .
+        dcterms:description "Шестой процесс в цепочке vad:t_p1" ;
+        vad:hasParentProcess vad:p1 .
 
     vad:Process27 rdf:type vad:TypeProcess ;
         rdfs:label "Процесс 27" ;
-        dcterms:description "Седьмой процесс в цепочке vad:t_p1" .
+        dcterms:description "Седьмой процесс в цепочке vad:t_p1" ;
+        vad:hasParentProcess vad:p1 .
 
     vad:Process28 rdf:type vad:TypeProcess ;
         rdfs:label "Процесс 28" ;
-        dcterms:description "Заключительный процесс в цепочке vad:t_p1" .
+        dcterms:description "Заключительный процесс в цепочке vad:t_p1" ;
+        vad:hasParentProcess vad:p1 .
 }
 
 # ============================================================================
@@ -516,54 +552,51 @@ vad:t_pGA {
         vad:hasParentTrig vad:root ;
         vad:definesProcess vad:pGA .
 
-    # Процесс 1 - DetailedChild (имеет дочернюю схему vad:t_p1 с hasParentTrig на текущую)
+    # Процесс 1 - будет вычислен как DetailedChild (голубой)
+    # (имеет дочернюю схему vad:t_p1 с hasParentTrig на текущую)
     # rdf:type находится в vad:ptree
     # isSubprocessTrig указывается первым для явной связи с TriG
+    # vad:processSubtype вычисляется автоматически в virtualRDFdata
     vad:p1 vad:isSubprocessTrig vad:t_pGA ;
         vad:hasExecutor vad:ExecutorGroup_p1 ;
-        vad:processSubtype vad:DetailedChild ;
         vad:hasNext vad:Process2 .
 
-    # Процесс 2 - Базовый
+    # Процесс 2 - будет вычислен как notDetailedChild (зелёный)
+    # (hasParentProcess = pGA, совпадает с родителем текущей схемы)
     vad:Process2 vad:isSubprocessTrig vad:t_pGA ;
         vad:hasExecutor vad:ExecutorGroup_Process2 ;
-        vad:processSubtype vad:Basic ;
         vad:hasNext vad:Process3, vad:Process4 .
 
-    # Процесс 3 - Базовый
+    # Процесс 3 - будет вычислен как notDetailedChild (зелёный)
     vad:Process3 vad:isSubprocessTrig vad:t_pGA ;
         vad:hasExecutor vad:ExecutorGroup_Process3 ;
-        vad:processSubtype vad:Basic ;
         vad:hasNext vad:Process4 .
 
-    # Процесс 4 - Базовый
+    # Процесс 4 - будет вычислен как notDetailedChild (зелёный)
     vad:Process4 vad:isSubprocessTrig vad:t_pGA ;
         vad:hasExecutor vad:ExecutorGroup_Process4 ;
-        vad:processSubtype vad:Basic ;
         vad:hasNext vad:Process5 .
 
-    # Процесс 5 - Базовый
+    # Процесс 5 - будет вычислен как notDetailedExternal (серый)
+    # (hasParentProcess = pOther, НЕ совпадает с pGA)
     vad:Process5 vad:isSubprocessTrig vad:t_pGA ;
         vad:hasExecutor vad:ExecutorGroup_Process5 ;
-        vad:processSubtype vad:Basic ;
         vad:hasNext vad:Process6 .
 
-    # Процесс 6 - Базовый
+    # Процесс 6 - будет вычислен как notDetailedChild (зелёный)
     vad:Process6 vad:isSubprocessTrig vad:t_pGA ;
         vad:hasExecutor vad:ExecutorGroup_Process6 ;
-        vad:processSubtype vad:Basic ;
         vad:hasNext vad:Process7 .
 
-    # Процесс 7 - Базовый
+    # Процесс 7 - будет вычислен как NotDefinedType (красноватый)
+    # (hasParentProcess = NotDefined)
     vad:Process7 vad:isSubprocessTrig vad:t_pGA ;
         vad:hasExecutor vad:ExecutorGroup_Process7 ;
-        vad:processSubtype vad:Basic ;
         vad:hasNext vad:Process8 .
 
-    # Процесс 8 - Базовый
+    # Процесс 8 - будет вычислен как notDetailedChild (зелёный)
     vad:Process8 vad:isSubprocessTrig vad:t_pGA ;
-        vad:hasExecutor vad:ExecutorGroup_Process8 ;
-        vad:processSubtype vad:Basic .
+        vad:hasExecutor vad:ExecutorGroup_Process8 .
 
     # Группы исполнителей (ID формируется как ExecutorGroup_ + ID процесса)
     vad:ExecutorGroup_p1 rdf:type vad:ExecutorGroup ;
@@ -613,54 +646,47 @@ vad:t_p1 {
         vad:hasParentTrig vad:t_pGA ;
         vad:definesProcess vad:p1 .
 
-    # Процесс 21 - Базовый
+    # Процесс 21 - будет вычислен как notDetailedChild (зелёный)
     # rdf:type находится в vad:ptree
     # isSubprocessTrig указывается первым для явной связи с TriG
+    # vad:processSubtype вычисляется автоматически (hasParentProcess = p1)
     vad:Process21 vad:isSubprocessTrig vad:t_p1 ;
         vad:hasExecutor vad:ExecutorGroup_Process21 ;
-        vad:processSubtype vad:Basic ;
         vad:hasNext vad:Process22 .
 
-    # Процесс 22 - Базовый
+    # Процесс 22 - будет вычислен как notDetailedChild (зелёный)
     vad:Process22 vad:isSubprocessTrig vad:t_p1 ;
         vad:hasExecutor vad:ExecutorGroup_Process22 ;
-        vad:processSubtype vad:Basic ;
         vad:hasNext vad:Process23, vad:Process24 .
 
-    # Процесс 23 - Базовый
+    # Процесс 23 - будет вычислен как notDetailedChild (зелёный)
     vad:Process23 vad:isSubprocessTrig vad:t_p1 ;
         vad:hasExecutor vad:ExecutorGroup_Process23 ;
-        vad:processSubtype vad:Basic ;
         vad:hasNext vad:Process24 .
 
-    # Процесс 24 - Базовый
+    # Процесс 24 - будет вычислен как notDetailedChild (зелёный)
     vad:Process24 vad:isSubprocessTrig vad:t_p1 ;
         vad:hasExecutor vad:ExecutorGroup_Process24 ;
-        vad:processSubtype vad:Basic ;
         vad:hasNext vad:Process25 .
 
-    # Процесс 25 - Базовый
+    # Процесс 25 - будет вычислен как notDetailedChild (зелёный)
     vad:Process25 vad:isSubprocessTrig vad:t_p1 ;
         vad:hasExecutor vad:ExecutorGroup_Process25 ;
-        vad:processSubtype vad:Basic ;
         vad:hasNext vad:Process26 .
 
-    # Процесс 26 - Базовый
+    # Процесс 26 - будет вычислен как notDetailedChild (зелёный)
     vad:Process26 vad:isSubprocessTrig vad:t_p1 ;
         vad:hasExecutor vad:ExecutorGroup_Process26 ;
-        vad:processSubtype vad:Basic ;
         vad:hasNext vad:Process27 .
 
-    # Процесс 27 - Базовый
+    # Процесс 27 - будет вычислен как notDetailedChild (зелёный)
     vad:Process27 vad:isSubprocessTrig vad:t_p1 ;
         vad:hasExecutor vad:ExecutorGroup_Process27 ;
-        vad:processSubtype vad:Basic ;
         vad:hasNext vad:Process28 .
 
-    # Процесс 28 - Базовый
+    # Процесс 28 - будет вычислен как notDetailedChild (зелёный)
     vad:Process28 vad:isSubprocessTrig vad:t_p1 ;
-        vad:hasExecutor vad:ExecutorGroup_Process28 ;
-        vad:processSubtype vad:Basic .
+        vad:hasExecutor vad:ExecutorGroup_Process28 .
 
     # Группы исполнителей (ID формируется как ExecutorGroup_ + ID процесса)
     vad:ExecutorGroup_Process21 rdf:type vad:ExecutorGroup ;
@@ -703,9 +729,14 @@ vad:t_p1 {
 # t_pGA, t_pGA2, t_pGA3 - корневые графы (hasParentTrig = root)
 # t_p1 - дочерний граф (hasParentTrig = t_pGA)
 #
+# vad:processSubtype вычисляется автоматически в virtualRDFdata:
+# - DetailedChild (голубой): процесс с hasTrig, дочерний TriG указывает на текущий
+# - notDetailedChild (зелёный): процесс с hasParentProcess = родитель текущей схемы
+#
 # ВАЖНЫЕ ПРАВИЛА:
-# 1. vad:isSubprocessTrig указывается первым для явной связи индивида с TriG
-# 2. ID группы исполнителей формируется как: ExecutorGroup_ + ID процесса
+# 1. vad:hasTrig и vad:hasParentProcess - взаимоисключающие предикаты
+# 2. vad:isSubprocessTrig указывается первым для явной связи индивида с TriG
+# 3. ID группы исполнителей формируется как: ExecutorGroup_ + ID процесса
 
 @prefix rdf: <http://www.w3.org/1999/02/22-rdf-syntax-ns#> .
 @prefix rdfs: <http://www.w3.org/2000/01/rdf-schema#> .
@@ -747,41 +778,49 @@ vad:ptree {
 
     vad:Process2 rdf:type vad:TypeProcess ;
         rdfs:label "Процесс 2" ;
-        dcterms:description "Второй процесс" .
+        dcterms:description "Второй процесс" ;
+        vad:hasParentProcess vad:pGA .
 
     vad:Process3 rdf:type vad:TypeProcess ;
         rdfs:label "Процесс 3" ;
-        dcterms:description "Третий процесс" .
+        dcterms:description "Третий процесс" ;
+        vad:hasParentProcess vad:pGA .
 
     # Метаданные процессов из vad:t_pGA2
 
     vad:Process2_1 rdf:type vad:TypeProcess ;
         rdfs:label "Процесс 2.1" ;
-        dcterms:description "Первый процесс группы А2" .
+        dcterms:description "Первый процесс группы А2" ;
+        vad:hasParentProcess vad:pGA2 .
 
     vad:Process2_2 rdf:type vad:TypeProcess ;
         rdfs:label "Процесс 2.2" ;
-        dcterms:description "Второй процесс группы А2" .
+        dcterms:description "Второй процесс группы А2" ;
+        vad:hasParentProcess vad:pGA2 .
 
     # Метаданные процессов из vad:t_pGA3
 
     vad:Process3_1 rdf:type vad:TypeProcess ;
         rdfs:label "Процесс 3.1" ;
-        dcterms:description "Первый процесс группы А3" .
+        dcterms:description "Первый процесс группы А3" ;
+        vad:hasParentProcess vad:pGA3 .
 
     vad:Process3_2 rdf:type vad:TypeProcess ;
         rdfs:label "Процесс 3.2" ;
-        dcterms:description "Второй процесс группы А3" .
+        dcterms:description "Второй процесс группы А3" ;
+        vad:hasParentProcess vad:pGA3 .
 
     # Метаданные процессов из vad:t_p1
 
     vad:Process21 rdf:type vad:TypeProcess ;
         rdfs:label "Процесс 21" ;
-        dcterms:description "Первый процесс детализации p1" .
+        dcterms:description "Первый процесс детализации p1" ;
+        vad:hasParentProcess vad:p1 .
 
     vad:Process22 rdf:type vad:TypeProcess ;
         rdfs:label "Процесс 22" ;
-        dcterms:description "Второй процесс детализации p1" .
+        dcterms:description "Второй процесс детализации p1" ;
+        vad:hasParentProcess vad:p1 .
 }
 
 # ============================================================================
@@ -815,17 +854,14 @@ vad:t_pGA {
 
     vad:p1 vad:isSubprocessTrig vad:t_pGA ;
         vad:hasExecutor vad:ExecutorGroup_p1 ;
-        vad:processSubtype vad:DetailedChild ;
         vad:hasNext vad:Process2 .
 
     vad:Process2 vad:isSubprocessTrig vad:t_pGA ;
         vad:hasExecutor vad:ExecutorGroup_Process2 ;
-        vad:processSubtype vad:Basic ;
         vad:hasNext vad:Process3 .
 
     vad:Process3 vad:isSubprocessTrig vad:t_pGA ;
-        vad:hasExecutor vad:ExecutorGroup_Process3 ;
-        vad:processSubtype vad:Basic .
+        vad:hasExecutor vad:ExecutorGroup_Process3 .
 
     vad:ExecutorGroup_p1 rdf:type vad:ExecutorGroup ;
         rdfs:label "Группа исполнителей p1" ;
@@ -852,12 +888,10 @@ vad:t_pGA2 {
 
     vad:Process2_1 vad:isSubprocessTrig vad:t_pGA2 ;
         vad:hasExecutor vad:ExecutorGroup_Process2_1 ;
-        vad:processSubtype vad:Basic ;
         vad:hasNext vad:Process2_2 .
 
     vad:Process2_2 vad:isSubprocessTrig vad:t_pGA2 ;
-        vad:hasExecutor vad:ExecutorGroup_Process2_2 ;
-        vad:processSubtype vad:Basic .
+        vad:hasExecutor vad:ExecutorGroup_Process2_2 .
 
     vad:ExecutorGroup_Process2_1 rdf:type vad:ExecutorGroup ;
         rdfs:label "Группа исполнителей Process2_1" ;
@@ -880,12 +914,10 @@ vad:t_pGA3 {
 
     vad:Process3_1 vad:isSubprocessTrig vad:t_pGA3 ;
         vad:hasExecutor vad:ExecutorGroup_Process3_1 ;
-        vad:processSubtype vad:Basic ;
         vad:hasNext vad:Process3_2 .
 
     vad:Process3_2 vad:isSubprocessTrig vad:t_pGA3 ;
-        vad:hasExecutor vad:ExecutorGroup_Process3_2 ;
-        vad:processSubtype vad:Basic .
+        vad:hasExecutor vad:ExecutorGroup_Process3_2 .
 
     vad:ExecutorGroup_Process3_1 rdf:type vad:ExecutorGroup ;
         rdfs:label "Группа исполнителей Process3_1" ;
@@ -909,12 +941,10 @@ vad:t_p1 {
 
     vad:Process21 vad:isSubprocessTrig vad:t_p1 ;
         vad:hasExecutor vad:ExecutorGroup_Process21 ;
-        vad:processSubtype vad:Basic ;
         vad:hasNext vad:Process22 .
 
     vad:Process22 vad:isSubprocessTrig vad:t_p1 ;
-        vad:hasExecutor vad:ExecutorGroup_Process22 ;
-        vad:processSubtype vad:Basic .
+        vad:hasExecutor vad:ExecutorGroup_Process22 .
 
     vad:ExecutorGroup_Process21 rdf:type vad:ExecutorGroup ;
         rdfs:label "Группа исполнителей Process21" ;
@@ -1005,14 +1035,26 @@ vad:t_p1 {
             'http://example.org/vad#ProcessTree',
             'vad:ExecutorTree',
             'http://example.org/vad#ExecutorTree',
-            'vad:Basic',
-            'http://example.org/vad#Basic',
+            // Process subtypes - parent classes
             'vad:Detailed',
             'http://example.org/vad#Detailed',
+            'vad:notDetailed',
+            'http://example.org/vad#notDetailed',
+            // Detailed subtypes (process has vad:hasTrig)
             'vad:DetailedChild',
             'http://example.org/vad#DetailedChild',
             'vad:DetailedExternal',
-            'http://example.org/vad#DetailedExternal'
+            'http://example.org/vad#DetailedExternal',
+            // notDetailed subtypes (process has vad:hasParentProcess)
+            'vad:notDetailedChild',
+            'http://example.org/vad#notDetailedChild',
+            'vad:notDetailedExternal',
+            'http://example.org/vad#notDetailedExternal',
+            'vad:NotDefinedType',
+            'http://example.org/vad#NotDefinedType',
+            // Special values
+            'vad:NotDefined',
+            'http://example.org/vad#NotDefined'
         ];
 
         /**
@@ -1040,7 +1082,9 @@ vad:t_p1 {
             'vad:definesProcess',
             'http://example.org/vad#definesProcess',
             'vad:isSubprocessTrig',
-            'http://example.org/vad#isSubprocessTrig'
+            'http://example.org/vad#isSubprocessTrig',
+            'vad:hasParentProcess',
+            'http://example.org/vad#hasParentProcess'
         ];
 
         /**
@@ -1056,7 +1100,9 @@ vad:t_p1 {
             'dcterms:description',
             'http://purl.org/dc/terms/description',
             'vad:hasTrig',
-            'http://example.org/vad#hasTrig'
+            'http://example.org/vad#hasTrig',
+            'vad:hasParentProcess',
+            'http://example.org/vad#hasParentProcess'
         ];
 
         /**
@@ -1083,12 +1129,30 @@ vad:t_p1 {
 
         /**
          * PROCESS_SUBTYPES - Подтипы процессов в VAD онтологии
+         *
+         * Detailed (имеет vad:hasTrig):
+         * - DetailedChild: дочерняя схема указывает на текущую (hasParentTrig)
+         * - DetailedExternal: дочерняя схема НЕ указывает на текущую
+         *
+         * notDetailed (НЕ имеет vad:hasTrig):
+         * - notDetailedChild: hasParentProcess совпадает с текущим процессом
+         * - notDetailedExternal: hasParentProcess НЕ совпадает
+         * - NotDefinedType: hasParentProcess = NotDefined
+         *
+         * Basic и Detailed - устаревшие, для обратной совместимости
          */
         const PROCESS_SUBTYPES = {
+            // Устаревшие (для обратной совместимости)
             BASIC: ['vad:Basic', 'http://example.org/vad#Basic'],
             DETAILED: ['vad:Detailed', 'http://example.org/vad#Detailed'],
+            // Детализированные (имеют vad:hasTrig)
             DETAILED_CHILD: ['vad:DetailedChild', 'http://example.org/vad#DetailedChild'],
-            DETAILED_EXTERNAL: ['vad:DetailedExternal', 'http://example.org/vad#DetailedExternal']
+            DETAILED_EXTERNAL: ['vad:DetailedExternal', 'http://example.org/vad#DetailedExternal'],
+            // Недетализированные (НЕ имеют vad:hasTrig)
+            NOT_DETAILED: ['vad:notDetailed', 'http://example.org/vad#notDetailed'],
+            NOT_DETAILED_CHILD: ['vad:notDetailedChild', 'http://example.org/vad#notDetailedChild'],
+            NOT_DETAILED_EXTERNAL: ['vad:notDetailedExternal', 'http://example.org/vad#notDetailedExternal'],
+            NOT_DEFINED_TYPE: ['vad:NotDefinedType', 'http://example.org/vad#NotDefinedType']
         };
 
         /**
@@ -1104,7 +1168,8 @@ vad:t_p1 {
                     'rdf:type',
                     'rdfs:label',
                     'dcterms:description',
-                    'vad:hasTrig'
+                    'vad:hasTrig',
+                    'vad:hasParentProcess'
                 ],
                 // Process в VADProcessDia (индивид) - индивидуальные свойства
                 vadProcessDia: [
@@ -1287,6 +1352,58 @@ vad:t_p1 {
             return PROCESS_SUBTYPES.DETAILED.some(t => subtypeUri === t || subtypeUri.endsWith('#Detailed')) ||
                    PROCESS_SUBTYPES.DETAILED_CHILD.some(t => subtypeUri === t || subtypeUri.endsWith('#DetailedChild')) ||
                    PROCESS_SUBTYPES.DETAILED_EXTERNAL.some(t => subtypeUri === t || subtypeUri.endsWith('#DetailedExternal'));
+        }
+
+        /**
+         * Получает стиль VADNodeStyle для процесса на основе его processSubtype
+         * Используется для визуализации процессов с разными цветами в зависимости от подтипа
+         * @param {Array<string>} nodeSubtypes - массив подтипов процесса
+         * @returns {string} - DOT-строка стиля для узла
+         */
+        function getProcessStyleForSubtype(nodeSubtypes) {
+            // Порядок приоритета проверки:
+            // 1. Конкретные подтипы (DetailedChild, DetailedExternal, notDetailedChild, notDetailedExternal, NotDefinedType)
+            // 2. Общие подтипы (Detailed, notDetailed)
+            // 3. Устаревшие подтипы (Basic)
+            // 4. По умолчанию - notDetailedChild (зеленый)
+
+            for (const subtype of nodeSubtypes) {
+                // DetailedChild - голубой
+                if (PROCESS_SUBTYPES.DETAILED_CHILD.some(t => subtype === t || subtype.endsWith('#DetailedChild'))) {
+                    return VADNodeStyles['ProcessStyleDetailedChild'].dot;
+                }
+                // DetailedExternal - оранжевый
+                if (PROCESS_SUBTYPES.DETAILED_EXTERNAL.some(t => subtype === t || subtype.endsWith('#DetailedExternal'))) {
+                    return VADNodeStyles['ProcessStyleDetailedExternal'].dot;
+                }
+                // notDetailedChild - зеленый
+                if (PROCESS_SUBTYPES.NOT_DETAILED_CHILD.some(t => subtype === t || subtype.endsWith('#notDetailedChild'))) {
+                    return VADNodeStyles['ProcessStyleNotDetailedChild'].dot;
+                }
+                // notDetailedExternal - серый
+                if (PROCESS_SUBTYPES.NOT_DETAILED_EXTERNAL.some(t => subtype === t || subtype.endsWith('#notDetailedExternal'))) {
+                    return VADNodeStyles['ProcessStyleNotDetailedExternal'].dot;
+                }
+                // NotDefinedType - красноватый
+                if (PROCESS_SUBTYPES.NOT_DEFINED_TYPE.some(t => subtype === t || subtype.endsWith('#NotDefinedType'))) {
+                    return VADNodeStyles['ProcessStyleNotDefinedType'].dot;
+                }
+                // Общий Detailed - голубой (для обратной совместимости)
+                if (PROCESS_SUBTYPES.DETAILED.some(t => subtype === t || subtype.endsWith('#Detailed'))) {
+                    return VADNodeStyles['ProcessStyleDetailed'].dot;
+                }
+                // notDetailed общий - зеленый
+                if (PROCESS_SUBTYPES.NOT_DETAILED.some(t => subtype === t || subtype.endsWith('#notDetailed'))) {
+                    return VADNodeStyles['ProcessStyleNotDetailedChild'].dot;
+                }
+                // Basic (устаревший) - зеленый
+                if (PROCESS_SUBTYPES.BASIC.some(t => subtype === t || subtype.endsWith('#Basic'))) {
+                    return VADNodeStyles['ProcessStyleBasic'].dot;
+                }
+            }
+
+            // По умолчанию - notDetailedChild (зеленый)
+            return VADNodeStyles['ProcessStyleNotDetailedChild'].dot;
         }
 
         /**
@@ -1598,22 +1715,74 @@ vad:t_p1 {
         // ============================================================================
 
         const VADNodeStyles = {
+            // =================================================================
+            // Детализированные процессы (Detailed) - имеют vad:hasTrig
+            // =================================================================
+            'ProcessStyleDetailedChild': {
+                types: ['vad:TypeProcess', 'http://example.org/vad#TypeProcess'],
+                subtypes: ['vad:DetailedChild', 'http://example.org/vad#DetailedChild'],
+                // cds shape с голубой заливкой для детализированного подпроцесса
+                dot: 'shape="cds" height="0.8" width="1.5" color="#1565C0" fillcolor="#90CAF9" fontname="Arial" fontsize="11" style="filled"',
+                label: 'Детализированный подпроцесс (vad:DetailedChild)',
+                description: 'Детализированный процесс, являющийся подпроцессом текущей схемы'
+            },
+            'ProcessStyleDetailedExternal': {
+                types: ['vad:TypeProcess', 'http://example.org/vad#TypeProcess'],
+                subtypes: ['vad:DetailedExternal', 'http://example.org/vad#DetailedExternal'],
+                // cds shape с оранжевой заливкой для детализированного внешнего процесса
+                dot: 'shape="cds" height="0.8" width="1.5" color="#E65100" fillcolor="#FFB74D" fontname="Arial" fontsize="11" style="filled"',
+                label: 'Детализированный внешний (vad:DetailedExternal)',
+                description: 'Детализированный процесс, НЕ являющийся подпроцессом текущей схемы'
+            },
+            // =================================================================
+            // Недетализированные процессы (notDetailed) - НЕ имеют vad:hasTrig
+            // =================================================================
+            'ProcessStyleNotDetailedChild': {
+                types: ['vad:TypeProcess', 'http://example.org/vad#TypeProcess'],
+                subtypes: ['vad:notDetailedChild', 'http://example.org/vad#notDetailedChild'],
+                // cds shape с зелёной заливкой для недетализированного подпроцесса
+                dot: 'shape="cds" height="0.8" width="1.5" color="#2E7D32" fillcolor="#A5D6A7" fontname="Arial" fontsize="11" style="filled"',
+                label: 'Недетализированный подпроцесс (vad:notDetailedChild)',
+                description: 'Недетализированный процесс-подпроцесс'
+            },
+            'ProcessStyleNotDetailedExternal': {
+                types: ['vad:TypeProcess', 'http://example.org/vad#TypeProcess'],
+                subtypes: ['vad:notDetailedExternal', 'http://example.org/vad#notDetailedExternal'],
+                // cds shape со светло-серой заливкой для недетализированного внешнего процесса
+                dot: 'shape="cds" height="0.8" width="1.5" color="#616161" fillcolor="#E0E0E0" fontname="Arial" fontsize="11" style="filled"',
+                label: 'Недетализированный внешний (vad:notDetailedExternal)',
+                description: 'Недетализированный внешний процесс'
+            },
+            'ProcessStyleNotDefinedType': {
+                types: ['vad:TypeProcess', 'http://example.org/vad#TypeProcess'],
+                subtypes: ['vad:NotDefinedType', 'http://example.org/vad#NotDefinedType'],
+                // cds shape с красноватой заливкой для процесса с неопределенным типом
+                dot: 'shape="cds" height="0.8" width="1.5" color="#C62828" fillcolor="#FFCDD2" fontname="Arial" fontsize="11" style="filled"',
+                label: 'Тип не определен (vad:NotDefinedType)',
+                description: 'Процесс с неопределенным родительским процессом'
+            },
+            // =================================================================
+            // Устаревшие стили для обратной совместимости
+            // =================================================================
             'ProcessStyleBasic': {
                 types: ['vad:TypeProcess', 'http://example.org/vad#TypeProcess'],
                 subtypes: ['vad:Basic', 'http://example.org/vad#Basic'],
-                // cds shape (chevron) с зелёной заливкой для базового типа
+                // cds shape (chevron) с зелёной заливкой для базового типа (устаревший)
                 dot: 'shape="cds" height="0.8" width="1.5" color="#2E7D32" fillcolor="#A5D6A7" fontname="Arial" fontsize="11" style="filled"',
-                label: 'Процесс Базовый (vad:Basic)',
-                description: 'Базовый бизнес-процесс в VAD диаграмме'
+                label: 'Процесс Базовый (vad:Basic) [устаревший]',
+                description: 'Устаревший базовый бизнес-процесс в VAD диаграмме'
             },
             'ProcessStyleDetailed': {
                 types: ['vad:TypeProcess', 'http://example.org/vad#TypeProcess'],
                 subtypes: ['vad:Detailed', 'http://example.org/vad#Detailed'],
-                // cds shape (chevron) с голубой заливкой для детализированного типа
+                // cds shape (chevron) с голубой заливкой для детализированного типа (устаревший)
                 dot: 'shape="cds" height="0.8" width="1.5" color="#1565C0" fillcolor="#90CAF9" fontname="Arial" fontsize="11" style="filled"',
-                label: 'Процесс Детализированный (vad:Detailed)',
-                description: 'Детализированный бизнес-процесс в VAD диаграмме'
+                label: 'Процесс Детализированный (vad:Detailed) [устаревший]',
+                description: 'Устаревший детализированный бизнес-процесс в VAD диаграмме'
             },
+            // =================================================================
+            // Другие элементы
+            // =================================================================
             'ExecutorGroupStyle': {
                 types: ['vad:ExecutorGroup', 'http://example.org/vad#ExecutorGroup'],
                 dot: 'shape="ellipse" color="#B8860B" fillcolor="#FFFFCC" fontname="Arial" fontsize="9" style="filled"',
@@ -3804,19 +3973,17 @@ WHERE {
                 htmlLabel += '>';
 
                 // Определяем стиль узла на основе vad:processSubtype
-                // Проверяем nodeSubtypesCache для определения типа процесса (Detailed, DetailedChild, DetailedExternal или Basic)
+                // Проверяем nodeSubtypesCache для определения типа процесса
+                // Поддерживаемые подтипы:
+                // - DetailedChild (голубой) - детализированный подпроцесс текущей схемы
+                // - DetailedExternal (оранжевый) - детализированный внешний процесс
+                // - notDetailedChild (зеленый) - недетализированный подпроцесс
+                // - notDetailedExternal (серый) - недетализированный внешний процесс
+                // - NotDefinedType (красноватый) - тип не определен
                 const nodeSubtypes = nodeSubtypesCache[uri] || [];
-                const isDetailed = nodeSubtypes.some(subtype => isDetailedSubtype(subtype));
 
-                // Выбираем стиль: голубой для Detailed, зеленый для Basic (по умолчанию)
-                let nodeStyle;
-                if (isDetailed) {
-                    // ProcessStyleDetailed: голубая заливка для детализированного типа
-                    nodeStyle = 'shape="cds" height="0.8" width="1.5" color="#1565C0" fillcolor="#90CAF9" fontname="Arial" fontsize="11" style="filled"';
-                } else {
-                    // ProcessStyleBasic: зеленая заливка для базового типа (по умолчанию)
-                    nodeStyle = 'shape="cds" height="0.8" width="1.5" color="#2E7D32" fillcolor="#A5D6A7" fontname="Arial" fontsize="11" style="filled"';
-                }
+                // Получаем стиль на основе подтипа процесса (используем новую функцию)
+                const nodeStyle = getProcessStyleForSubtype(nodeSubtypes);
                 dot += `    ${nodeId} [label=${htmlLabel} ${nodeStyle}];\n`;
 
                 nodeLabelToUri[processInfo.label] = { uri: uri, dotId: nodeId };
@@ -6611,7 +6778,36 @@ WHERE {
                 triples.push(autoTriplesStr);
             }
 
-            const sparqlQuery = `${prefixDeclarations}INSERT DATA {
+            // Формируем URI процесса в префиксной форме
+            const processPrefixed = getPrefixedName(processUri, currentPrefixes);
+
+            // Генерируем комбинированный SPARQL запрос:
+            // 1. DELETE vad:hasParentProcess из ptree (если есть) - правило взаимоисключения
+            // 2. INSERT vad:hasTrig в ptree
+            // 3. INSERT содержимое нового TriG графа
+            const sparqlQuery = `${prefixDeclarations}# Правило: vad:hasTrig и vad:hasParentProcess - взаимоисключающие
+# При создании нового TriG для процесса удаляем vad:hasParentProcess
+
+DELETE {
+    GRAPH vad:ptree {
+        ${processPrefixed} vad:hasParentProcess ?oldParent .
+    }
+}
+WHERE {
+    GRAPH vad:ptree {
+        ${processPrefixed} vad:hasParentProcess ?oldParent .
+    }
+};
+
+# Добавляем связь процесса с новым TriG в дереве процессов
+INSERT DATA {
+    GRAPH vad:ptree {
+        ${processPrefixed} vad:hasTrig ${trigUri} .
+    }
+};
+
+# Создаём новый TriG граф
+INSERT DATA {
     GRAPH ${trigUri} {
 ${triples.join('\n')}
     }

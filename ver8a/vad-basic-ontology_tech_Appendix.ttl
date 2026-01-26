@@ -89,6 +89,303 @@ vad:Tech
     dcterms:description "Базовый класс для технологических объектов, определяющих группы предикатов" .
 
 # ==============================================================================
+# АВТОМАТИЧЕСКИ ГЕНЕРИРУЕМЫЕ ОБЪЕКТЫ (AUTO-GENERATED OBJECTS)
+# ==============================================================================
+
+vad:Auto
+    rdf:type rdfs:Class, owl:Class ;
+    rdfs:label "Auto" ;
+    rdfs:comment """
+        Класс Auto (автозаполнение) - описывает объекты и свойства,
+        формируемые автоматически системой.
+
+        Данный класс документирует все автоматически генерируемые элементы:
+        1. vad:isSubprocessTrig - автоматически добавляется при создании
+           индивида процесса в TriG. Правило: {newProcess} vad:isSubprocessTrig {currentTriG}
+
+        2. vad:ExecutorGroup - автоматически создается при создании нового
+           индивида процесса. Правило: ID формируется как ExecutorGroup_{processId}
+
+        3. ID нового TriG - формируется автоматически как t_{processId}
+           на основе концепта процесса
+
+        4. rdfs:label нового TriG - формируется автоматически как
+           "Схема t_{processId} процесса {processLabel}"
+
+        5. vad:processSubtype - вычисляется автоматически в virtualRDFdata
+           на основе анализа vad:hasTrig и vad:hasParentTrig
+
+        Связь с JS-кодом: функции createNewTrig(), smartDesignCreate()
+    """ ;
+    dcterms:description "Класс для описания автоматически генерируемых объектов и свойств" .
+
+# ------------------------------------------------------------------------------
+# Автоматически генерируемые предикаты и правила их формирования
+# ------------------------------------------------------------------------------
+
+vad:AutoIsSubprocessTrig
+    rdf:type vad:Auto ;
+    rdfs:label "AutoIsSubprocessTrig" ;
+    rdfs:comment """
+        Автоматическое добавление vad:isSubprocessTrig.
+
+        Правило: При создании нового индивида процесса в составе TriG
+        автоматически добавляется триплет:
+        {newProcess} vad:isSubprocessTrig {currentTriG} .
+
+        Пример:
+        vad:Process2 vad:isSubprocessTrig vad:t_pGA .
+
+        Этот предикат добавляется ПЕРВЫМ при создании индивида.
+    """ ;
+    dcterms:description "Автоматическое добавление связи процесса с TriG" .
+
+vad:AutoExecutorGroup
+    rdf:type vad:Auto ;
+    rdfs:label "AutoExecutorGroup" ;
+    rdfs:comment """
+        Автоматическое создание ExecutorGroup.
+
+        Правило: При создании нового индивида процесса автоматически
+        создается группа исполнителей с ID: ExecutorGroup_{processId}
+
+        Пример: Для процесса vad:p1 создается vad:ExecutorGroup_p1
+
+        Также автоматически добавляются триплеты:
+        vad:ExecutorGroup_{processId} rdf:type vad:ExecutorGroup .
+        vad:ExecutorGroup_{processId} rdfs:label "Группа исполнителей процесса {processLabel}" .
+        {newProcess} vad:hasExecutor vad:ExecutorGroup_{processId} .
+    """ ;
+    dcterms:description "Автоматическое создание группы исполнителей" .
+
+vad:AutoTriGId
+    rdf:type vad:Auto ;
+    rdfs:label "AutoTriGId" ;
+    rdfs:comment """
+        Автоматическое формирование ID нового TriG.
+
+        Правило: ID нового TriG формируется как t_{processId}
+        на основе выбранного концепта процесса.
+
+        Пример: Для процесса vad:p1 создается TriG vad:t_p1
+    """ ;
+    dcterms:description "Автоматическое формирование ID TriG" .
+
+vad:AutoTriGLabel
+    rdf:type vad:Auto ;
+    rdfs:label "AutoTriGLabel" ;
+    rdfs:comment """
+        Автоматическое формирование rdfs:label нового TriG.
+
+        Правило: Label формируется как "Схема t_{processId} процесса {processLabel}"
+        на основе label концепта процесса.
+
+        Пример: Для процесса с label "Процесс 1" создается label
+        "Схема t_p1 процесса Процесс 1"
+    """ ;
+    dcterms:description "Автоматическое формирование label TriG" .
+
+vad:AutoProcessSubtype
+    rdf:type vad:Auto ;
+    rdfs:label "AutoProcessSubtype" ;
+    rdfs:comment """
+        Автоматическое вычисление vad:processSubtype.
+
+        Вычисляется в virtualRDFdata при запуске и изменении схемы процесса.
+
+        Алгоритм для Detailed (процесс имеет vad:hasTrig):
+        - DetailedChild: если схема процесса (vad:hasTrig) имеет
+          vad:hasParentTrig на текущую схему (родительская схема)
+        - DetailedExternal: если vad:hasParentTrig не совпадает с текущей схемой
+
+        Алгоритм для notDetailed (процесс НЕ имеет vad:hasTrig):
+        - notDetailedChild: если vad:hasParentProcess совпадает с процессом,
+          на схеме которого показан индивид
+        - notDetailedExternal: если vad:hasParentProcess НЕ совпадает
+        - NotDefinedType: если vad:hasParentProcess = NotDefined
+    """ ;
+    dcterms:description "Автоматическое вычисление подтипа процесса" .
+
+# ==============================================================================
+# ПОДТИПЫ ПРОЦЕССОВ (PROCESS SUBTYPES) - вычисляемые значения
+# ==============================================================================
+# Эти подтипы НЕ указываются в RDF-данных напрямую.
+# Они вычисляются автоматически в virtualRDFdata на основе анализа данных.
+# ==============================================================================
+
+# ------------------------------------------------------------------------------
+# Detailed - Детализированный процесс (базовый тип)
+# ------------------------------------------------------------------------------
+# Процесс, имеющий дочернюю схему (vad:hasTrig).
+# Это родительский тип для DetailedChild и DetailedExternal.
+# ------------------------------------------------------------------------------
+
+vad:Detailed
+    rdf:type rdfs:Class, owl:Class ;
+    rdfs:label "Detailed" ;
+    rdfs:comment """
+        Детализированный процесс (Detailed) - процесс, имеющий схему детализации.
+
+        Признак: в ptree указан vad:hasTrig для данного процесса.
+
+        Имеет два подтипа:
+        - vad:DetailedChild - дочерняя схема имеет vad:hasParentTrig на текущую
+        - vad:DetailedExternal - дочерняя схема НЕ имеет vad:hasParentTrig на текущую
+
+        Вычисляется автоматически в virtualRDFdata.
+    """ ;
+    dcterms:description "Детализированный процесс (имеет дочернюю схему)" .
+
+# ------------------------------------------------------------------------------
+# DetailedChild - Детализированный подпроцесс
+# ------------------------------------------------------------------------------
+
+vad:DetailedChild
+    rdf:type rdfs:Class, owl:Class ;
+    rdfs:subClassOf vad:Detailed ;
+    rdfs:label "DetailedChild" ;
+    rdfs:comment """
+        DetailedChild - детализированный процесс, являющийся подпроцессом.
+
+        Правило определения:
+        1. Процесс имеет vad:hasTrig (есть схема детализации)
+        2. Схема детализации имеет vad:hasParentTrig на текущую схему
+
+        Пример: В схеме vad:t_pGA процесс vad:p1 имеет подтип DetailedChild,
+        если его схема vad:t_p1 имеет: vad:t_p1 vad:hasParentTrig vad:t_pGA
+
+        Визуализация: голубая заливка (#90CAF9)
+    """ ;
+    dcterms:description "Детализированный процесс-подпроцесс (дочерняя схема указывает на текущую)" .
+
+# ------------------------------------------------------------------------------
+# DetailedExternal - Детализированный внешний процесс
+# ------------------------------------------------------------------------------
+
+vad:DetailedExternal
+    rdf:type rdfs:Class, owl:Class ;
+    rdfs:subClassOf vad:Detailed ;
+    rdfs:label "DetailedExternal" ;
+    rdfs:comment """
+        DetailedExternal - детализированный процесс, НЕ являющийся подпроцессом.
+
+        Правило определения:
+        1. Процесс имеет vad:hasTrig (есть схема детализации)
+        2. Схема детализации имеет vad:hasParentTrig НЕ на текущую схему
+
+        Это может быть ссылка на внешний процесс или процесс из другой ветви.
+
+        Визуализация: оранжевая заливка (#FFB74D)
+    """ ;
+    dcterms:description "Детализированный внешний процесс (дочерняя схема НЕ указывает на текущую)" .
+
+# ------------------------------------------------------------------------------
+# notDetailed - Недетализированный процесс (базовый тип)
+# ------------------------------------------------------------------------------
+# Процесс, НЕ имеющий дочернюю схему (нет vad:hasTrig).
+# Это родительский тип для notDetailedChild, notDetailedExternal, NotDefinedType.
+# Заменяет устаревший vad:Basic.
+# ------------------------------------------------------------------------------
+
+vad:notDetailed
+    rdf:type rdfs:Class, owl:Class ;
+    rdfs:label "notDetailed" ;
+    rdfs:comment """
+        Недетализированный процесс (notDetailed) - процесс без схемы детализации.
+
+        Признак: в ptree НЕ указан vad:hasTrig для данного процесса.
+        Вместо этого должен быть указан vad:hasParentProcess.
+
+        Имеет три подтипа:
+        - vad:notDetailedChild - hasParentProcess совпадает с текущим процессом
+        - vad:notDetailedExternal - hasParentProcess НЕ совпадает с текущим
+        - vad:NotDefinedType - hasParentProcess = NotDefined
+
+        Вычисляется автоматически в virtualRDFdata.
+        Заменяет устаревший vad:Basic.
+    """ ;
+    dcterms:description "Недетализированный процесс (не имеет дочерней схемы)" .
+
+# ------------------------------------------------------------------------------
+# notDetailedChild - Недетализированный подпроцесс
+# ------------------------------------------------------------------------------
+
+vad:notDetailedChild
+    rdf:type rdfs:Class, owl:Class ;
+    rdfs:subClassOf vad:notDetailed ;
+    rdfs:label "notDetailedChild" ;
+    rdfs:comment """
+        notDetailedChild - недетализированный подпроцесс.
+
+        Правило определения:
+        1. Процесс НЕ имеет vad:hasTrig (нет схемы детализации)
+        2. vad:hasParentProcess в ptree совпадает с процессом,
+           на схеме которого показан данный индивид
+
+        Визуализация: зеленая заливка (#A5D6A7) - как бывший Basic
+    """ ;
+    dcterms:description "Недетализированный подпроцесс (hasParentProcess совпадает с текущим)" .
+
+# ------------------------------------------------------------------------------
+# notDetailedExternal - Недетализированный внешний процесс
+# ------------------------------------------------------------------------------
+
+vad:notDetailedExternal
+    rdf:type rdfs:Class, owl:Class ;
+    rdfs:subClassOf vad:notDetailed ;
+    rdfs:label "notDetailedExternal" ;
+    rdfs:comment """
+        notDetailedExternal - недетализированный внешний процесс.
+
+        Правило определения:
+        1. Процесс НЕ имеет vad:hasTrig (нет схемы детализации)
+        2. vad:hasParentProcess в ptree НЕ совпадает с процессом,
+           на схеме которого показан данный индивид
+
+        Визуализация: светло-серая заливка (#E0E0E0)
+    """ ;
+    dcterms:description "Недетализированный внешний процесс (hasParentProcess НЕ совпадает)" .
+
+# ------------------------------------------------------------------------------
+# NotDefinedType - Тип не определен
+# ------------------------------------------------------------------------------
+
+vad:NotDefinedType
+    rdf:type rdfs:Class, owl:Class ;
+    rdfs:subClassOf vad:notDetailed ;
+    rdfs:label "NotDefinedType" ;
+    rdfs:comment """
+        NotDefinedType - тип процесса не определен.
+
+        Правило определения:
+        1. Процесс НЕ имеет vad:hasTrig (нет схемы детализации)
+        2. vad:hasParentProcess = vad:NotDefined или не указан
+
+        Это временное состояние, требующее дальнейшего определения.
+
+        Визуализация: красноватая заливка (#FFCDD2)
+    """ ;
+    dcterms:description "Тип процесса не определен (hasParentProcess = NotDefined)" .
+
+# ------------------------------------------------------------------------------
+# NotDefined - Специальное значение для неопределенного родителя
+# ------------------------------------------------------------------------------
+
+vad:NotDefined
+    rdf:type rdfs:Resource ;
+    rdfs:label "NotDefined" ;
+    rdfs:comment """
+        Специальное значение, указывающее что родительский процесс не определен.
+
+        Используется в vad:hasParentProcess когда процесс еще не привязан
+        к конкретному родительскому процессу.
+
+        При создании нового TriG, если hasParentProcess = NotDefined,
+        выдается ошибка - необходимо сначала задать родительский процесс.
+    """ ;
+    dcterms:description "Специальное значение для неопределенного родительского процесса" .
+
+# ==============================================================================
 # ПРЕДИКАТЫ ВКЛЮЧЕНИЯ (INCLUSION PREDICATES)
 # ==============================================================================
 
