@@ -16,6 +16,23 @@
 Может нужно только ParentProcess? ParentTriG - отменить?
 
 Сделать иерархию Исполнителей и Процессов? 
+```
+vad:ptree {      
+ vad:p1.1 rdf:type vad:TypeProcess ;
+  vad:hasTrig vad:t_p1.1 .
+```
+имя TriG формируется автоматом  
+Вариант 2
+```
+vad:p1.1 rdf:type vad:TypeProcess ;
+  vad:hasTrig vad:t_p1.1 .
+:hasParentTriG 
+```
+При этом, :hasParentTriG – взаимоисключающий, т.е. если есть 
+```
+vad:t_pGA2 {
+       vad:definesProcess vad:pGA2 .
+```
 
 ## algorithm
 Чтобы ввести новую схему, нужно иметь концепт процесса, т.к. именно на его основе формируется схема процесса.  
@@ -26,12 +43,18 @@
 
 ## auto
 
+
+## tech RDF
+Строить вторичный RDF? В папке TMP? Вторичный RDF для каждой схемы?  
+Формировать дерево – один раз, при старте? 
+
+---
 ## copy
 ### Ключевые правила (запиши их в состав онтологии):
 Добавлять триплеты мы можем только в какой-либо TriG, поэтому в окне Smart Design в поле TriG: нужно выбрать конкретный TriG. Кнопка «New TriG (VADProcessDia)» позволяет добавлять только TriG типа VADProcessDia. Другие типы TriG (новые TriG) не добавляются.
 
-## copy
-ver6t
+## copy ver6t
+https://github.com/bpmbpm/rdf-grapher/tree/main/ver6d
 ### info
 дублирование отношений: 
 ```
@@ -56,4 +79,4 @@ vad:t1.1 rdfs:label "Схема процесса TriG1.1" ;
 Общее направление:
 - https://github.com/terryvel/essential-open-one-page-editor Value Stream но в VAD [Value-Added Chain](https://studopedia.ru/9_24437_model-protsessa-dobavlennoy-stoimosti-VAD.html)
 
----
+
