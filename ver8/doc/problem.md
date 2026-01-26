@@ -29,3 +29,31 @@
 ## copy
 ### Ключевые правила (запиши их в состав онтологии):
 Добавлять триплеты мы можем только в какой-либо TriG, поэтому в окне Smart Design в поле TriG: нужно выбрать конкретный TriG. Кнопка «New TriG (VADProcessDia)» позволяет добавлять только TriG типа VADProcessDia. Другие типы TriG (новые TriG) не добавляются.
+
+## copy
+ver6t
+### info
+дублирование отношений: 
+```
+vad:t1 {
+vad:t1 rdfs:label "Схема процесса TriG1" ;
+    vad:hasParent vad:root .
+
+vad:p1 rdf:type vad:Process ;
+
+vad:processSubtype vad:Detailed ;
+        vad:hasTrig vad:t1.1 ;
+```
+детальный и имеет ссылку на дочерний Trig vad:t1.1. Однако добавляется ссылка на материнский TriG:  vad:hasParent vad:t1  
+
+```
+vad:t1.1 {
+vad:t1.1 rdfs:label "Схема процесса TriG1.1" ;
+    vad:hasParent vad:t1 .
+```
+
+### general directions
+Общее направление:
+- https://github.com/terryvel/essential-open-one-page-editor Value Stream но в VAD [Value-Added Chain](https://studopedia.ru/9_24437_model-protsessa-dobavlennoy-stoimosti-VAD.html)
+
+---
