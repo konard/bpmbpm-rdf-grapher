@@ -33,7 +33,8 @@ vad:p1.1 rdf:type vad:TypeProcess ;
 vad:t_pGA2 {
        vad:definesProcess vad:pGA2 .
 ```
-
+### duplicates
+- hasTriG vs definesProcess
 ## algorithm
 Чтобы ввести новую схему, нужно иметь концепт процесса, т.к. именно на его основе формируется схема процесса.  
 Допустим, что при создании нового концепта процесса будет вопрос - укажи материнский (proot).  
