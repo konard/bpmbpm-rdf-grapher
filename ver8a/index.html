@@ -26,8 +26,7 @@
     <div class="description">
         <p>
             <strong>Загрузить пример RDF данных:</strong>
-            <span class="example-link" onclick="loadExampleTrigVADv2()">Trig VADv2</span>
-            <span class="example-link" onclick="loadExampleTrigVADv2tree()">Trig VADv2tree</span>
+            <span class="example-link" onclick="loadExampleTrigVADv4()">Trig VADv4</span>
         </p>
         <div id="example-status" class="example-status" style="display: none;"></div>
     </div>
@@ -40,6 +39,7 @@
             <button class="save-as-btn" onclick="saveAsFile()">Сохранить как</button>
             <button class="load-btn" onclick="document.getElementById('file-input').click()">Загрузить</button>
             <button class="test-btn" onclick="testRdfValidation()">Тест</button>
+            <button class="virtual-rdf-btn" onclick="showVirtualRDFData()">virtualRDFdata</button>
             <input type="file" id="file-input" style="display: none;" accept=".ttl,.rdf,.nt,.nq,.trig" onchange="loadFile(event)">
         </div>
         <textarea id="rdf-input" placeholder="Введите RDF данные в формате TriG..."></textarea>
@@ -166,6 +166,7 @@
             </div>
             <div class="smart-design-buttons">
                 <button class="new-trig-btn" onclick="openNewTrigModal()">New TriG (VADProcessDia)</button>
+                <button class="del-trig-btn" onclick="openDelTrigModal()">Del TriG</button>
                 <button onclick="smartDesignCreate()">Создать SPARQL</button>
                 <button onclick="smartDesignCreateWithPrefix()" style="background-color: #1565C0;">Создать SPARQL (prefix)</button>
                 <button class="delete-btn" onclick="smartDesignDelete()">Удалить триплет</button>
@@ -218,6 +219,36 @@
             <div class="new-trig-modal-buttons">
                 <button class="new-trig-cancel-btn" onclick="closeNewTrigModal()">Отмена</button>
                 <button class="new-trig-create-btn" onclick="createNewTrig()">Создать запрос New TriG</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Модальное окно для удаления TriG -->
+    <div id="del-trig-modal" class="new-trig-modal">
+        <div class="new-trig-modal-content">
+            <div class="new-trig-modal-header" style="background-color: #f44336;">
+                <h3>Удаление TriG контейнера</h3>
+                <button class="new-trig-modal-close" onclick="closeDelTrigModal()">&times;</button>
+            </div>
+            <div class="new-trig-modal-body">
+                <div class="new-trig-field">
+                    <label for="del-trig-select">Выберите TriG для удаления:</label>
+                    <select id="del-trig-select" onchange="updateDelTrigInfo()">
+                        <option value="">-- Выберите TriG --</option>
+                    </select>
+                </div>
+                <div class="new-trig-field">
+                    <label>Информация о TriG:</label>
+                    <div id="del-trig-info" style="padding: 10px; background-color: #f5f5f5; border-radius: 4px; font-size: 13px; min-height: 60px;">
+                        Выберите TriG для просмотра информации
+                    </div>
+                </div>
+                <div id="del-trig-warning" style="display: none; padding: 10px; background-color: #ffebee; border: 1px solid #f44336; border-radius: 4px; margin-top: 10px; color: #c62828;">
+                </div>
+            </div>
+            <div class="new-trig-modal-buttons">
+                <button class="new-trig-cancel-btn" onclick="closeDelTrigModal()">Отмена</button>
+                <button class="new-trig-create-btn" id="del-trig-confirm-btn" onclick="deleteTriG()" style="background-color: #f44336;" disabled>Создать запрос Del TriG</button>
             </div>
         </div>
     </div>
@@ -346,16 +377,15 @@ WHERE {
         // ============================================================================
 
         const EXAMPLE_DATA = {
-            // Только TriG VADv2 пример (остальные форматы удалены при минимизации)
-            'trig-vad-v2': `# Пример TriG VADv2 (Value Added Chain Diagram с иерархией TriG)
+            // TriG VADv4 пример
+            'trig-vad-v4': `# Пример TriG VADv4 (Value Added Chain Diagram с иерархией TriG)
 # Демонстрация иерархии TriG графов через hasParentTrig
-# Демонстрация различных подтипов процессов (вычисляются автоматически):
+# Исполнители определены в vad:rtree (Дерево Исполнителей)
 #
-# - vad:DetailedChild (голубой): процесс с vad:hasTrig, где дочерний TriG указывает на текущий
-# - vad:DetailedExternal (оранжевый): процесс с vad:hasTrig, где дочерний TriG НЕ указывает на текущий
-# - vad:notDetailedChild (зелёный): процесс с vad:hasParentProcess, совпадающим с родителем текущей схемы
-# - vad:notDetailedExternal (серый): процесс с vad:hasParentProcess, НЕ совпадающим с родителем
-# - vad:NotDefinedType (красноватый): процесс с vad:hasParentProcess = vad:NotDefined
+# vad:processSubtype вычисляется автоматически в virtualRDFdata:
+# - vad:DetailedChild: процесс с vad:hasTrig, где дочерний TriG указывает на текущий
+# - vad:notDetailedChild: процесс с vad:hasParentProcess, совпадающим с родителем текущей схемы
+# - vad:NotDefinedType: процесс с vad:hasParentProcess = vad:NotDefined
 #
 # ВАЖНЫЕ ПРАВИЛА:
 # 1. vad:hasTrig и vad:hasParentProcess - взаимоисключающие предикаты
@@ -370,7 +400,6 @@ WHERE {
 
 # ============================================================================
 # Дерево Процессов (ptree) - общий граф с метаданными всех процессов
-# Содержит rdf:type, rdfs:label, dcterms:description, vad:hasTrig для всех vad:Process
 # ============================================================================
 
 vad:ptree {
@@ -378,107 +407,46 @@ vad:ptree {
         rdfs:label "Дерево Процессов (TriG)" ;
         vad:hasParentTrig vad:root .
 
-    # Метаданные процессов для групп процессов (после root)
-
-    vad:pGA rdf:type vad:TypeProcess ;
-        rdfs:label "Группа Процессов А" ;
-        dcterms:description "Группа Процессов А" ;
-        vad:hasTrig vad:t_pGA .
-
-    # Метаданные процессов из vad:pGA (rdf:type, rdfs:label, dcterms:description, vad:hasTrig)
-
     vad:p1 rdf:type vad:TypeProcess ;
         rdfs:label "p1 Процесс 1" ;
-        dcterms:description "Первый процесс в цепочке добавленной стоимости" ;
+        dcterms:description "p1 Процесс 1" ;
         vad:hasTrig vad:t_p1 .
 
-    # notDetailedChild - родитель совпадает с текущим процессом (зеленые)
-    vad:Process2 rdf:type vad:TypeProcess ;
-        rdfs:label "Процесс 2" ;
+    vad:p1.1 rdf:type vad:TypeProcess ;
+        rdfs:label "p1.1 Процесс 1.1" ;
+        dcterms:description "Первый процесс в цепочке добавленной стоимости" ;
+        vad:hasTrig vad:t_p1.1 .
+
+    vad:p1.2 rdf:type vad:TypeProcess ;
+        rdfs:label "Процесс 1.2" ;
         dcterms:description "Второй процесс, выполняется после Процесса 1" ;
-        vad:hasParentProcess vad:pGA .
+        vad:hasParentProcess vad:p1 .
 
-    vad:Process3 rdf:type vad:TypeProcess ;
-        rdfs:label "Процесс 3" ;
-        dcterms:description "Третий процесс в цепочке" ;
-        vad:hasParentProcess vad:pGA .
+    # p1.1.1
+    vad:p1.1.1 rdf:type vad:TypeProcess ;
+        rdfs:label "p1.1.1 Процесс 1.1.1" ;
+        dcterms:description "Первый процесс в цепочке добавленной стоимости" ;
+        vad:hasParentProcess vad:p1.1 .
 
-    vad:Process4 rdf:type vad:TypeProcess ;
-        rdfs:label "Процесс 4" ;
-        dcterms:description "Четвёртый процесс в цепочке" ;
-        vad:hasParentProcess vad:pGA .
+    vad:p1.1.2 rdf:type vad:TypeProcess ;
+        rdfs:label "p1.1.2 Процесс 1.1.2" ;
+        dcterms:description "Второй процесс в цепочке добавленной стоимости" ;
+        vad:hasParentProcess vad:p2 .
 
-    # notDetailedExternal - родитель НЕ совпадает (серый)
-    vad:Process5 rdf:type vad:TypeProcess ;
-        rdfs:label "Процесс 5 (внешний)" ;
-        dcterms:description "Пятый процесс - внешний (hasParentProcess не совпадает)" ;
-        vad:hasParentProcess vad:pOther .
+    vad:p2 rdf:type vad:TypeProcess ;
+        rdfs:label "p2 Процесс 2" ;
+        dcterms:description "p2 Процесс 2" ;
+        vad:hasTrig vad:t_p2 .
 
-    # notDetailedChild - родитель совпадает (зеленый)
-    vad:Process6 rdf:type vad:TypeProcess ;
-        rdfs:label "Процесс 6" ;
-        dcterms:description "Шестой процесс в цепочке" ;
-        vad:hasParentProcess vad:pGA .
+    vad:p2.1 rdf:type vad:TypeProcess ;
+        rdfs:label "p2.1 Процесс 2.1" ;
+        dcterms:description "Первый процесс в цепочке добавленной стоимости" ;
+        vad:hasParentProcess vad:p2 .
 
-    # NotDefinedType - родитель не определен (красноватый)
-    vad:Process7 rdf:type vad:TypeProcess ;
-        rdfs:label "Процесс 7 (не определен)" ;
-        dcterms:description "Седьмой процесс - тип не определен" ;
+    vad:p2.2 rdf:type vad:TypeProcess ;
+        rdfs:label "p2.2 Процесс 2.2" ;
+        dcterms:description "Второй процесс" ;
         vad:hasParentProcess vad:NotDefined .
-
-    # notDetailedChild - родитель совпадает (зеленый)
-    vad:Process8 rdf:type vad:TypeProcess ;
-        rdfs:label "Процесс 8" ;
-        dcterms:description "Заключительный процесс в цепочке" ;
-        vad:hasParentProcess vad:pGA .
-
-    # Внешний процесс (родитель для Process5)
-    vad:pOther rdf:type vad:TypeProcess ;
-        rdfs:label "Внешний процесс" ;
-        dcterms:description "Внешний родительский процесс" ;
-        vad:hasTrig vad:t_pOther .
-
-    # Метаданные процессов из vad:t_p1
-    # Все имеют hasParentProcess = p1 (родитель текущей схемы t_p1)
-    vad:Process21 rdf:type vad:TypeProcess ;
-        rdfs:label "Процесс 21" ;
-        dcterms:description "Первый процесс в цепочке vad:t_p1" ;
-        vad:hasParentProcess vad:p1 .
-
-    vad:Process22 rdf:type vad:TypeProcess ;
-        rdfs:label "Процесс 22" ;
-        dcterms:description "Второй процесс в цепочке vad:t_p1" ;
-        vad:hasParentProcess vad:p1 .
-
-    vad:Process23 rdf:type vad:TypeProcess ;
-        rdfs:label "Процесс 23" ;
-        dcterms:description "Третий процесс в цепочке vad:t_p1" ;
-        vad:hasParentProcess vad:p1 .
-
-    vad:Process24 rdf:type vad:TypeProcess ;
-        rdfs:label "Процесс 24" ;
-        dcterms:description "Четвёртый процесс в цепочке vad:t_p1" ;
-        vad:hasParentProcess vad:p1 .
-
-    vad:Process25 rdf:type vad:TypeProcess ;
-        rdfs:label "Процесс 25" ;
-        dcterms:description "Пятый процесс в цепочке vad:t_p1" ;
-        vad:hasParentProcess vad:p1 .
-
-    vad:Process26 rdf:type vad:TypeProcess ;
-        rdfs:label "Процесс 26" ;
-        dcterms:description "Шестой процесс в цепочке vad:t_p1" ;
-        vad:hasParentProcess vad:p1 .
-
-    vad:Process27 rdf:type vad:TypeProcess ;
-        rdfs:label "Процесс 27" ;
-        dcterms:description "Седьмой процесс в цепочке vad:t_p1" ;
-        vad:hasParentProcess vad:p1 .
-
-    vad:Process28 rdf:type vad:TypeProcess ;
-        rdfs:label "Процесс 28" ;
-        dcterms:description "Заключительный процесс в цепочке vad:t_p1" ;
-        vad:hasParentProcess vad:p1 .
 }
 
 # ============================================================================
@@ -491,7 +459,7 @@ vad:rtree {
         rdfs:label "Дерево Исполнителей (TriG)" ;
         vad:hasParentTrig vad:root .
 
-    # Исполнители для t_pGA
+    # Исполнители
     vad:Executor1 rdf:type vad:TypeExecutor ;
         rdfs:label "Исполнитель 1" .
 
@@ -516,7 +484,7 @@ vad:rtree {
     vad:Executor8 rdf:type vad:TypeExecutor ;
         rdfs:label "Исполнитель 8" .
 
-    # Исполнители для t_p1
+    # Исполнители
     vad:Executor21 rdf:type vad:TypeExecutor ;
         rdfs:label "Исполнитель 21" .
 
@@ -543,417 +511,100 @@ vad:rtree {
 }
 
 # ============================================================================
-# Корневой TriG граф: t_pGA (hasParentTrig = root)
+# Корневой TriG граф: t_p1 (hasParentTrig = root)
 # ============================================================================
 
-vad:t_pGA {
-    vad:t_pGA rdf:type vad:VADProcessDia ;
-        rdfs:label "Схема t_pGA процесса pGA" ;
+vad:t_p1 {
+    vad:t_p1 rdf:type vad:VADProcessDia ;
+        rdfs:label "Схема t_p1 процесса p1" ;
         vad:hasParentTrig vad:root ;
-        vad:definesProcess vad:pGA .
+        vad:definesProcess vad:p1 .
 
-    # Процесс 1 - будет вычислен как DetailedChild (голубой)
-    # (имеет дочернюю схему vad:t_p1 с hasParentTrig на текущую)
+    # Процесс p1.1 - DetailedChild (имеет дочернюю схему vad:t_p1.1 с hasParentTrig на текущую)
     # rdf:type находится в vad:ptree
     # isSubprocessTrig указывается первым для явной связи с TriG
-    # vad:processSubtype вычисляется автоматически в virtualRDFdata
-    vad:p1 vad:isSubprocessTrig vad:t_pGA ;
-        vad:hasExecutor vad:ExecutorGroup_p1 ;
-        vad:hasNext vad:Process2 .
+    vad:p1.1 vad:isSubprocessTrig vad:t_p1 ;
+        vad:hasExecutor vad:ExecutorGroup_p1.1 ;
+        vad:hasNext vad:p1.2 .
 
-    # Процесс 2 - будет вычислен как notDetailedChild (зелёный)
-    # (hasParentProcess = pGA, совпадает с родителем текущей схемы)
-    vad:Process2 vad:isSubprocessTrig vad:t_pGA ;
-        vad:hasExecutor vad:ExecutorGroup_Process2 ;
-        vad:hasNext vad:Process3, vad:Process4 .
-
-    # Процесс 3 - будет вычислен как notDetailedChild (зелёный)
-    vad:Process3 vad:isSubprocessTrig vad:t_pGA ;
-        vad:hasExecutor vad:ExecutorGroup_Process3 ;
-        vad:hasNext vad:Process4 .
-
-    # Процесс 4 - будет вычислен как notDetailedChild (зелёный)
-    vad:Process4 vad:isSubprocessTrig vad:t_pGA ;
-        vad:hasExecutor vad:ExecutorGroup_Process4 ;
-        vad:hasNext vad:Process5 .
-
-    # Процесс 5 - будет вычислен как notDetailedExternal (серый)
-    # (hasParentProcess = pOther, НЕ совпадает с pGA)
-    vad:Process5 vad:isSubprocessTrig vad:t_pGA ;
-        vad:hasExecutor vad:ExecutorGroup_Process5 ;
-        vad:hasNext vad:Process6 .
-
-    # Процесс 6 - будет вычислен как notDetailedChild (зелёный)
-    vad:Process6 vad:isSubprocessTrig vad:t_pGA ;
-        vad:hasExecutor vad:ExecutorGroup_Process6 ;
-        vad:hasNext vad:Process7 .
-
-    # Процесс 7 - будет вычислен как NotDefinedType (красноватый)
-    # (hasParentProcess = NotDefined)
-    vad:Process7 vad:isSubprocessTrig vad:t_pGA ;
-        vad:hasExecutor vad:ExecutorGroup_Process7 ;
-        vad:hasNext vad:Process8 .
-
-    # Процесс 8 - будет вычислен как notDetailedChild (зелёный)
-    vad:Process8 vad:isSubprocessTrig vad:t_pGA ;
-        vad:hasExecutor vad:ExecutorGroup_Process8 .
+    # Процесс p1.2 - notDetailedChild
+    vad:p1.2 vad:isSubprocessTrig vad:t_p1 ;
+        vad:hasExecutor vad:ExecutorGroup_p1.2 .
 
     # Группы исполнителей (ID формируется как ExecutorGroup_ + ID процесса)
-    vad:ExecutorGroup_p1 rdf:type vad:ExecutorGroup ;
-        rdfs:label "Группа исполнителей процесса p1" ;
+    vad:ExecutorGroup_p1.1 rdf:type vad:ExecutorGroup ;
+        rdfs:label "Группа исполнителей процесса p1.1" ;
         vad:includes vad:Executor1 .
 
-    vad:ExecutorGroup_Process2 rdf:type vad:ExecutorGroup ;
-        rdfs:label "Группа исполнителей процесса Process2" ;
+    vad:ExecutorGroup_p1.2 rdf:type vad:ExecutorGroup ;
+        rdfs:label "Группа исполнителей процесса p1.2" ;
         vad:includes vad:Executor1, vad:Executor2 .
-
-    vad:ExecutorGroup_Process3 rdf:type vad:ExecutorGroup ;
-        rdfs:label "Группа исполнителей процесса Process3" ;
-        vad:includes vad:Executor3 .
-
-    vad:ExecutorGroup_Process4 rdf:type vad:ExecutorGroup ;
-        rdfs:label "Группа исполнителей процесса Process4" ;
-        vad:includes vad:Executor3, vad:Executor4 .
-
-    vad:ExecutorGroup_Process5 rdf:type vad:ExecutorGroup ;
-        rdfs:label "Группа исполнителей процесса Process5" ;
-        vad:includes vad:Executor5, vad:Executor6 .
-
-    vad:ExecutorGroup_Process6 rdf:type vad:ExecutorGroup ;
-        rdfs:label "Группа исполнителей процесса Process6" ;
-        vad:includes vad:Executor7, vad:Executor8 .
-
-    vad:ExecutorGroup_Process7 rdf:type vad:ExecutorGroup ;
-        rdfs:label "Группа исполнителей процесса Process7" ;
-        vad:includes vad:Executor1, vad:Executor5 .
-
-    vad:ExecutorGroup_Process8 rdf:type vad:ExecutorGroup ;
-        rdfs:label "Группа исполнителей процесса Process8" ;
-        vad:includes vad:Executor2, vad:Executor7 .
 
     # Примечание: Исполнители (vad:Executor1..8) определены в vad:rtree
 }
 
 # ============================================================================
-# Дочерний TriG граф: t_p1 (hasParentTrig = t_pGA)
-# Это детализация процесса p1 из родительского графа t_pGA
-# Все объекты имеют префикс 2 в номерах (Process21, Исполнитель 21 и т.д.)
+# Дочерний TriG граф: t_p1.1 (hasParentTrig = t_p1)
+# Это детализация процесса p1.1 из родительского графа t_p1
 # ============================================================================
 
-vad:t_p1 {
-    vad:t_p1 rdf:type vad:VADProcessDia ;
-        rdfs:label "Схема t_p1 процесса p1" ;
-        vad:hasParentTrig vad:t_pGA ;
-        vad:definesProcess vad:p1 .
+vad:t_p1.1 {
+    vad:t_p1.1 rdf:type vad:VADProcessDia ;
+        rdfs:label "Схема t_p1.1 процесса p1.1" ;
+        vad:hasParentTrig vad:t_p1 ;
+        vad:definesProcess vad:p1.1 .
 
-    # Процесс 21 - будет вычислен как notDetailedChild (зелёный)
+    # Процесс p1.1.1 - notDetailedChild
     # rdf:type находится в vad:ptree
     # isSubprocessTrig указывается первым для явной связи с TriG
-    # vad:processSubtype вычисляется автоматически (hasParentProcess = p1)
-    vad:Process21 vad:isSubprocessTrig vad:t_p1 ;
-        vad:hasExecutor vad:ExecutorGroup_Process21 ;
-        vad:hasNext vad:Process22 .
+    vad:p1.1.1 vad:isSubprocessTrig vad:t_p1.1 ;
+        vad:hasExecutor vad:ExecutorGroup_p1.1.1 ;
+        vad:hasNext vad:p1.1.2 .
 
-    # Процесс 22 - будет вычислен как notDetailedChild (зелёный)
-    vad:Process22 vad:isSubprocessTrig vad:t_p1 ;
-        vad:hasExecutor vad:ExecutorGroup_Process22 ;
-        vad:hasNext vad:Process23, vad:Process24 .
-
-    # Процесс 23 - будет вычислен как notDetailedChild (зелёный)
-    vad:Process23 vad:isSubprocessTrig vad:t_p1 ;
-        vad:hasExecutor vad:ExecutorGroup_Process23 ;
-        vad:hasNext vad:Process24 .
-
-    # Процесс 24 - будет вычислен как notDetailedChild (зелёный)
-    vad:Process24 vad:isSubprocessTrig vad:t_p1 ;
-        vad:hasExecutor vad:ExecutorGroup_Process24 ;
-        vad:hasNext vad:Process25 .
-
-    # Процесс 25 - будет вычислен как notDetailedChild (зелёный)
-    vad:Process25 vad:isSubprocessTrig vad:t_p1 ;
-        vad:hasExecutor vad:ExecutorGroup_Process25 ;
-        vad:hasNext vad:Process26 .
-
-    # Процесс 26 - будет вычислен как notDetailedChild (зелёный)
-    vad:Process26 vad:isSubprocessTrig vad:t_p1 ;
-        vad:hasExecutor vad:ExecutorGroup_Process26 ;
-        vad:hasNext vad:Process27 .
-
-    # Процесс 27 - будет вычислен как notDetailedChild (зелёный)
-    vad:Process27 vad:isSubprocessTrig vad:t_p1 ;
-        vad:hasExecutor vad:ExecutorGroup_Process27 ;
-        vad:hasNext vad:Process28 .
-
-    # Процесс 28 - будет вычислен как notDetailedChild (зелёный)
-    vad:Process28 vad:isSubprocessTrig vad:t_p1 ;
-        vad:hasExecutor vad:ExecutorGroup_Process28 .
+    # Процесс p1.1.2 - notDetailedExternal (hasParentProcess = p2, не совпадает с p1.1)
+    vad:p1.1.2 vad:isSubprocessTrig vad:t_p1.1 ;
+        vad:hasExecutor vad:ExecutorGroup_p1.1.2 .
 
     # Группы исполнителей (ID формируется как ExecutorGroup_ + ID процесса)
-    vad:ExecutorGroup_Process21 rdf:type vad:ExecutorGroup ;
-        rdfs:label "Группа исполнителей процесса Process21" ;
+    vad:ExecutorGroup_p1.1.1 rdf:type vad:ExecutorGroup ;
+        rdfs:label "Группа исполнителей процесса p1.1.1" ;
         vad:includes vad:Executor21 .
 
-    vad:ExecutorGroup_Process22 rdf:type vad:ExecutorGroup ;
-        rdfs:label "Группа исполнителей процесса Process22" ;
+    vad:ExecutorGroup_p1.1.2 rdf:type vad:ExecutorGroup ;
+        rdfs:label "Группа исполнителей процесса p1.1.2" ;
         vad:includes vad:Executor21, vad:Executor22 .
-
-    vad:ExecutorGroup_Process23 rdf:type vad:ExecutorGroup ;
-        rdfs:label "Группа исполнителей процесса Process23" ;
-        vad:includes vad:Executor23 .
-
-    vad:ExecutorGroup_Process24 rdf:type vad:ExecutorGroup ;
-        rdfs:label "Группа исполнителей процесса Process24" ;
-        vad:includes vad:Executor23, vad:Executor24 .
-
-    vad:ExecutorGroup_Process25 rdf:type vad:ExecutorGroup ;
-        rdfs:label "Группа исполнителей процесса Process25" ;
-        vad:includes vad:Executor25, vad:Executor26 .
-
-    vad:ExecutorGroup_Process26 rdf:type vad:ExecutorGroup ;
-        rdfs:label "Группа исполнителей процесса Process26" ;
-        vad:includes vad:Executor27, vad:Executor28 .
-
-    vad:ExecutorGroup_Process27 rdf:type vad:ExecutorGroup ;
-        rdfs:label "Группа исполнителей процесса Process27" ;
-        vad:includes vad:Executor21, vad:Executor25 .
-
-    vad:ExecutorGroup_Process28 rdf:type vad:ExecutorGroup ;
-        rdfs:label "Группа исполнителей процесса Process28" ;
-        vad:includes vad:Executor22, vad:Executor27 .
-
-    # Примечание: Исполнители (vad:Executor21..28) определены в vad:rtree
-}`,
-            // TriG VADv2tree пример с множественной иерархией (t_pGA, t_pGA2, t_pGA3 на одном уровне)
-            'trig-vad-v2tree': `# Пример TriG VADv2tree (Value Added Chain Diagram с множественной иерархией TriG)
-# Демонстрация нескольких TriG графов на одном уровне иерархии
-# t_pGA, t_pGA2, t_pGA3 - корневые графы (hasParentTrig = root)
-# t_p1 - дочерний граф (hasParentTrig = t_pGA)
-#
-# vad:processSubtype вычисляется автоматически в virtualRDFdata:
-# - DetailedChild (голубой): процесс с hasTrig, дочерний TriG указывает на текущий
-# - notDetailedChild (зелёный): процесс с hasParentProcess = родитель текущей схемы
-#
-# ВАЖНЫЕ ПРАВИЛА:
-# 1. vad:hasTrig и vad:hasParentProcess - взаимоисключающие предикаты
-# 2. vad:isSubprocessTrig указывается первым для явной связи индивида с TriG
-# 3. ID группы исполнителей формируется как: ExecutorGroup_ + ID процесса
-
-@prefix rdf: <http://www.w3.org/1999/02/22-rdf-syntax-ns#> .
-@prefix rdfs: <http://www.w3.org/2000/01/rdf-schema#> .
-@prefix dcterms: <http://purl.org/dc/terms/> .
-@prefix vad: <http://example.org/vad#> .
-
-# ============================================================================
-# Дерево Процессов (ptree) - общий граф с метаданными всех процессов
-# ============================================================================
-
-vad:ptree {
-    vad:ptree rdf:type vad:ProcessTree ;
-        rdfs:label "Дерево Процессов (TriG)" ;
-        vad:hasParentTrig vad:root .
-
-    # Метаданные групп процессов (корневые)
-
-    vad:pGA rdf:type vad:TypeProcess ;
-        rdfs:label "Группа Процессов А" ;
-        dcterms:description "Группа Процессов А" ;
-        vad:hasTrig vad:t_pGA .
-
-    vad:pGA2 rdf:type vad:TypeProcess ;
-        rdfs:label "Группа Процессов А2" ;
-        dcterms:description "Группа Процессов А2" ;
-        vad:hasTrig vad:t_pGA2 .
-
-    vad:pGA3 rdf:type vad:TypeProcess ;
-        rdfs:label "Группа Процессов А3" ;
-        dcterms:description "Группа Процессов А3" ;
-        vad:hasTrig vad:t_pGA3 .
-
-    # Метаданные процессов из vad:t_pGA
-
-    vad:p1 rdf:type vad:TypeProcess ;
-        rdfs:label "p1 Процесс 1" ;
-        dcterms:description "Первый процесс в цепочке" ;
-        vad:hasTrig vad:t_p1 .
-
-    vad:Process2 rdf:type vad:TypeProcess ;
-        rdfs:label "Процесс 2" ;
-        dcterms:description "Второй процесс" ;
-        vad:hasParentProcess vad:pGA .
-
-    vad:Process3 rdf:type vad:TypeProcess ;
-        rdfs:label "Процесс 3" ;
-        dcterms:description "Третий процесс" ;
-        vad:hasParentProcess vad:pGA .
-
-    # Метаданные процессов из vad:t_pGA2
-
-    vad:Process2_1 rdf:type vad:TypeProcess ;
-        rdfs:label "Процесс 2.1" ;
-        dcterms:description "Первый процесс группы А2" ;
-        vad:hasParentProcess vad:pGA2 .
-
-    vad:Process2_2 rdf:type vad:TypeProcess ;
-        rdfs:label "Процесс 2.2" ;
-        dcterms:description "Второй процесс группы А2" ;
-        vad:hasParentProcess vad:pGA2 .
-
-    # Метаданные процессов из vad:t_pGA3
-
-    vad:Process3_1 rdf:type vad:TypeProcess ;
-        rdfs:label "Процесс 3.1" ;
-        dcterms:description "Первый процесс группы А3" ;
-        vad:hasParentProcess vad:pGA3 .
-
-    vad:Process3_2 rdf:type vad:TypeProcess ;
-        rdfs:label "Процесс 3.2" ;
-        dcterms:description "Второй процесс группы А3" ;
-        vad:hasParentProcess vad:pGA3 .
-
-    # Метаданные процессов из vad:t_p1
-
-    vad:Process21 rdf:type vad:TypeProcess ;
-        rdfs:label "Процесс 21" ;
-        dcterms:description "Первый процесс детализации p1" ;
-        vad:hasParentProcess vad:p1 .
-
-    vad:Process22 rdf:type vad:TypeProcess ;
-        rdfs:label "Процесс 22" ;
-        dcterms:description "Второй процесс детализации p1" ;
-        vad:hasParentProcess vad:p1 .
 }
 
 # ============================================================================
-# Дерево Исполнителей (rtree)
+# Корневой TriG граф: t_p2 (hasParentTrig = root)
 # ============================================================================
 
-vad:rtree {
-    vad:rtree rdf:type vad:ExecutorTree ;
-        rdfs:label "Дерево Исполнителей (TriG)" ;
-        vad:hasParentTrig vad:root .
-
-    vad:Executor1 rdf:type vad:TypeExecutor ;
-        rdfs:label "Исполнитель 1" .
-
-    vad:Executor2 rdf:type vad:TypeExecutor ;
-        rdfs:label "Исполнитель 2" .
-
-    vad:Executor3 rdf:type vad:TypeExecutor ;
-        rdfs:label "Исполнитель 3" .
-}
-
-# ============================================================================
-# Корневой TriG граф: t_pGA (hasParentTrig = root)
-# ============================================================================
-
-vad:t_pGA {
-    vad:t_pGA rdf:type vad:VADProcessDia ;
-        rdfs:label "Схема t_pGA процесса pGA" ;
+vad:t_p2 {
+    vad:t_p2 rdf:type vad:VADProcessDia ;
+        rdfs:label "Схема t_p2 процесса p2" ;
         vad:hasParentTrig vad:root ;
-        vad:definesProcess vad:pGA .
+        vad:definesProcess vad:p2 .
 
-    vad:p1 vad:isSubprocessTrig vad:t_pGA ;
-        vad:hasExecutor vad:ExecutorGroup_p1 ;
-        vad:hasNext vad:Process2 .
+    # Процесс p2.1 - notDetailedChild
+    # rdf:type находится в vad:ptree
+    # isSubprocessTrig указывается первым для явной связи с TriG
+    vad:p2.1 vad:isSubprocessTrig vad:t_p2 ;
+        vad:hasExecutor vad:ExecutorGroup_p2.1 ;
+        vad:hasNext vad:p2.2 .
 
-    vad:Process2 vad:isSubprocessTrig vad:t_pGA ;
-        vad:hasExecutor vad:ExecutorGroup_Process2 ;
-        vad:hasNext vad:Process3 .
+    # Процесс p2.2 - NotDefinedType (hasParentProcess = NotDefined)
+    vad:p2.2 vad:isSubprocessTrig vad:t_p2 ;
+        vad:hasExecutor vad:ExecutorGroup_p2.2 .
 
-    vad:Process3 vad:isSubprocessTrig vad:t_pGA ;
-        vad:hasExecutor vad:ExecutorGroup_Process3 .
-
-    vad:ExecutorGroup_p1 rdf:type vad:ExecutorGroup ;
-        rdfs:label "Группа исполнителей p1" ;
+    # Группы исполнителей (ID формируется как ExecutorGroup_ + ID процесса)
+    vad:ExecutorGroup_p2.1 rdf:type vad:ExecutorGroup ;
+        rdfs:label "Группа исполнителей процесса p2.1" ;
         vad:includes vad:Executor1 .
 
-    vad:ExecutorGroup_Process2 rdf:type vad:ExecutorGroup ;
-        rdfs:label "Группа исполнителей Process2" ;
+    vad:ExecutorGroup_p2.2 rdf:type vad:ExecutorGroup ;
+        rdfs:label "Группа исполнителей процесса p2.2" ;
         vad:includes vad:Executor1, vad:Executor2 .
-
-    vad:ExecutorGroup_Process3 rdf:type vad:ExecutorGroup ;
-        rdfs:label "Группа исполнителей Process3" ;
-        vad:includes vad:Executor2 .
-}
-
-# ============================================================================
-# Корневой TriG граф: t_pGA2 (hasParentTrig = root) - на одном уровне с t_pGA
-# ============================================================================
-
-vad:t_pGA2 {
-    vad:t_pGA2 rdf:type vad:VADProcessDia ;
-        rdfs:label "Схема t_pGA2 процесса pGA2" ;
-        vad:hasParentTrig vad:root ;
-        vad:definesProcess vad:pGA2 .
-
-    vad:Process2_1 vad:isSubprocessTrig vad:t_pGA2 ;
-        vad:hasExecutor vad:ExecutorGroup_Process2_1 ;
-        vad:hasNext vad:Process2_2 .
-
-    vad:Process2_2 vad:isSubprocessTrig vad:t_pGA2 ;
-        vad:hasExecutor vad:ExecutorGroup_Process2_2 .
-
-    vad:ExecutorGroup_Process2_1 rdf:type vad:ExecutorGroup ;
-        rdfs:label "Группа исполнителей Process2_1" ;
-        vad:includes vad:Executor1 .
-
-    vad:ExecutorGroup_Process2_2 rdf:type vad:ExecutorGroup ;
-        rdfs:label "Группа исполнителей Process2_2" ;
-        vad:includes vad:Executor2 .
-}
-
-# ============================================================================
-# Корневой TriG граф: t_pGA3 (hasParentTrig = root) - на одном уровне с t_pGA
-# ============================================================================
-
-vad:t_pGA3 {
-    vad:t_pGA3 rdf:type vad:VADProcessDia ;
-        rdfs:label "Схема t_pGA3 процесса pGA3" ;
-        vad:hasParentTrig vad:root ;
-        vad:definesProcess vad:pGA3 .
-
-    vad:Process3_1 vad:isSubprocessTrig vad:t_pGA3 ;
-        vad:hasExecutor vad:ExecutorGroup_Process3_1 ;
-        vad:hasNext vad:Process3_2 .
-
-    vad:Process3_2 vad:isSubprocessTrig vad:t_pGA3 ;
-        vad:hasExecutor vad:ExecutorGroup_Process3_2 .
-
-    vad:ExecutorGroup_Process3_1 rdf:type vad:ExecutorGroup ;
-        rdfs:label "Группа исполнителей Process3_1" ;
-        vad:includes vad:Executor3 .
-
-    vad:ExecutorGroup_Process3_2 rdf:type vad:ExecutorGroup ;
-        rdfs:label "Группа исполнителей Process3_2" ;
-        vad:includes vad:Executor1, vad:Executor3 .
-}
-
-# ============================================================================
-# Дочерний TriG граф: t_p1 (hasParentTrig = t_pGA)
-# Детализация процесса p1 из родительского графа t_pGA
-# ============================================================================
-
-vad:t_p1 {
-    vad:t_p1 rdf:type vad:VADProcessDia ;
-        rdfs:label "Схема t_p1 процесса p1" ;
-        vad:hasParentTrig vad:t_pGA ;
-        vad:definesProcess vad:p1 .
-
-    vad:Process21 vad:isSubprocessTrig vad:t_p1 ;
-        vad:hasExecutor vad:ExecutorGroup_Process21 ;
-        vad:hasNext vad:Process22 .
-
-    vad:Process22 vad:isSubprocessTrig vad:t_p1 ;
-        vad:hasExecutor vad:ExecutorGroup_Process22 .
-
-    vad:ExecutorGroup_Process21 rdf:type vad:ExecutorGroup ;
-        rdfs:label "Группа исполнителей Process21" ;
-        vad:includes vad:Executor1 .
-
-    vad:ExecutorGroup_Process22 rdf:type vad:ExecutorGroup ;
-        rdfs:label "Группа исполнителей Process22" ;
-        vad:includes vad:Executor2 .
-}`
+}\`
         };
 
         // ============================================================================
@@ -1897,6 +1548,10 @@ vad:t_p1 {
         let currentStore = null;
         let comunicaEngine = null;
         let currentDotCode = '';
+
+        // virtualRDFdata - хранилище вычисляемых RDF данных (vad:processSubtype и др.)
+        // Структура: { 'vad:vt_trigName': { quads: [...], trigData: {...} } }
+        let virtualRDFdata = {};
 
         const defaultSparqlQuery = `SELECT ?s ?p ?o
 WHERE {
@@ -2952,6 +2607,20 @@ WHERE {
                 }
             }
 
+            // Добавляем вычисленные свойства из virtualRDFdata (с разделителем)
+            const computedProperties = getComputedPropertiesForNode(nodeUri);
+            if (computedProperties.length > 0) {
+                propertiesHtml += '<div style="margin-top: 15px; padding-top: 10px; border-top: 2px dashed #9C27B0;">';
+                propertiesHtml += '<div style="font-size: 12px; color: #9C27B0; margin-bottom: 8px; font-weight: bold;">Вычисляемые свойства (virtualRDFdata):</div>';
+                computedProperties.forEach(prop => {
+                    propertiesHtml += '<div class="property-item" style="background-color: #F3E5F5; border-left: 3px solid #9C27B0;">';
+                    propertiesHtml += `<div class="property-predicate" style="color: #7B1FA2;">${prop.predicateLabel}</div>`;
+                    propertiesHtml += `<div class="property-value uri" style="color: #4A148C;">${prop.valueLabel}</div>`;
+                    propertiesHtml += '</div>';
+                });
+                propertiesHtml += '</div>';
+            }
+
             const escapedNodeLabel = nodeLabel.replace(/'/g, "\\'").replace(/"/g, '&quot;');
             const panelHtml = `
                 <div class="properties-panel visible" id="${panelId}" style="right: ${rightOffset}px; top: ${topOffset}px;">
@@ -3354,37 +3023,22 @@ WHERE {
          * 5. При другой ошибке: отображает подробную информацию об ошибке
          */
         /**
-         * Загружает пример TriG VADv2 с иерархией TriG графов
-         * Содержит:
-         * - Trig1: корневой граф (hasParentTrig = root)
-         * - Trig11: дочерний граф (hasParentTrig = Trig1)
-         * Алгоритм загрузки файла:
-         * 1. Отображает статус загрузки
-         * 2. Выполняет fetch запрос к файлу 'Trig_VADv2.ttl' (относительный путь от текущего расположения HTML файла)
-         * 3. При успехе: заполняет текстовое поле RDF данными, устанавливает формат ввода TriG и режим визуализации VAD TriG
-         * 4. При ошибке CORS (локальный файл): показывает информацию и использует встроенные данные
-         * 5. При другой ошибке: отображает подробную информацию об ошибке
+         * Загружает пример TriG VADv4 (Value Added Chain Diagram с иерархией TriG)
+         * Демонстрирует:
+         * - Иерархию процессов: p1, p1.1, p1.2, p1.1.1, p1.1.2, p2, p2.1, p2.2
+         * - Корневые TriG графы: t_p1, t_p2 (hasParentTrig = root)
+         * - Дочерний TriG граф: t_p1.1 (hasParentTrig = t_p1)
+         * - Вычисляемые подтипы: DetailedChild, notDetailedChild, notDetailedExternal, NotDefinedType
          */
-        function loadExampleTrigVADv2() {
-            loadExampleFromFile('Trig_VADv2.ttl', 'Trig VADv2', 'trig', 'vad-trig', 'trig-vad-v2');
+        function loadExampleTrigVADv4() {
+            loadExampleFromFile('Trig_VADv4.ttl', 'Trig VADv4', 'trig', 'vad-trig', 'trig-vad-v4');
         }
 
         /**
-         * Загружает пример TriG VADv2tree с множественной иерархией TriG графов
-         * Содержит:
-         * - t_pGA, t_pGA2, t_pGA3: корневые графы (hasParentTrig = root)
-         * - t_p1: дочерний граф (hasParentTrig = t_pGA)
-         * Демонстрирует отображение нескольких TriG на одном уровне иерархии
-         */
-        function loadExampleTrigVADv2tree() {
-            loadExampleFromFile('Trig_VADv2tree.ttl', 'Trig VADv2tree', 'trig', 'vad-trig', 'trig-vad-v2tree');
-        }
-
-        /**
-         * Для обратной совместимости: вызывает загрузку примера Trig VADv2
+         * Для обратной совместимости: вызывает загрузку примера Trig VADv4
          */
         function loadExample() {
-            loadExampleTrigVADv2();
+            loadExampleTrigVADv4();
         }
 
         /**
@@ -3534,6 +3188,352 @@ WHERE {
                 });
             } catch (error) {
                 alert(`❌ ОШИБКА ПРИ ПРОВЕРКЕ\n\n${error.message}\n\nПроверьте корректность RDF данных.`);
+            }
+        }
+
+        // ============================================================================
+        // ФУНКЦИИ ДЛЯ VIRTUALRDFDATA (вычисляемые RDF данные)
+        // ============================================================================
+
+        /**
+         * Вычисляет processSubtype для всех процессов во всех TriG схемах
+         * и сохраняет результаты в virtualRDFdata
+         *
+         * Алгоритм вычисления vad:processSubtype:
+         * - Если процесс имеет vad:hasTrig (детализированный):
+         *   - DetailedChild: дочерний TriG указывает на текущий (hasParentTrig = currentTrig)
+         *   - DetailedExternal: дочерний TriG НЕ указывает на текущий
+         * - Если процесс имеет vad:hasParentProcess (недетализированный):
+         *   - notDetailedChild: hasParentProcess совпадает с процессом-владельцем текущей схемы
+         *   - notDetailedExternal: hasParentProcess НЕ совпадает
+         *   - NotDefinedType: hasParentProcess = vad:NotDefined
+         *
+         * @returns {Object} virtualRDFdata - структура с вычисленными данными
+         */
+        function computeVirtualRDFdata() {
+            virtualRDFdata = {};
+
+            // Проверяем наличие trigHierarchy
+            if (!trigHierarchy || Object.keys(trigHierarchy).length === 0) {
+                console.warn('computeVirtualRDFdata: trigHierarchy пуст или не инициализирован');
+                return virtualRDFdata;
+            }
+
+            // Получаем данные из ptree для определения hasTrig и hasParentProcess
+            const ptreeQuads = trigHierarchy[PTREE_GRAPH_URI]?.quads || [];
+
+            // Создаем карты для быстрого доступа
+            const processHasTrig = new Map();  // processUri -> trigUri
+            const processHasParentProcess = new Map();  // processUri -> parentProcessUri
+            const trigDefinesProcess = new Map();  // trigUri -> processUri
+            const trigHasParentTrig = new Map();  // trigUri -> parentTrigUri
+
+            // Заполняем карту hasTrig из ptree
+            ptreeQuads.forEach(quad => {
+                const predicateLabel = getPrefixedName(quad.predicate.value, currentPrefixes);
+                if (predicateLabel === 'vad:hasTrig' || quad.predicate.value === 'http://example.org/vad#hasTrig') {
+                    processHasTrig.set(quad.subject.value, quad.object.value);
+                }
+                if (predicateLabel === 'vad:hasParentProcess' || quad.predicate.value === 'http://example.org/vad#hasParentProcess') {
+                    processHasParentProcess.set(quad.subject.value, quad.object.value);
+                }
+            });
+
+            // Заполняем карты definesProcess и hasParentTrig для каждого TriG
+            Object.entries(trigHierarchy).forEach(([trigUri, graphInfo]) => {
+                if (trigUri === PTREE_GRAPH_URI || trigUri === RTREE_GRAPH_URI) return;
+
+                graphInfo.quads.forEach(quad => {
+                    const predicateLabel = getPrefixedName(quad.predicate.value, currentPrefixes);
+                    if (predicateLabel === 'vad:definesProcess' || quad.predicate.value === 'http://example.org/vad#definesProcess') {
+                        trigDefinesProcess.set(trigUri, quad.object.value);
+                    }
+                    if (predicateLabel === 'vad:hasParentTrig' || quad.predicate.value === 'http://example.org/vad#hasParentTrig') {
+                        trigHasParentTrig.set(trigUri, quad.object.value);
+                    }
+                });
+            });
+
+            // Обрабатываем каждый TriG типа VADProcessDia
+            Object.entries(trigHierarchy).forEach(([trigUri, graphInfo]) => {
+                // Пропускаем специальные графы
+                if (trigUri === PTREE_GRAPH_URI || trigUri === RTREE_GRAPH_URI) return;
+
+                // Получаем процесс, который определяется этим TriG
+                const definingProcess = trigDefinesProcess.get(trigUri);
+
+                // Создаем виртуальный TriG для хранения processSubtype
+                const virtualTrigId = trigUri.replace(/t_/, 'vt_');
+                const virtualTrigLabel = getPrefixedName(virtualTrigId, currentPrefixes);
+
+                virtualRDFdata[virtualTrigId] = {
+                    trigUri: trigUri,
+                    label: `Виртуальный TriG для ${getPrefixedName(trigUri, currentPrefixes)}`,
+                    processSubtypes: {}
+                };
+
+                // Находим все процессы в этом TriG (по vad:isSubprocessTrig)
+                const processesInTrig = [];
+                graphInfo.quads.forEach(quad => {
+                    const predicateLabel = getPrefixedName(quad.predicate.value, currentPrefixes);
+                    if (predicateLabel === 'vad:isSubprocessTrig' || quad.predicate.value === 'http://example.org/vad#isSubprocessTrig') {
+                        processesInTrig.push(quad.subject.value);
+                    }
+                });
+
+                // Вычисляем processSubtype для каждого процесса в этом TriG
+                processesInTrig.forEach(processUri => {
+                    let subtype = null;
+
+                    // Проверяем, имеет ли процесс свой TriG (детализированный)
+                    if (processHasTrig.has(processUri)) {
+                        const childTrigUri = processHasTrig.get(processUri);
+                        const childParentTrig = trigHasParentTrig.get(childTrigUri);
+
+                        if (childParentTrig === trigUri) {
+                            subtype = 'vad:DetailedChild';
+                        } else {
+                            subtype = 'vad:DetailedExternal';
+                        }
+                    }
+                    // Проверяем, имеет ли процесс hasParentProcess (недетализированный)
+                    else if (processHasParentProcess.has(processUri)) {
+                        const parentProcess = processHasParentProcess.get(processUri);
+                        const parentProcessLabel = getPrefixedName(parentProcess, currentPrefixes);
+
+                        if (parentProcessLabel === 'vad:NotDefined' || parentProcess === 'http://example.org/vad#NotDefined') {
+                            subtype = 'vad:NotDefinedType';
+                        } else if (parentProcess === definingProcess) {
+                            subtype = 'vad:notDetailedChild';
+                        } else {
+                            subtype = 'vad:notDetailedExternal';
+                        }
+                    }
+                    // По умолчанию - notDetailedChild (если ничего не определено)
+                    else {
+                        subtype = 'vad:notDetailedChild';
+                    }
+
+                    virtualRDFdata[virtualTrigId].processSubtypes[processUri] = subtype;
+                });
+            });
+
+            // Обновляем nodeSubtypesCache на основе вычисленных данных
+            updateNodeSubtypesCacheFromVirtualData();
+
+            return virtualRDFdata;
+        }
+
+        /**
+         * Обновляет nodeSubtypesCache на основе вычисленных virtualRDFdata
+         * Это позволяет визуализации использовать вычисленные подтипы
+         */
+        function updateNodeSubtypesCacheFromVirtualData() {
+            Object.values(virtualRDFdata).forEach(vTrig => {
+                Object.entries(vTrig.processSubtypes).forEach(([processUri, subtype]) => {
+                    if (!nodeSubtypesCache[processUri]) {
+                        nodeSubtypesCache[processUri] = [];
+                    }
+
+                    const fullSubtypeUri = subtype.replace('vad:', 'http://example.org/vad#');
+
+                    if (!nodeSubtypesCache[processUri].includes(subtype)) {
+                        nodeSubtypesCache[processUri].push(subtype);
+                    }
+                    if (!nodeSubtypesCache[processUri].includes(fullSubtypeUri)) {
+                        nodeSubtypesCache[processUri].push(fullSubtypeUri);
+                    }
+                });
+            });
+        }
+
+        /**
+         * Получает вычисленные свойства (processSubtype) для конкретного процесса
+         * @param {string} nodeUri - URI узла
+         * @returns {Array} - массив вычисленных свойств [{predicate, value}]
+         */
+        function getComputedPropertiesForNode(nodeUri) {
+            const computed = [];
+
+            // Ищем processSubtype в virtualRDFdata
+            Object.values(virtualRDFdata).forEach(vTrig => {
+                if (vTrig.processSubtypes[nodeUri]) {
+                    computed.push({
+                        predicate: 'vad:processSubtype',
+                        predicateLabel: 'vad:processSubtype',
+                        value: vTrig.processSubtypes[nodeUri],
+                        valueLabel: vTrig.processSubtypes[nodeUri],
+                        source: 'virtualRDFdata'
+                    });
+                }
+            });
+
+            return computed;
+        }
+
+        /**
+         * Показывает virtualRDFdata в отдельном окне
+         * Вызывается при нажатии кнопки "virtualRDFdata"
+         */
+        function showVirtualRDFData() {
+            // Вычисляем virtualRDFdata, если еще не вычислены
+            if (!trigHierarchy || Object.keys(trigHierarchy).length === 0) {
+                // Нужно сначала распарсить RDF данные
+                const rdfInput = document.getElementById('rdf-input');
+                if (!rdfInput || !rdfInput.value.trim()) {
+                    alert('Нет данных для анализа. Введите RDF данные и нажмите "Показать" для визуализации.');
+                    return;
+                }
+
+                // Парсим данные для получения trigHierarchy
+                const parser = new N3.Parser({ format: 'trig' });
+                const quads = [];
+                let prefixes = {};
+
+                try {
+                    parser.parse(rdfInput.value, (error, quad, parsedPrefixes) => {
+                        if (error) {
+                            alert(`Ошибка парсинга RDF: ${error.message}`);
+                            return;
+                        }
+                        if (quad) {
+                            quads.push(quad);
+                        } else {
+                            if (parsedPrefixes) {
+                                prefixes = parsedPrefixes;
+                            }
+
+                            currentPrefixes = prefixes;
+                            currentQuads = quads;
+
+                            const hierarchyResult = parseTriGHierarchy(quads, prefixes);
+                            if (hierarchyResult.valid) {
+                                trigHierarchy = hierarchyResult.hierarchy;
+                                computeVirtualRDFdata();
+                                displayVirtualRDFDataWindow();
+                            } else {
+                                alert('Ошибка парсинга иерархии TriG. Убедитесь, что данные корректны.');
+                            }
+                        }
+                    });
+                } catch (error) {
+                    alert(`Ошибка: ${error.message}`);
+                }
+            } else {
+                computeVirtualRDFdata();
+                displayVirtualRDFDataWindow();
+            }
+        }
+
+        /**
+         * Отображает virtualRDFdata в новом окне браузера
+         */
+        function displayVirtualRDFDataWindow() {
+            // Формируем TriG формат для virtualRDFdata
+            let trigContent = '# virtualRDFdata - вычисляемые RDF данные\n';
+            trigContent += '# Сгенерировано автоматически на основе RDF данных\n';
+            trigContent += '#\n';
+            trigContent += '# Содержит вычисленные vad:processSubtype для каждого процесса в каждой схеме\n';
+            trigContent += '#\n';
+            trigContent += '# Подтипы процессов:\n';
+            trigContent += '# - vad:DetailedChild (голубой): процесс с vad:hasTrig, дочерний TriG указывает на текущий\n';
+            trigContent += '# - vad:DetailedExternal (оранжевый): процесс с vad:hasTrig, дочерний TriG НЕ указывает на текущий\n';
+            trigContent += '# - vad:notDetailedChild (зелёный): процесс с vad:hasParentProcess, совпадающим с родителем схемы\n';
+            trigContent += '# - vad:notDetailedExternal (серый): процесс с vad:hasParentProcess, НЕ совпадающим с родителем\n';
+            trigContent += '# - vad:NotDefinedType (красноватый): процесс с vad:hasParentProcess = vad:NotDefined\n\n';
+
+            trigContent += '@prefix rdf: <http://www.w3.org/1999/02/22-rdf-syntax-ns#> .\n';
+            trigContent += '@prefix rdfs: <http://www.w3.org/2000/01/rdf-schema#> .\n';
+            trigContent += '@prefix vad: <http://example.org/vad#> .\n\n';
+
+            // Генерируем содержимое для каждого виртуального TriG
+            Object.entries(virtualRDFdata).forEach(([vTrigId, vTrigData]) => {
+                const vTrigLabel = getPrefixedName(vTrigId, currentPrefixes);
+                const originalTrigLabel = getPrefixedName(vTrigData.trigUri, currentPrefixes);
+
+                trigContent += `# ============================================================================\n`;
+                trigContent += `# ${vTrigLabel} - вычисленные свойства для ${originalTrigLabel}\n`;
+                trigContent += `# ============================================================================\n\n`;
+
+                trigContent += `${vTrigLabel} {\n`;
+
+                // Добавляем processSubtype для каждого процесса
+                Object.entries(vTrigData.processSubtypes).forEach(([processUri, subtype]) => {
+                    const processLabel = getPrefixedName(processUri, currentPrefixes);
+                    trigContent += `    ${processLabel} vad:processSubtype ${subtype} .\n`;
+                });
+
+                trigContent += '}\n\n';
+            });
+
+            // Создаем новое окно
+            const newWindow = window.open('', '_blank', 'width=900,height=700,scrollbars=yes,resizable=yes');
+
+            if (newWindow) {
+                const htmlContent = '<!DOCTYPE html>' +
+                    '<html><head><title>virtualRDFdata</title>' +
+                    '<style>' +
+                    'body { font-family: Consolas, Monaco, monospace; padding: 20px; background-color: #f5f5f5; margin: 0; }' +
+                    '.container { background-color: white; padding: 20px; border-radius: 8px; box-shadow: 0 2px 4px rgba(0,0,0,0.1); }' +
+                    'h1 { color: #333; font-size: 18px; margin-top: 0; border-bottom: 2px solid #9C27B0; padding-bottom: 10px; }' +
+                    'pre { white-space: pre-wrap; word-wrap: break-word; font-size: 13px; line-height: 1.5; margin: 0; color: #333; }' +
+                    '.copy-btn { background-color: #9C27B0; color: white; border: none; padding: 8px 16px; border-radius: 4px; cursor: pointer; margin-right: 10px; margin-bottom: 15px; }' +
+                    '.copy-btn:hover { background-color: #7B1FA2; }' +
+                    '.save-btn { background-color: #4CAF50; color: white; border: none; padding: 8px 16px; border-radius: 4px; cursor: pointer; margin-bottom: 15px; }' +
+                    '.save-btn:hover { background-color: #45a049; }' +
+                    '.comment { color: #6a9955; }' +
+                    '.keyword { color: #0000ff; }' +
+                    '.uri { color: #795E26; }' +
+                    '</style></head>' +
+                    '<body><div class="container">' +
+                    '<h1>virtualRDFdata - Вычисляемые RDF данные</h1>' +
+                    '<button class="copy-btn" id="copy-btn">Копировать в буфер</button>' +
+                    '<button class="save-btn" id="save-btn">Сохранить как файл</button>' +
+                    '<pre id="trig-content"></pre>' +
+                    '</div></body></html>';
+
+                newWindow.document.write(htmlContent);
+                newWindow.document.close();
+
+                // Заполняем содержимое
+                const preElement = newWindow.document.getElementById('trig-content');
+                if (preElement) {
+                    preElement.textContent = trigContent;
+                }
+
+                // Обработчик копирования
+                const copyBtn = newWindow.document.getElementById('copy-btn');
+                if (copyBtn) {
+                    copyBtn.onclick = function() {
+                        newWindow.navigator.clipboard.writeText(trigContent).then(function() {
+                            newWindow.alert('Скопировано в буфер обмена');
+                        }).catch(function() {
+                            const textarea = newWindow.document.createElement('textarea');
+                            textarea.value = trigContent;
+                            newWindow.document.body.appendChild(textarea);
+                            textarea.select();
+                            newWindow.document.execCommand('copy');
+                            newWindow.document.body.removeChild(textarea);
+                            newWindow.alert('Скопировано в буфер обмена');
+                        });
+                    };
+                }
+
+                // Обработчик сохранения
+                const saveBtn = newWindow.document.getElementById('save-btn');
+                if (saveBtn) {
+                    saveBtn.onclick = function() {
+                        const blob = new Blob([trigContent], { type: 'text/turtle' });
+                        const url = URL.createObjectURL(blob);
+                        const a = newWindow.document.createElement('a');
+                        a.href = url;
+                        a.download = 'virtualRDFdata.ttl';
+                        newWindow.document.body.appendChild(a);
+                        a.click();
+                        newWindow.document.body.removeChild(a);
+                        URL.revokeObjectURL(url);
+                    };
+                }
             }
         }
 
@@ -6840,6 +6840,234 @@ ${triples.join('\n')}
                 simpleTripleBtn.style.cursor = 'pointer';
                 simpleTripleBtn.title = '';
             }
+        }
+
+        // ============================================================================
+        // ФУНКЦИИ ДЛЯ УДАЛЕНИЯ TriG (Del TriG)
+        // ============================================================================
+
+        /**
+         * Открывает модальное окно удаления TriG
+         */
+        function openDelTrigModal() {
+            const modal = document.getElementById('del-trig-modal');
+            const trigSelect = document.getElementById('del-trig-select');
+            const warningDiv = document.getElementById('del-trig-warning');
+            const confirmBtn = document.getElementById('del-trig-confirm-btn');
+
+            // Очищаем предыдущее состояние
+            warningDiv.style.display = 'none';
+            confirmBtn.disabled = true;
+
+            // Заполняем список TriG для удаления (только VADProcessDia)
+            trigSelect.innerHTML = '<option value="">-- Выберите TriG --</option>';
+
+            const trigs = getAllTriGs();
+            trigs.forEach(t => {
+                // Пропускаем специальные графы (ptree, rtree)
+                if (t.uri === PTREE_GRAPH_URI || t.uri === RTREE_GRAPH_URI) return;
+
+                const option = document.createElement('option');
+                option.value = t.uri;
+                const id = getPrefixedName(t.uri, currentPrefixes);
+                const displayText = t.label && t.label !== id ? `${id} (${t.label})` : id;
+                option.textContent = displayText;
+                trigSelect.appendChild(option);
+            });
+
+            // Очищаем информационный блок
+            document.getElementById('del-trig-info').innerHTML = 'Выберите TriG для просмотра информации';
+
+            modal.style.display = 'block';
+        }
+
+        /**
+         * Закрывает модальное окно удаления TriG
+         */
+        function closeDelTrigModal() {
+            const modal = document.getElementById('del-trig-modal');
+            modal.style.display = 'none';
+        }
+
+        /**
+         * Обновляет информацию о выбранном TriG для удаления
+         */
+        function updateDelTrigInfo() {
+            const trigUri = document.getElementById('del-trig-select').value;
+            const infoDiv = document.getElementById('del-trig-info');
+            const warningDiv = document.getElementById('del-trig-warning');
+            const confirmBtn = document.getElementById('del-trig-confirm-btn');
+
+            if (!trigUri) {
+                infoDiv.innerHTML = 'Выберите TriG для просмотра информации';
+                warningDiv.style.display = 'none';
+                confirmBtn.disabled = true;
+                return;
+            }
+
+            // Получаем информацию о TriG
+            const graphInfo = trigHierarchy[trigUri];
+            if (!graphInfo) {
+                infoDiv.innerHTML = 'Ошибка: TriG не найден';
+                warningDiv.style.display = 'none';
+                confirmBtn.disabled = true;
+                return;
+            }
+
+            const trigLabel = getPrefixedName(trigUri, currentPrefixes);
+
+            // Проверяем, есть ли дочерние TriG
+            const childTrigs = [];
+            Object.entries(trigHierarchy).forEach(([uri, info]) => {
+                if (info.hasParent === trigUri) {
+                    childTrigs.push({
+                        uri: uri,
+                        label: getPrefixedName(uri, currentPrefixes)
+                    });
+                }
+            });
+
+            // Формируем информацию
+            let infoHtml = `<strong>ID:</strong> ${trigLabel}<br>`;
+            infoHtml += `<strong>Label:</strong> ${graphInfo.label || 'не указан'}<br>`;
+            infoHtml += `<strong>Parent:</strong> ${graphInfo.hasParent ? getPrefixedName(graphInfo.hasParent, currentPrefixes) : 'не указан'}<br>`;
+            infoHtml += `<strong>Процессов:</strong> ${graphInfo.processes ? graphInfo.processes.length : 0}`;
+
+            infoDiv.innerHTML = infoHtml;
+
+            // Проверяем наличие дочерних TriG
+            if (childTrigs.length > 0) {
+                const childLabels = childTrigs.map(c => c.label).join(', ');
+                warningDiv.innerHTML = `<strong>⚠️ ОШИБКА:</strong> Удаление невозможно!<br><br>` +
+                    `Данный TriG (${trigLabel}) является родительским для следующих TriG:<br>` +
+                    `<strong>${childLabels}</strong><br><br>` +
+                    `Сначала измените ссылку vad:hasParentTrig у дочерних TriG или удалите их.`;
+                warningDiv.style.display = 'block';
+                confirmBtn.disabled = true;
+            } else {
+                warningDiv.style.display = 'none';
+                confirmBtn.disabled = false;
+            }
+        }
+
+        /**
+         * Генерирует SPARQL запрос для удаления TriG
+         * При удалении:
+         * 1. Проверяет наличие дочерних TriG (если есть - ошибка)
+         * 2. Удаляет vad:hasTrig из ptree
+         * 3. Добавляет vad:hasParentProcess к процессу (ссылается на родителя родительского TriG)
+         * 4. Удаляет граф TriG
+         * 5. Пересчитывает virtualRDFdata
+         */
+        function deleteTriG() {
+            const trigUri = document.getElementById('del-trig-select').value;
+
+            if (!trigUri) {
+                alert('Ошибка: Выберите TriG для удаления');
+                return;
+            }
+
+            const graphInfo = trigHierarchy[trigUri];
+            if (!graphInfo) {
+                alert('Ошибка: TriG не найден');
+                return;
+            }
+
+            // Получаем процесс, который определяется этим TriG
+            let definingProcess = null;
+            graphInfo.quads.forEach(quad => {
+                const predicateLabel = getPrefixedName(quad.predicate.value, currentPrefixes);
+                if (predicateLabel === 'vad:definesProcess' || quad.predicate.value === 'http://example.org/vad#definesProcess') {
+                    definingProcess = quad.object.value;
+                }
+            });
+
+            if (!definingProcess) {
+                alert('Ошибка: Не найден процесс, определяемый этим TriG (vad:definesProcess)');
+                return;
+            }
+
+            // Получаем родительский TriG
+            const parentTrigUri = graphInfo.hasParent;
+            if (!parentTrigUri || parentTrigUri === 'http://example.org/vad#root') {
+                // Если родитель root, устанавливаем hasParentProcess = NotDefined
+                // (или можно запретить удаление корневых TriG)
+            }
+
+            // Получаем процесс-владельца родительского TriG (для hasParentProcess)
+            let parentDefiningProcess = null;
+            if (parentTrigUri && parentTrigUri !== 'http://example.org/vad#root') {
+                const parentGraphInfo = trigHierarchy[parentTrigUri];
+                if (parentGraphInfo) {
+                    parentGraphInfo.quads.forEach(quad => {
+                        const predicateLabel = getPrefixedName(quad.predicate.value, currentPrefixes);
+                        if (predicateLabel === 'vad:definesProcess' || quad.predicate.value === 'http://example.org/vad#definesProcess') {
+                            parentDefiningProcess = quad.object.value;
+                        }
+                    });
+                }
+            }
+
+            // Если не нашли родительский процесс, используем NotDefined
+            if (!parentDefiningProcess) {
+                parentDefiningProcess = 'http://example.org/vad#NotDefined';
+            }
+
+            // Формируем SPARQL запрос
+            const trigLabel = getPrefixedName(trigUri, currentPrefixes);
+            const processLabel = getPrefixedName(definingProcess, currentPrefixes);
+            const parentProcessLabel = getPrefixedName(parentDefiningProcess, currentPrefixes);
+
+            const prefixDeclarations = generateSparqlPrefixes(currentPrefixes);
+
+            const sparqlQuery = `${prefixDeclarations}# Правило: При удалении TriG возвращаем vad:hasParentProcess
+# Удаляем TriG "${trigLabel}" и обновляем связи процесса
+
+# 1. Удаляем vad:hasTrig из ptree
+DELETE {
+    GRAPH vad:ptree {
+        ${processLabel} vad:hasTrig ${trigLabel} .
+    }
+}
+WHERE {
+    GRAPH vad:ptree {
+        ${processLabel} vad:hasTrig ${trigLabel} .
+    }
+};
+
+# 2. Добавляем vad:hasParentProcess к процессу
+INSERT DATA {
+    GRAPH vad:ptree {
+        ${processLabel} vad:hasParentProcess ${parentProcessLabel} .
+    }
+};
+
+# 3. Удаляем содержимое TriG графа
+# ПРИМЕЧАНИЕ: DROP GRAPH не поддерживается напрямую в N3.js/Comunica
+# Вместо этого удаляем все триплеты из графа
+DELETE {
+    GRAPH ${trigLabel} {
+        ?s ?p ?o .
+    }
+}
+WHERE {
+    GRAPH ${trigLabel} {
+        ?s ?p ?o .
+    }
+}`;
+
+            // Записываем SPARQL в поле результата
+            const resultTextarea = document.getElementById('result-sparql-query');
+            if (resultTextarea) {
+                resultTextarea.value = sparqlQuery;
+            }
+
+            closeDelTrigModal();
+            showSmartDesignMessage(
+                `SPARQL запрос для удаления TriG "${trigLabel}" сгенерирован.\n` +
+                `После применения необходимо пересчитать virtualRDFdata.`,
+                'warning'
+            );
         }
 
         /**

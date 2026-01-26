@@ -1,0 +1,63 @@
+# virtualRDFdata_VADv4.ttl
+# Вычисленные (виртуальные) RDF данные на основе примера VADv4
+# Содержит вычисляемые vad:processSubtype для каждого процесса в соответствующем TriG
+#
+# Алгоритм вычисления vad:processSubtype:
+# 1. Если процесс имеет vad:hasTrig (Detailed):
+#    - DetailedChild: дочерний TriG имеет hasParentTrig на текущий TriG
+#    - DetailedExternal: дочерний TriG НЕ имеет hasParentTrig на текущий TriG
+# 2. Если процесс имеет vad:hasParentProcess (notDetailed):
+#    - notDetailedChild: hasParentProcess совпадает с процессом, определяемым текущим TriG
+#    - notDetailedExternal: hasParentProcess НЕ совпадает с процессом текущего TriG
+#    - NotDefinedType: hasParentProcess = vad:NotDefined
+#
+# Формат: vad:vt_<trigName> - виртуальный TriG для реального vad:t_<trigName>
+
+@prefix rdf: <http://www.w3.org/1999/02/22-rdf-syntax-ns#> .
+@prefix rdfs: <http://www.w3.org/2000/01/rdf-schema#> .
+@prefix vad: <http://example.org/vad#> .
+
+# ============================================================================
+# Виртуальный TriG для vad:t_p1 (корневой граф, definesProcess = p1)
+# Процессы на схеме: p1.1, p1.2
+# ============================================================================
+
+vad:vt_p1 {
+    # p1.1 имеет vad:hasTrig vad:t_p1.1, где t_p1.1 имеет hasParentTrig = t_p1
+    # Значит p1.1 - DetailedChild (дочерний TriG указывает на текущий)
+    vad:p1.1 vad:processSubtype vad:DetailedChild .
+
+    # p1.2 имеет vad:hasParentProcess vad:p1, а t_p1 definesProcess = p1
+    # Значит p1.2 - notDetailedChild (родитель совпадает с текущим процессом)
+    vad:p1.2 vad:processSubtype vad:notDetailedChild .
+}
+
+# ============================================================================
+# Виртуальный TriG для vad:t_p1.1 (дочерний граф, definesProcess = p1.1)
+# Процессы на схеме: p1.1.1, p1.1.2
+# ============================================================================
+
+vad:vt_p1.1 {
+    # p1.1.1 имеет vad:hasParentProcess vad:p1.1, а t_p1.1 definesProcess = p1.1
+    # Значит p1.1.1 - notDetailedChild (родитель совпадает с текущим процессом)
+    vad:p1.1.1 vad:processSubtype vad:notDetailedChild .
+
+    # p1.1.2 имеет vad:hasParentProcess vad:p2, а t_p1.1 definesProcess = p1.1
+    # Значит p1.1.2 - notDetailedExternal (родитель НЕ совпадает с текущим процессом)
+    vad:p1.1.2 vad:processSubtype vad:notDetailedExternal .
+}
+
+# ============================================================================
+# Виртуальный TriG для vad:t_p2 (корневой граф, definesProcess = p2)
+# Процессы на схеме: p2.1, p2.2
+# ============================================================================
+
+vad:vt_p2 {
+    # p2.1 имеет vad:hasParentProcess vad:p2, а t_p2 definesProcess = p2
+    # Значит p2.1 - notDetailedChild (родитель совпадает с текущим процессом)
+    vad:p2.1 vad:processSubtype vad:notDetailedChild .
+
+    # p2.2 имеет vad:hasParentProcess vad:NotDefined
+    # Значит p2.2 - NotDefinedType
+    vad:p2.2 vad:processSubtype vad:NotDefinedType .
+}
