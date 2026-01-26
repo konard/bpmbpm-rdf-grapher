@@ -1,0 +1,43 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Test Debug</title>
+</head>
+<body>
+    <h1>Debug Test</h1>
+    <div id="test-results"></div>
+    
+    <script>
+        console.log('Debug test started');
+        
+        // Проверим основные функции
+        const results = document.getElementById('test-results');
+        
+        function testBasicFunctionality() {
+            let html = '<h2>Test Results:</h2>';
+            
+            // Test 1: Check if elements exist
+            const testElements = [
+                'rdf-input',
+                'input-format', 
+                'visualize-btn',
+                'max-label-length',
+                'max-vad-row-length'
+            ];
+            
+            html += '<h3>Element Tests:</h3>';
+            testElements.forEach(id => {
+                const element = document.getElementById(id);
+                html += `<p>${id}: ${element ? 'EXISTS' : 'MISSING'}</p>`;
+            });
+            
+            results.innerHTML = html;
+        }
+        
+        // Run tests
+        testBasicFunctionality();
+    </script>
+</body>
+</html>
