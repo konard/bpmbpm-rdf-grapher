@@ -1120,6 +1120,24 @@
             font-style: italic;
         }
 
+        /* Стили для секций свойств */
+        .trig-property-section {
+            margin-bottom: 5px;
+        }
+
+        .trig-property-section.concept-section {
+            background-color: #E3F2FD;
+            border-left: 3px solid #2196F3;
+            margin-left: -10px;
+            padding-left: 10px;
+            padding-top: 5px;
+            padding-bottom: 5px;
+        }
+
+        .trig-property-item.concept-property {
+            background-color: transparent;
+        }
+
         /* ============================================================================
            СТИЛИ ДЛЯ РЕЖИМА SPARQL SMART DESIGN
            ============================================================================ */
