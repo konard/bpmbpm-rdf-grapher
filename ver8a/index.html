@@ -99,7 +99,7 @@
                 </div>
             </div>
 
-            <div class="form-group" id="max-vad-row-length-group" style="display: none;">
+            <div class="form-group" id="max-vad-row-length-group">
                 <label for="max-vad-row-length">Макс. длина VAD:</label>
                 <input type="number" id="max-vad-row-length" value="8" min="2" max="20" style="width: 100%; padding: 10px; border: 1px solid #ddd; border-radius: 4px; font-size: 14px;">
                 <div class="mode-description" id="max-vad-row-length-description">
@@ -7234,6 +7234,15 @@ WHERE {
                 if (mode === 'vad' || mode === 'vad-trig') {
                     maxVadRowLengthGroup.style.display = 'block';
                     console.log(`Showing max VAD length field for mode: ${mode}`);
+                    // Дополнительная проверка что элемент действительно виден
+                    setTimeout(() => {
+                        const display = window.getComputedStyle(maxVadRowLengthGroup).display;
+                        if (display === 'none') {
+                            maxVadRowLengthGroup.style.display = 'block !important';
+                            maxVadRowLengthGroup.setAttribute('style', 'display: block !important');
+                            console.log('Force-showing max VAD length field with !important');
+                        }
+                    }, 100);
                 } else {
                     maxVadRowLengthGroup.style.display = 'none';
                 }
@@ -7287,14 +7296,38 @@ WHERE {
                     smartDesignContainer.classList.add('visible');
                     // В режиме SPARQL Smart Design всегда также отображается окно SPARQL запрос
                     sparqlPanel.classList.add('visible');
+                    console.log('Smart Design panels made visible');
+                    
+                    // Дополнительная проверка что контейнер действительно виден
+                    setTimeout(() => {
+                        if (smartDesignContainer) {
+                            const display = window.getComputedStyle(smartDesignContainer).display;
+                            console.log('Smart Design container display after timeout:', display);
+                            if (display === 'none') {
+                                smartDesignContainer.style.display = 'block !important';
+                                smartDesignContainer.setAttribute('style', 'display: block !important');
+                                console.log('Force-showing Smart Design container with !important');
+                            }
+                        }
+                    }, 100);
+                    
                     // Заполняем выпадающие списки при активации Smart Design
-                    populateSmartDesignDropdowns();
+                    if (typeof populateSmartDesignDropdowns === 'function') {
+                        populateSmartDesignDropdowns();
+                    }
                     // Показываем справочные сообщения при открытии панели
-                    showSmartDesignMessage('Выберите TriG, затем Subject, Predicate и Object. Нажмите "Создать SPARQL" для генерации запроса.', 'info');
-                    showResultSparqlMessage('После генерации SPARQL запроса нажмите "Применить как Simple Triple" или "Применить как Shorthand Triple" для добавления в RDF данные.', 'info');
+                    if (typeof showSmartDesignMessage === 'function') {
+                        showSmartDesignMessage('Выберите TriG, затем Subject, Predicate и Object. Нажмите "Создать SPARQL" для генерации запроса.', 'info');
+                    }
+                    if (typeof showResultSparqlMessage === 'function') {
+                        showResultSparqlMessage('После генерации SPARQL запроса нажмите "Применить как Simple Triple" или "Применить как Shorthand Triple" для добавления в RDF данные.', 'info');
+                    }
                 } else {
                     // Показываем сообщение, что Smart Design доступен только в VAD TriG
-                    showSmartDesignMessage('SPARQL Smart Design доступен только в режиме "Режим VAD TriG"', 'info');
+                    console.log('Smart Design not available - not VAD TriG mode');
+                    if (typeof showSmartDesignMessage === 'function') {
+                        showSmartDesignMessage('SPARQL Smart Design доступен только в режиме "Режим VAD TriG"', 'info');
+                    }
                 }
             }
             
@@ -8992,6 +9025,44 @@ WHERE {
 
         // Загружаем технологическое приложение при старте
         document.addEventListener('DOMContentLoaded', function() {
+            console.log('DOMContentLoaded: Initializing ver8a...');
+            
+            // Первоначальная инициализация
+            try {
+                // Устанавливаем правильные значения по умолчанию
+                const vizMode = document.getElementById('visualization-mode');
+                const sparqlMode = document.getElementById('sparql-mode');
+                
+                if (vizMode) {
+                    console.log('Visualization mode found:', vizMode.value);
+                } else {
+                    console.error('visualization-mode element not found');
+                }
+                
+                if (sparqlMode) {
+                    console.log('SPARQL mode found:', sparqlMode.value);
+                } else {
+                    console.error('sparql-mode element not found');
+                }
+                
+                // Обновляем описания режимов
+                if (typeof updateModeDescription === 'function') {
+                    updateModeDescription();
+                    console.log('updateModeDescription called successfully');
+                }
+                
+                // Обновляем SPARQL панели
+                if (typeof toggleSparqlPanel === 'function') {
+                    toggleSparqlPanel();
+                    console.log('toggleSparqlPanel called successfully');
+                }
+                
+                console.log('DOMContentLoaded: Initial initialization complete');
+            } catch (error) {
+                console.error('Error in initial DOMContentLoaded:', error);
+            }
+            
+            // Загружаем технологическое приложение
             loadTechAppendix();
             
             // Дополнительная инициализация для гарантии работы
@@ -9001,17 +9072,47 @@ WHERE {
                     // Принудительно обновляем состояние режимов
                     if (typeof updateModeDescription === 'function') {
                         updateModeDescription();
+                        console.log('updateModeDescription called again');
                     }
                     
                     // Проверяем что все элементы на месте
                     const vizMode = document.getElementById('visualization-mode');
                     const sparqlMode = document.getElementById('sparql-mode');
+                    const maxVadGroup = document.getElementById('max-vad-row-length-group');
+                    const smartContainer = document.getElementById('smart-design-container');
                     
-                    if (vizMode && vizMode.value === 'vad-trig') {
-                        console.log('VAD TriG mode confirmed, ensuring panels are properly set');
-                        if (typeof toggleSparqlPanel === 'function') {
-                            toggleSparqlPanel();
+                    if (vizMode) {
+                        console.log('Visualization mode confirmed:', vizMode.value);
+                        
+                        // Проверяем видимость поля Макс. длина VAD
+                        if (maxVadGroup) {
+                            const display = window.getComputedStyle(maxVadGroup).display;
+                            console.log('Max VAD Length group display:', display);
+                            if (vizMode.value === 'vad-trig' && display === 'none') {
+                                maxVadGroup.style.display = 'block';
+                                console.log('Force-showing Max VAD Length group');
+                            }
                         }
+                    }
+                    
+                    if (sparqlMode) {
+                        console.log('SPARQL mode confirmed:', sparqlMode.value);
+                        
+                        // Проверяем видимость Smart Design
+                        if (smartContainer) {
+                            const display = window.getComputedStyle(smartContainer).display;
+                            console.log('Smart Design container display:', display);
+                            if (vizMode && vizMode.value === 'vad-trig' && sparqlMode.value === 'smart-design' && display === 'none') {
+                                smartContainer.classList.add('visible');
+                                console.log('Force-showing Smart Design container');
+                            }
+                        }
+                    }
+                    
+                    // Снова вызываем toggleSparqlPanel для гарантии
+                    if (typeof toggleSparqlPanel === 'function') {
+                        toggleSparqlPanel();
+                        console.log('toggleSparqlPanel called again');
                     }
                     
                     console.log('DOMContentLoaded: Additional initialization complete');
