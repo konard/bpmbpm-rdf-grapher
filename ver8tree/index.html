@@ -296,6 +296,7 @@
             <button onclick="downloadPNG()">Скачать PNG</button>
             <button onclick="openInNewWindowGitHub()">Показать в окне github</button>
             <button onclick="openInNewWindowLdfFi()">Показать в окне ldf.fi</button>
+            <button onclick="openInNewWindowLdfFiTrig()">Показать в окне ldf.fi (TriG)</button>
             <button onclick="openInNewWindowGraphvizOnline()">Показать в окне GraphvizOnline</button>
         </div>
         <div class="legend-panel" id="legend-panel" style="display: none;">
@@ -683,10 +684,7 @@ vad:t_p2 {
                 'rdf:type',
                 'http://www.w3.org/1999/02/22-rdf-syntax-ns#type',
                 'vad:hasParentObj',
-                'http://example.org/vad#hasParentObj',
-                // Для обратной совместимости со старыми данными
-                'vad:hasParentTrig',
-                'http://example.org/vad#hasParentTrig'
+                'http://example.org/vad#hasParentObj'
             ]
         };
 
@@ -766,9 +764,6 @@ vad:t_p2 {
             // Новый предикат для иерархии объектов
             'vad:hasParentObj',
             'http://example.org/vad#hasParentObj',
-            // Устаревший предикат (для обратной совместимости)
-            'vad:hasParentTrig',
-            'http://example.org/vad#hasParentTrig',
             'vad:includes',
             'http://example.org/vad#includes',
             'vad:processSubtype',
@@ -910,9 +905,7 @@ vad:t_p2 {
                 vadProcessDia: [
                     'rdf:type',
                     'rdfs:label',
-                    'vad:hasParentObj',  // Новый предикат для иерархии объектов
-                    // Устаревшие предикаты (для обратной совместимости)
-                    'vad:hasParentTrig',
+                    'vad:hasParentObj',
                     'vad:definesProcess'
                 ]
             },
@@ -937,8 +930,7 @@ vad:t_p2 {
                 ptree: [
                     'rdf:type',
                     'rdfs:label',
-                    'vad:hasParentObj',
-                    'vad:hasParentTrig'
+                    'vad:hasParentObj'
                 ]
             },
             // ExecutorTree (vad:rtree)
@@ -946,8 +938,7 @@ vad:t_p2 {
                 rtree: [
                     'rdf:type',
                     'rdfs:label',
-                    'vad:hasParentObj',
-                    'vad:hasParentTrig'
+                    'vad:hasParentObj'
                 ]
             }
         };
@@ -1561,7 +1552,7 @@ vad:t_p2 {
                 description: 'Связь группы с исполнителями'
             },
             'HasParentStyle': {
-                predicates: ['vad:hasParentObj', 'http://example.org/vad#hasParentObj', 'vad:hasParentTrig', 'http://example.org/vad#hasParentTrig'],
+                predicates: ['vad:hasParentObj', 'http://example.org/vad#hasParentObj'],
                 dot: 'color="#999999" penwidth="1" style="dashed" arrowhead="empty"',
                 label: 'Родитель (vad:hasParentObj)',
                 description: 'Связь с родительским объектом'
@@ -2151,13 +2142,8 @@ WHERE {
                     }
                 }
 
-                // vad:hasParentObj (новый предикат)
+                // vad:hasParentObj
                 if (predicateLabel === 'vad:hasParentObj' || predicateUri === 'http://example.org/vad#hasParentObj') {
-                    allObjects[subjectUri].hasParent = quad.object.value;
-                }
-
-                // vad:hasParentTrig (устаревший предикат, для обратной совместимости)
-                if ((predicateLabel === 'vad:hasParentTrig' || predicateUri === 'http://example.org/vad#hasParentTrig') && !allObjects[subjectUri].hasParent) {
                     allObjects[subjectUri].hasParent = quad.object.value;
                 }
 
@@ -4332,11 +4318,6 @@ WHERE {
                     if (predicateLabel === 'vad:hasNext' || predicateUri === 'http://example.org/vad#hasNext') {
                         processInfo.hasNext.push(objectValue);
                         hasNextEdges.push({ from: subjectUri, to: objectValue });
-                    }
-
-                    // Собираем hasParent
-                    if (predicateLabel === 'vad:hasParentTrig' || predicateUri === 'http://example.org/vad#hasParentTrig') {
-                        processInfo.hasParent = objectValue;
                     }
                 }
 
@@ -7916,6 +7897,31 @@ ${triples.join('\n')}
 
             // Формируем URL для внешнего сервиса
             const serviceUrl = `https://www.ldf.fi/service/rdf-grapher?rdf=${encodedRdf}&from=${fromFormat}&to=png`;
+
+            // Открываем в новом окне
+            window.open(serviceUrl, '_blank');
+        }
+
+        /**
+         * Открывает визуализацию в новом окне через внешний LDF сервис с форматом TriG
+         * Формирует URL с параметрами: rdf=данные&from=trig&to=png
+         */
+        function openInNewWindowLdfFiTrig() {
+            // Получаем входные данные
+            const rdfInput = document.getElementById('rdf-input').value.trim();
+
+            // Проверяем, что данные введены
+            if (!rdfInput) {
+                alert('Пожалуйста, введите RDF данные');
+                return;
+            }
+
+            // Кодируем RDF данные для URL
+            // Заменяем пробелы на + для совместимости с LDF сервисом
+            const encodedRdf = encodeURIComponent(rdfInput).replace(/%20/g, '+');
+
+            // Формируем URL для внешнего сервиса с явным указанием формата TriG
+            const serviceUrl = `https://www.ldf.fi/service/rdf-grapher?rdf=${encodedRdf}&from=trig&to=png`;
 
             // Открываем в новом окне
             window.open(serviceUrl, '_blank');
