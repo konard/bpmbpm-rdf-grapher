@@ -203,6 +203,54 @@ vad:generationRule
     dcterms:description "Описывает правило автоматической генерации" .
 
 # ==============================================================================
+# ПРЕДИКАТ hasNodeStyle - ОПРЕДЕЛЕНИЕ ВИЗУАЛЬНОГО СТИЛЯ УЗЛА
+# ==============================================================================
+
+vad:hasNodeStyle
+    rdf:type rdf:Property, owl:DatatypeProperty ;
+    rdfs:label "hasNodeStyle" ;
+    rdfs:domain rdfs:Class ;
+    rdfs:range xsd:string ;
+    rdfs:comment """
+        Предикат hasNodeStyle определяет визуальный стиль узла в формате DOT.
+
+        Используется для подтипов процессов, которые имеют отдельное визуальное
+        представление на диаграмме:
+        - vad:DetailedChild - голубая заливка
+        - vad:DetailedExternal - синяя заливка
+        - vad:notDetailedChild - зелёная заливка
+        - vad:notDetailedExternal - светло-зелёная заливка
+        - vad:NotDefinedType - серая заливка (пунктир)
+
+        Промежуточные классы (vad:Detailed, vad:notDetailed) НЕ имеют этого
+        свойства, т.к. они не отображаются в легенде как отдельные стили.
+
+        Значение представляет собой DOT-атрибуты узла, например:
+        'shape="cds" height="0.8" width="1.5" color="#1565C0" fillcolor="#90CAF9"'
+
+        Связь с JS-кодом: значения считываются при старте программы и
+        используются для настройки VADNodeStyles.
+    """ ;
+    dcterms:description "Визуальный стиль узла в формате DOT (для подтипов со стилями)" .
+
+vad:styleLegendLabel
+    rdf:type rdf:Property, owl:DatatypeProperty ;
+    rdfs:label "styleLegendLabel" ;
+    rdfs:domain rdfs:Class ;
+    rdfs:range xsd:string ;
+    rdfs:comment """
+        Предикат styleLegendLabel определяет краткое название стиля для легенды.
+
+        Используется вместе с vad:hasNodeStyle для формирования легенды стилей.
+        Значение должно быть кратким (2-3 слова) и понятным пользователю.
+
+        Примеры:
+        - "Детализ. подпроцесс (DetailedChild)"
+        - "Не детализ. внешний (notDetailedExternal)"
+    """ ;
+    dcterms:description "Краткое название стиля для легенды" .
+
+# ==============================================================================
 # ПОДТИПЫ ПРОЦЕССОВ (PROCESS SUBTYPES)
 # ==============================================================================
 # Перенесены из vad-basic-ontology.ttl, так как не используются в RDF-данных
@@ -245,6 +293,8 @@ vad:DetailedChild
     rdf:type rdfs:Class, owl:Class ;
     rdfs:subClassOf vad:Detailed ;
     rdfs:label "DetailedChild" ;
+    vad:hasNodeStyle "shape=\"cds\" height=\"0.8\" width=\"1.5\" color=\"#1565C0\" fillcolor=\"#90CAF9\" fontname=\"Arial\" fontsize=\"11\" style=\"filled\"" ;
+    vad:styleLegendLabel "Детализ. подпроцесс (DetailedChild)" ;
     rdfs:comment """
         DetailedChild - детализированный процесс, являющийся подпроцессом.
 
@@ -257,7 +307,7 @@ vad:DetailedChild
         - TriG vad:t_p1.1 имеет vad:hasParentObj vad:p1.1
         - Следовательно, индивид находится в схеме родительского процесса -> DetailedChild
 
-        Визуализация: отдельный цвет заливки в легенде.
+        Визуализация: голубая заливка (#90CAF9) с синей рамкой (#1565C0).
     """ ;
     dcterms:description "Детализированный процесс-подпроцесс" .
 
@@ -269,6 +319,8 @@ vad:DetailedExternal
     rdf:type rdfs:Class, owl:Class ;
     rdfs:subClassOf vad:Detailed ;
     rdfs:label "DetailedExternal" ;
+    vad:hasNodeStyle "shape=\"cds\" height=\"0.8\" width=\"1.5\" color=\"#0D47A1\" fillcolor=\"#64B5F6\" fontname=\"Arial\" fontsize=\"11\" style=\"filled\"" ;
+    vad:styleLegendLabel "Детализ. внешний (DetailedExternal)" ;
     rdfs:comment """
         DetailedExternal - детализированный процесс, не являющийся подпроцессом.
 
@@ -281,7 +333,7 @@ vad:DetailedExternal
         - TriG vad:t_p1.1 имеет vad:hasParentObj vad:p1.1 (не p2)
         - Следовательно, индивид находится во внешней схеме -> DetailedExternal
 
-        Визуализация: отдельный цвет заливки в легенде.
+        Визуализация: синяя заливка (#64B5F6) с тёмно-синей рамкой (#0D47A1).
     """ ;
     dcterms:description "Детализированный внешний процесс" .
 
@@ -321,13 +373,15 @@ vad:notDetailedChild
     rdf:type rdfs:Class, owl:Class ;
     rdfs:subClassOf vad:notDetailed ;
     rdfs:label "notDetailedChild" ;
+    vad:hasNodeStyle "shape=\"cds\" height=\"0.8\" width=\"1.5\" color=\"#2E7D32\" fillcolor=\"#A5D6A7\" fontname=\"Arial\" fontsize=\"11\" style=\"filled\"" ;
+    vad:styleLegendLabel "Не детализ. подпроцесс (notDetailedChild)" ;
     rdfs:comment """
         notDetailedChild - не детализированный процесс, являющийся подпроцессом.
 
         Признак: индивид процесса без vad:hasTrig находится в схеме,
         которая является схемой его родительского процесса.
 
-        Визуализация: отдельный цвет заливки в легенде.
+        Визуализация: зелёная заливка (#A5D6A7) с тёмно-зелёной рамкой (#2E7D32).
     """ ;
     dcterms:description "Не детализированный процесс-подпроцесс" .
 
@@ -339,13 +393,15 @@ vad:notDetailedExternal
     rdf:type rdfs:Class, owl:Class ;
     rdfs:subClassOf vad:notDetailed ;
     rdfs:label "notDetailedExternal" ;
+    vad:hasNodeStyle "shape=\"cds\" height=\"0.8\" width=\"1.5\" color=\"#1B5E20\" fillcolor=\"#C8E6C9\" fontname=\"Arial\" fontsize=\"11\" style=\"filled\"" ;
+    vad:styleLegendLabel "Не детализ. внешний (notDetailedExternal)" ;
     rdfs:comment """
         notDetailedExternal - не детализированный процесс, не являющийся подпроцессом.
 
         Признак: индивид процесса без vad:hasTrig находится в схеме,
         которая НЕ является схемой его родительского процесса.
 
-        Визуализация: отдельный цвет заливки в легенде.
+        Визуализация: светло-зелёная заливка (#C8E6C9) с тёмно-зелёной рамкой (#1B5E20).
     """ ;
     dcterms:description "Не детализированный внешний процесс" .
 
@@ -356,6 +412,8 @@ vad:notDetailedExternal
 vad:NotDefinedType
     rdf:type rdfs:Class, owl:Class ;
     rdfs:label "NotDefinedType" ;
+    vad:hasNodeStyle "shape=\"cds\" height=\"0.8\" width=\"1.5\" color=\"#616161\" fillcolor=\"#BDBDBD\" fontname=\"Arial\" fontsize=\"11\" style=\"filled,dashed\"" ;
+    vad:styleLegendLabel "Неопред. родитель (NotDefinedType)" ;
     rdfs:comment """
         NotDefinedType - процесс с неопределённым родительским элементом.
 
@@ -371,7 +429,7 @@ vad:NotDefinedType
         Такие процессы не могут быть использованы для создания новых TriG
         до указания корректного родительского элемента.
 
-        Визуализация: отдельный цвет заливки в легенде.
+        Визуализация: серая заливка (#BDBDBD) с пунктирной рамкой (#616161).
     """ ;
     dcterms:description "Процесс с неопределённым родителем (pNotDefined)" .
 
