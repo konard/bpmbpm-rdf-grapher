@@ -12,3 +12,6 @@ https://bpmbpm.github.io/rdf-grapher/ver8tree/
 Нажать кнопку (press the button) **Визуализировать**
 
 Выбор режима:  "SPARQL Smart Design"
+
+### target
+Семантический аналог для http://www.bpm.processoffice.ru/
