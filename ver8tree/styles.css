@@ -854,7 +854,7 @@
             border: 2px solid #4CAF50;
             border-radius: 8px;
             box-shadow: 0 2px 8px rgba(0,0,0,0.1);
-            flex: 1;
+            flex: 2;
             overflow: hidden;
             display: flex;
             flex-direction: column;
@@ -876,8 +876,8 @@
         }
 
         .trig-tree-item {
-            padding: 6px 10px;
-            margin: 2px 0;
+            padding: 3px 10px;
+            margin: 1px 0;
             cursor: pointer;
             border-radius: 4px;
             font-family: 'Consolas', 'Monaco', monospace;

@@ -26,8 +26,7 @@
     <div class="description">
         <p>
             <strong>Загрузить пример RDF данных:</strong>
-            <span class="example-link" onclick="loadExampleTrigVADv2()">Trig VADv2</span>
-            <span class="example-link" onclick="loadExampleTrigVADv2tree()">Trig VADv2tree</span>
+            <span class="example-link" onclick="loadExampleTrigVADv5()">Trig_VADv5</span>
         </p>
         <div id="example-status" class="example-status" style="display: none;"></div>
     </div>
@@ -207,12 +206,6 @@
                 <div class="new-trig-field">
                     <label for="new-trig-label">rdfs:label (автоматически):</label>
                     <input type="text" id="new-trig-label" placeholder="Схема процесса {processLabel}" readonly style="background-color: #f5f5f5;">
-                </div>
-                <div class="new-trig-field">
-                    <label for="new-trig-parent">vad:hasParentObj (родитель):</label>
-                    <select id="new-trig-parent">
-                        <option value="">-- Выберите родителя --</option>
-                    </select>
                 </div>
             </div>
             <div class="new-trig-modal-buttons">
@@ -3321,26 +3314,23 @@ WHERE {
          * 4. При ошибке CORS (локальный файл): показывает информацию и использует встроенные данные
          * 5. При другой ошибке: отображает подробную информацию об ошибке
          */
-        function loadExampleTrigVADv2() {
-            loadExampleFromFile('Trig_VADv2.ttl', 'Trig VADv2', 'trig', 'vad-trig', 'trig-vad-v2');
-        }
-
         /**
-         * Загружает пример TriG VADv2tree с множественной иерархией TriG графов
+         * Загружает пример TriG VADv5 с иерархией объектов через hasParentObj
          * Содержит:
-         * - t_pGA, t_pGA2, t_pGA3: корневые графы (hasParentTrig = root)
-         * - t_p1: дочерний граф (hasParentTrig = t_pGA)
-         * Демонстрирует отображение нескольких TriG на одном уровне иерархии
+         * - vad:root: корень дерева (TechTree)
+         * - vad:ptree: дерево процессов (ObjectTree)
+         * - vad:rtree: дерево исполнителей (ObjectTree)
+         * - t_pGA, t_p1: схемы процессов (VADProcessDia)
          */
-        function loadExampleTrigVADv2tree() {
-            loadExampleFromFile('Trig_VADv2tree.ttl', 'Trig VADv2tree', 'trig', 'vad-trig', 'trig-vad-v2tree');
+        function loadExampleTrigVADv5() {
+            loadExampleFromFile('Trig_VADv5.ttl', 'Trig_VADv5', 'trig', 'vad-trig', 'trig-vad-v5');
         }
 
         /**
-         * Для обратной совместимости: вызывает загрузку примера Trig VADv2
+         * Для обратной совместимости: вызывает загрузку примера Trig_VADv5
          */
         function loadExample() {
-            loadExampleTrigVADv2();
+            loadExampleTrigVADv5();
         }
 
         /**
@@ -6604,19 +6594,6 @@ WHERE {
          */
         function openNewTrigModal() {
             const modal = document.getElementById('new-trig-modal');
-            const parentSelect = document.getElementById('new-trig-parent');
-
-            // Заполняем список родителей существующими TriG
-            parentSelect.innerHTML = '<option value="">-- Выберите родителя (опционально) --</option>';
-            const trigs = getAllTriGs();
-            trigs.forEach(t => {
-                const option = document.createElement('option');
-                option.value = t.uri;
-                const id = getPrefixedName(t.uri, currentPrefixes);
-                const displayText = t.label && t.label !== id ? `${id} (${t.label})` : id;
-                option.textContent = displayText;
-                parentSelect.appendChild(option);
-            });
 
             // Очищаем поля ввода
             document.getElementById('new-trig-id').value = '';
@@ -6651,12 +6628,12 @@ WHERE {
         /**
          * Создает новый TriG контейнер и генерирует SPARQL запрос
          * Использует выбранный концепт процесса для генерации ID
+         * vad:hasParentObj указывает на выбранный концепт процесса
          */
         function createNewTrig() {
             const processConcept = document.getElementById('new-trig-process-concept').value;
             const trigId = document.getElementById('new-trig-id').value.trim();
             const label = document.getElementById('new-trig-label').value.trim();
-            const parentUri = document.getElementById('new-trig-parent').value;
 
             // Проверяем, что выбран концепт процесса
             if (!processConcept) {
@@ -6668,19 +6645,6 @@ WHERE {
             if (!trigId) {
                 alert('Ошибка: ID нового TriG не может быть пустым');
                 return;
-            }
-
-            // Получаем локальное имя процесса из URI
-            // processConcept может быть в форме "vad:ProcessX" или "<http://...#ProcessX>"
-            let processLocalName;
-            if (processConcept.startsWith('vad:')) {
-                processLocalName = processConcept.substring(4);
-            } else if (processConcept.includes('#')) {
-                processLocalName = processConcept.split('#').pop().replace('>', '');
-            } else if (processConcept.includes('/')) {
-                processLocalName = processConcept.split('/').pop().replace('>', '');
-            } else {
-                processLocalName = processConcept;
             }
 
             // Проверяем, не существует ли уже такой TriG
@@ -6697,6 +6661,9 @@ WHERE {
                 trigUri = `<http://example.org/vad#${trigId}>`;
             }
 
+            // Преобразуем концепт процесса в префиксную форму для hasParentObj
+            const processConceptPrefixed = getPrefixedName(processConcept, currentPrefixes);
+
             // Генерируем SPARQL для создания TriG с нужными предикатами
             const prefixDeclarations = generateSparqlPrefixes(currentPrefixes);
 
@@ -6711,30 +6678,8 @@ WHERE {
                 triples.push(`        ${trigUri} rdfs:label "${escapedLabel}" .`);
             }
 
-            // vad:hasParentObj (опционально)
-            if (parentUri) {
-                // Преобразуем URI родителя в префиксную форму
-                const parentPrefixed = getPrefixedName(parentUri, currentPrefixes);
-                triples.push(`        ${trigUri} vad:hasParentObj ${parentPrefixed} .`);
-            }
-
-            // Добавляем автогенерируемые триплы для индивидуального процесса
-            // Получаем полный URI триГа для функции generateAutoTriples
-            const fullTrigUri = currentPrefixes['vad']
-                ? currentPrefixes['vad'] + trigId
-                : `http://example.org/vad#${trigId}`;
-
-            // Получаем полный URI процесса
-            const processUri = currentPrefixes['vad']
-                ? currentPrefixes['vad'] + processLocalName
-                : processConcept.replace(/^<|>$/g, '');
-
-            // Получаем автоматические триплеты (возвращается строка)
-            const autoTriplesStr = generateAutoTriples(processUri, fullTrigUri);
-            // Добавляем автотриплеты напрямую в массив (они уже отформатированы)
-            if (autoTriplesStr && autoTriplesStr.trim().length > 0) {
-                triples.push(autoTriplesStr);
-            }
+            // vad:hasParentObj указывает на концепт процесса
+            triples.push(`        ${trigUri} vad:hasParentObj ${processConceptPrefixed} .`);
 
             const sparqlQuery = `${prefixDeclarations}INSERT DATA {
     GRAPH ${trigUri} {
