@@ -378,8 +378,7 @@ vad:root {
 vad:ptree {
     vad:ptree rdf:type vad:ObjectTree ;
         rdfs:label "Дерево Процессов (TriG)" ;
-#        vad:hasParentTrig vad:root .
-         vad:hasParentObj vad:root .
+        vad:hasParentObj vad:root .
 
     vad:p1 rdf:type vad:TypeProcess ;
         rdfs:label "p1 Процесс 1" ;
@@ -397,20 +396,17 @@ vad:ptree {
         rdfs:label "Процесс 1.2" ;
         dcterms:description "Второй процесс, выполняется после Процесса 1" ;
          vad:hasParentObj vad:p1 .
- #       vad:hasParentProcess vad:p1 .
 
     # p1.1.1
     vad:p1.1.1 rdf:type vad:TypeProcess ;
         rdfs:label "p1.1.1 Процесс 1.1.1" ;
         dcterms:description "Первый процесс в цепочке добавленной стоимости" ;
         vad:hasParentObj vad:p1.1 .
-#        vad:hasParentProcess vad:p1.1 .
 
     vad:p1.1.2 rdf:type vad:TypeProcess ;
         rdfs:label "p1.1.2 Процесс 1.1.2" ;
         dcterms:description "Второй процесс в цепочке добавленной стоимости" ;
         vad:hasParentObj vad:p1.1 .
-#       vad:hasParentProcess vad:p1.1 .
 
     vad:p2 rdf:type vad:TypeProcess ;
         rdfs:label "p2 Процесс 2" ;
@@ -422,25 +418,21 @@ vad:ptree {
         rdfs:label "p2.1 Процесс 2.1" ;
         dcterms:description "Первый процесс в цепочке добавленной стоимости" ;
         vad:hasParentObj vad:p2 .
-#        vad:hasParentProcess vad:p2 .
 
     vad:p2.2 rdf:type vad:TypeProcess ;
         rdfs:label "p2.2 Процесс 2.2" ;
         dcterms:description "Второй процесс" ;
         vad:hasParentObj vad:p2 .
-#        vad:hasParentProcess vad:p2 .
 
    vad:pх.х rdf:type vad:TypeProcess ;
         rdfs:label "pх.х Процесс х.х" ;
         dcterms:description "Какой-то процесс" ;
-#        vad:hasParentProcess vad:pNotDefined .
         vad:hasParentObj vad:pNotDefined .
 
    vad:pNotDefined rdf:type vad:TypeProcess ;
         rdfs:label "pNotDefined Процесс" ;
         dcterms:description "Какой-то процесс" ;
         vad:hasParentObj vad:ptree .
-#        vad:hasParentProcess vad:NotDefined .
 
 }
 
@@ -453,7 +445,6 @@ vad:rtree {
     vad:rtree rdf:type vad:ObjectTree ;
         rdfs:label "Дерево Исполнителей (TriG)" ;
         vad:hasParentObj vad:root .
-#        vad:hasParentTrig vad:root .
 
     vad:Org-structure rdf:type vad:TypeExecutor ;
         rdfs:label "Исполнитель Org-structure" ;
@@ -534,8 +525,6 @@ vad:t_p1 {
     vad:t_p1 rdf:type vad:VADProcessDia ;
         rdfs:label "Схема t_p1 процесса p1" ;
         vad:hasParentObj vad:p1 .
-#        vad:hasParentTrig vad:root ;
-#        vad:definesProcess vad:p1 .
 
     # Процесс p1.1 - DetailedChild (имеет дочернюю схему vad:t_p1.1 с hasParentTrig на текущую)
     # rdf:type находится в vad:ptree
@@ -569,8 +558,6 @@ vad:t_p1.1 {
     vad:t_p1.1 rdf:type vad:VADProcessDia ;
         rdfs:label "Схема t_p1.1 процесса p1.1" ;
         vad:hasParentObj vad:p1.1 .
-#        vad:hasParentTrig vad:t_p1 ;
-#        vad:definesProcess vad:p1.1 .
 
     # Процесс p1.1.1 - notDetailedChild
     # rdf:type находится в vad:ptree
@@ -601,8 +588,6 @@ vad:t_p2 {
     vad:t_p2 rdf:type vad:VADProcessDia ;
         rdfs:label "Схема t_p2 процесса p2" ;
         vad:hasParentObj vad:p2 .
-#        vad:hasParentTrig vad:root ;
-#        vad:definesProcess vad:p2 .
 
     # Процесс p2.1 - notDetailedChild
     # rdf:type находится в vad:ptree
