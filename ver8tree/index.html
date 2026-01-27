@@ -271,7 +271,7 @@
 
                 <!-- Панель свойств объекта -->
                 <div class="trig-properties-panel">
-                    <div class="trig-properties-header">Окно свойств объекта</div>
+                    <div class="trig-properties-header">Карточка объекта</div>
                     <div class="trig-properties-content" id="trig-properties-content">
                         <div class="trig-properties-empty">Выберите TriG в дереве</div>
                     </div>
@@ -1879,14 +1879,16 @@ vad:t_p1 {
         // ВИРТУАЛЬНЫЕ ДАННЫЕ (VIRTUAL RDF DATA)
         // ============================================================================
         // Хранилище для автоматически вычисляемых свойств процессов
-        // Формат: { processUri: { processSubtype: 'DetailedChild', ... } }
+        // Формат: { trigUri: { processUri: { processSubtype: 'DetailedChild', ... } } }
         // Пересчитывается при загрузке данных и изменении схемы
+        // ВАЖНО: processSubtype вычисляется для каждой пары (процесс, TriG),
+        // т.к. один процесс может присутствовать в нескольких TriG с разными подтипами
         // ============================================================================
 
         let virtualRDFdata = {};  // Виртуальные вычисляемые свойства
 
         /**
-         * Вычисляет vad:processSubtype для всех процессов
+         * Вычисляет vad:processSubtype для всех процессов в каждом TriG
          * Алгоритм:
          * 1. Если hasParentObj = pNotDefined -> NotDefinedType
          * 2. Если концепт имеет hasTrig -> Detailed*
@@ -1899,13 +1901,54 @@ vad:t_p1 {
          * @param {Object} trigHierarchy - Иерархия TriG графов
          * @param {Object} prefixes - Словарь префиксов
          * @returns {Object} - virtualRDFdata с вычисленными подтипами
+         *                     Формат: { trigUri: { processUri: { processSubtype, ... } } }
          */
         function calculateProcessSubtypes(hierarchy, prefixes) {
+            // Результат: { trigUri: { processUri: { processSubtype, label, hasParentObj, hasTrig } } }
             const result = {};
             const pNotDefinedUris = [
                 'http://example.org/vad#pNotDefined',
                 'vad:pNotDefined'
             ];
+
+            // Получаем метаданные процессов из ptree
+            const ptreeUri = 'http://example.org/vad#ptree';
+            const ptreeInfo = hierarchy[ptreeUri];
+            const processMetadata = {}; // { processUri: { hasParentObj, hasTrig, label } }
+
+            if (ptreeInfo && ptreeInfo.quads) {
+                ptreeInfo.quads.forEach(quad => {
+                    const subjectUri = quad.subject.value;
+                    const predicateUri = quad.predicate.value;
+                    const predicateLabel = getPrefixedName(predicateUri, prefixes);
+                    const objectValue = quad.object.value;
+
+                    // Инициализируем запись для процесса
+                    if (!processMetadata[subjectUri]) {
+                        processMetadata[subjectUri] = {
+                            hasParentObj: null,
+                            hasTrig: null,
+                            label: null
+                        };
+                    }
+
+                    // Собираем hasParentObj, hasTrig и label для всех процессов
+                    if (predicateLabel === 'vad:hasParentObj' ||
+                        predicateUri === 'http://example.org/vad#hasParentObj') {
+                        processMetadata[subjectUri].hasParentObj = objectValue;
+                    }
+
+                    if (predicateLabel === 'vad:hasTrig' ||
+                        predicateUri === 'http://example.org/vad#hasTrig') {
+                        processMetadata[subjectUri].hasTrig = objectValue;
+                    }
+
+                    if (predicateLabel === 'rdfs:label' ||
+                        predicateUri === 'http://www.w3.org/2000/01/rdf-schema#label') {
+                        processMetadata[subjectUri].label = objectValue;
+                    }
+                });
+            }
 
             // Проходим по всем TriG в иерархии
             for (const [trigUri, trigInfo] of Object.entries(hierarchy)) {
@@ -1915,129 +1958,84 @@ vad:t_p1 {
                     continue;
                 }
 
-                // Получаем hasParentObj текущего TriG (это концепт процесса, которому принадлежит схема)
-                const trigParentObj = trigInfo.hasParentObj;
+                // Проверяем, что это TriG типа VADProcessDia
+                const trigType = trigInfo.type;
+                const isVADProcessDia = trigType &&
+                    (trigType === 'http://example.org/vad#VADProcessDia' ||
+                     trigType.endsWith('#VADProcessDia'));
 
-                // Получаем все процессы из текущего TriG
+                if (!isVADProcessDia) {
+                    continue;
+                }
+
+                // Получаем hasParentObj текущего TriG (это концепт процесса, которому принадлежит схема)
+                // В иерархии свойство называется hasParent (не hasParentObj)
+                const trigParentObj = trigInfo.hasParent;
+
+                // Инициализируем контейнер для этого TriG
+                result[trigUri] = {};
+
+                // Находим все индивиды процессов в этом TriG через vad:isSubprocessTrig
                 trigInfo.quads.forEach(quad => {
                     const subjectUri = quad.subject.value;
                     const predicateUri = quad.predicate.value;
                     const objectValue = quad.object.value;
 
-                    // Ищем процессы (rdf:type = TypeProcess)
-                    if (predicateUri === 'http://www.w3.org/1999/02/22-rdf-syntax-ns#type' &&
-                        (objectValue === 'http://example.org/vad#TypeProcess' ||
-                         objectValue.endsWith('#TypeProcess'))) {
+                    // Ищем индивиды процессов через vad:isSubprocessTrig
+                    if (predicateUri === 'http://example.org/vad#isSubprocessTrig' ||
+                        predicateUri.endsWith('#isSubprocessTrig')) {
+                        // objectValue - это URI TriG, в котором находится индивид
+                        // subjectUri - это URI процесса
+                        if (objectValue === trigUri) {
+                            // Этот процесс является индивидом в текущем TriG
+                            const metadata = processMetadata[subjectUri] || {};
+                            const hasParentObj = metadata.hasParentObj;
+                            const hasTrig = metadata.hasTrig;
+                            const label = metadata.label;
 
-                        // Инициализируем запись для процесса
-                        if (!result[subjectUri]) {
-                            result[subjectUri] = {
-                                processSubtype: null,
-                                trigUri: trigUri,
-                                label: null,
-                                hasParentObj: null,
-                                hasTrig: null
+                            // Вычисляем processSubtype
+                            let processSubtype = null;
+
+                            // 1. Проверяем pNotDefined
+                            if (hasParentObj && pNotDefinedUris.some(uri =>
+                                hasParentObj === uri || hasParentObj.endsWith('#pNotDefined'))) {
+                                processSubtype = 'NotDefinedType';
+                            } else {
+                                // 2. Определяем, находится ли индивид в схеме родительского процесса
+                                // Процесс является подпроцессом (Child), если его hasParentObj
+                                // совпадает с hasParentObj TriG (владельцем схемы)
+                                const isChild = trigParentObj && hasParentObj === trigParentObj;
+
+                                // 3. Вычисляем подтип на основе hasTrig и isChild
+                                if (hasTrig) {
+                                    // Детализированный процесс
+                                    processSubtype = isChild ? 'DetailedChild' : 'DetailedExternal';
+                                } else {
+                                    // Не детализированный процесс
+                                    processSubtype = isChild ? 'notDetailedChild' : 'notDetailedExternal';
+                                }
+                            }
+
+                            result[trigUri][subjectUri] = {
+                                processSubtype: processSubtype,
+                                label: label,
+                                hasParentObj: hasParentObj,
+                                hasTrig: hasTrig
                             };
-                        }
-                        result[subjectUri].trigUri = trigUri;
-                    }
-                });
-            }
-
-            // Получаем метаданные процессов из ptree
-            const ptreeUri = 'http://example.org/vad#ptree';
-            const ptreeInfo = hierarchy[ptreeUri];
-
-            if (ptreeInfo && ptreeInfo.quads) {
-                ptreeInfo.quads.forEach(quad => {
-                    const subjectUri = quad.subject.value;
-                    const predicateUri = quad.predicate.value;
-                    const predicateLabel = getPrefixedName(predicateUri, prefixes);
-                    const objectValue = quad.object.value;
-
-                    // Собираем hasParentObj и hasTrig для всех процессов
-                    if (predicateLabel === 'vad:hasParentObj' ||
-                        predicateUri === 'http://example.org/vad#hasParentObj') {
-                        if (!result[subjectUri]) {
-                            result[subjectUri] = {
-                                processSubtype: null,
-                                trigUri: null,
-                                label: null,
-                                hasParentObj: objectValue,
-                                hasTrig: null
-                            };
-                        } else {
-                            result[subjectUri].hasParentObj = objectValue;
-                        }
-                    }
-
-                    if (predicateLabel === 'vad:hasTrig' ||
-                        predicateUri === 'http://example.org/vad#hasTrig') {
-                        if (!result[subjectUri]) {
-                            result[subjectUri] = {
-                                processSubtype: null,
-                                trigUri: null,
-                                label: null,
-                                hasParentObj: null,
-                                hasTrig: objectValue
-                            };
-                        } else {
-                            result[subjectUri].hasTrig = objectValue;
-                        }
-                    }
-
-                    if (predicateLabel === 'rdfs:label' ||
-                        predicateUri === 'http://www.w3.org/2000/01/rdf-schema#label') {
-                        if (result[subjectUri]) {
-                            result[subjectUri].label = objectValue;
                         }
                     }
                 });
-            }
-
-            // Вычисляем processSubtype для каждого процесса
-            for (const [processUri, processInfo] of Object.entries(result)) {
-                const hasParentObj = processInfo.hasParentObj;
-                const hasTrig = processInfo.hasTrig;
-                const processTrigUri = processInfo.trigUri;
-
-                // 1. Проверяем pNotDefined
-                if (hasParentObj && pNotDefinedUris.some(uri =>
-                    hasParentObj === uri || hasParentObj.endsWith('#pNotDefined'))) {
-                    processInfo.processSubtype = 'NotDefinedType';
-                    continue;
-                }
-
-                // 2. Определяем, находится ли индивид в схеме родительского процесса
-                // Для этого проверяем, совпадает ли hasParentObj TriG с hasParentObj процесса
-                let isChild = false;
-                if (processTrigUri && hierarchy[processTrigUri]) {
-                    const trigParentObj = hierarchy[processTrigUri].hasParentObj;
-                    // Процесс является подпроцессом, если его hasParentObj совпадает с
-                    // объектом, на который указывает hasParentObj его TriG
-                    if (trigParentObj && hasParentObj === trigParentObj) {
-                        isChild = true;
-                    }
-                }
-
-                // 3. Вычисляем подтип на основе hasTrig и isChild
-                if (hasTrig) {
-                    // Детализированный процесс
-                    processInfo.processSubtype = isChild ? 'DetailedChild' : 'DetailedExternal';
-                } else {
-                    // Не детализированный процесс
-                    processInfo.processSubtype = isChild ? 'notDetailedChild' : 'notDetailedExternal';
-                }
             }
 
             return result;
         }
 
         /**
-         * Генерирует строковое представление virtualRDFdata в формате Turtle/TriG
+         * Генерирует строковое представление virtualRDFdata в формате TriG
+         * Создаёт виртуальные контейнеры (vt_*) для каждого TriG типа VADProcessDia
          * @param {Object} virtualData - Виртуальные данные
          * @param {Object} prefixes - Словарь префиксов
-         * @returns {string} - Строка в формате Turtle
+         * @returns {string} - Строка в формате TriG
          */
         function formatVirtualRDFdata(virtualData, prefixes) {
             let output = '# ==============================================================================\n';
@@ -2045,6 +2043,7 @@ vad:t_p1 {
             output += '# ==============================================================================\n';
             output += '# Эти данные вычисляются автоматически при загрузке и не хранятся в RDF.\n';
             output += '# Пересчёт происходит при изменении схемы процесса.\n';
+            output += '# Для каждого TriG типа VADProcessDia создаётся виртуальный двойник (vt_*).\n';
             output += '# ==============================================================================\n\n';
 
             // Добавляем префиксы
@@ -2052,40 +2051,40 @@ vad:t_p1 {
             output += '@prefix rdfs:     <http://www.w3.org/2000/01/rdf-schema#> .\n';
             output += '@prefix vad:      <http://example.org/vad#> .\n\n';
 
-            // Группируем по TriG
-            const byTrig = {};
-            for (const [processUri, processInfo] of Object.entries(virtualData)) {
-                const trigUri = processInfo.trigUri || 'unknown';
-                if (!byTrig[trigUri]) {
-                    byTrig[trigUri] = [];
-                }
-                byTrig[trigUri].push({ uri: processUri, ...processInfo });
-            }
-
-            // Выводим для каждого TriG
-            for (const [trigUri, processes] of Object.entries(byTrig)) {
+            // Выводим для каждого TriG виртуальный контейнер
+            for (const [trigUri, processes] of Object.entries(virtualData)) {
                 const trigLabel = getPrefixedName(trigUri, prefixes);
-                output += `# TriG: ${trigLabel}\n`;
-                output += `# Виртуальный контейнер: vt_${trigLabel.replace('vad:t_', '').replace('vad:', '')}\n\n`;
 
-                processes.forEach(processInfo => {
-                    const processLabel = getPrefixedName(processInfo.uri, prefixes);
+                // Формируем имя виртуального контейнера (vt_ вместо t_)
+                let virtualContainerName;
+                if (trigLabel.startsWith('vad:t_')) {
+                    virtualContainerName = 'vad:vt_' + trigLabel.substring(6);
+                } else if (trigLabel.startsWith('vad:')) {
+                    virtualContainerName = 'vad:vt_' + trigLabel.substring(4);
+                } else {
+                    virtualContainerName = 'vt_' + trigLabel;
+                }
+
+                // Пропускаем TriG без процессов
+                if (Object.keys(processes).length === 0) {
+                    continue;
+                }
+
+                output += `# Виртуальный контейнер для ${trigLabel}\n`;
+                output += `${virtualContainerName} {\n`;
+
+                // Свойства самого виртуального TriG
+                output += `    ${trigLabel} rdf:type vad:Virtual .\n\n`;
+
+                // Свойства процессов
+                for (const [processUri, processInfo] of Object.entries(processes)) {
+                    const processLabel = getPrefixedName(processUri, prefixes);
                     const subtype = processInfo.processSubtype || 'unknown';
-                    const label = processInfo.label || '';
 
-                    output += `${processLabel}\n`;
-                    output += `    vad:processSubtype vad:${subtype} ;  # Вычислено автоматически\n`;
-                    if (label) {
-                        output += `    rdfs:label "${label}" ;\n`;
-                    }
-                    if (processInfo.hasParentObj) {
-                        output += `    vad:hasParentObj ${getPrefixedName(processInfo.hasParentObj, prefixes)} ;\n`;
-                    }
-                    if (processInfo.hasTrig) {
-                        output += `    vad:hasTrig ${getPrefixedName(processInfo.hasTrig, prefixes)} ;\n`;
-                    }
-                    output += `    # trigUri: ${trigLabel} .\n\n`;
-                });
+                    output += `    ${processLabel} vad:processSubtype vad:${subtype} .\n`;
+                }
+
+                output += `}\n\n`;
             }
 
             return output;
@@ -2853,50 +2852,29 @@ WHERE {
                 html += `<div class="trig-properties-empty">Нет свойств для объекта ${escapeHtml(prefixedUri)}</div>`;
             }
 
-            // Проверяем, есть ли вычисляемые свойства в virtualRDFdata
-            const virtualData = virtualRDFdata[objectUri];
-            if (virtualData) {
-                // Добавляем разделитель
-                html += `<div class="trig-property-separator">`;
-                html += `<span class="separator-line"></span>`;
-                html += `<span class="separator-text">Вычисляемые свойства (virtualRDFdata)</span>`;
-                html += `<span class="separator-line"></span>`;
+            // Проверяем, есть ли вычисляемые свойства в virtualRDFdata для текущего контекста TriG
+            // Новый формат virtualRDFdata: { trigUri: { processUri: { processSubtype, ... } } }
+            let virtualData = null;
+            if (contextTrigUri && virtualRDFdata[contextTrigUri]) {
+                virtualData = virtualRDFdata[contextTrigUri][objectUri];
+            }
+
+            // Если процесс не найден в текущем TriG, ищем его в любом TriG
+            if (!virtualData) {
+                for (const [trigUri, processes] of Object.entries(virtualRDFdata)) {
+                    if (processes[objectUri]) {
+                        virtualData = processes[objectUri];
+                        break;
+                    }
+                }
+            }
+
+            // Добавляем вычисляемые свойства в основной список (без отдельной секции)
+            if (virtualData && virtualData.processSubtype) {
+                html += `<div class="trig-property-item virtual-property">`;
+                html += `<div class="trig-property-predicate">vad:processSubtype</div>`;
+                html += `<div class="trig-property-value uri virtual">vad:${escapeHtml(virtualData.processSubtype)}</div>`;
                 html += `</div>`;
-
-                // vad:processSubtype
-                if (virtualData.processSubtype) {
-                    html += `<div class="trig-property-item virtual-property">`;
-                    html += `<div class="trig-property-predicate">vad:processSubtype</div>`;
-                    html += `<div class="trig-property-value uri virtual">vad:${escapeHtml(virtualData.processSubtype)}</div>`;
-                    html += `</div>`;
-                }
-
-                // hasTrig (из ptree)
-                if (virtualData.hasTrig) {
-                    const hasTrigLabel = getPrefixedName(virtualData.hasTrig, prefixes);
-                    html += `<div class="trig-property-item virtual-property">`;
-                    html += `<div class="trig-property-predicate">vad:hasTrig (ptree)</div>`;
-                    html += `<div class="trig-property-value uri virtual">${escapeHtml(hasTrigLabel)}</div>`;
-                    html += `</div>`;
-                }
-
-                // hasParentObj (из ptree)
-                if (virtualData.hasParentObj) {
-                    const parentLabel = getPrefixedName(virtualData.hasParentObj, prefixes);
-                    html += `<div class="trig-property-item virtual-property">`;
-                    html += `<div class="trig-property-predicate">vad:hasParentObj (ptree)</div>`;
-                    html += `<div class="trig-property-value uri virtual">${escapeHtml(parentLabel)}</div>`;
-                    html += `</div>`;
-                }
-
-                // trigUri (где находится индивид)
-                if (virtualData.trigUri) {
-                    const trigLabel = getPrefixedName(virtualData.trigUri, prefixes);
-                    html += `<div class="trig-property-item virtual-property">`;
-                    html += `<div class="trig-property-predicate">trigUri (расположение)</div>`;
-                    html += `<div class="trig-property-value uri virtual">${escapeHtml(trigLabel)}</div>`;
-                    html += `</div>`;
-                }
             }
 
             propertiesContent.innerHTML = html;
