@@ -5,8 +5,15 @@
  * as described in comment8a.md section 4 (Формализация VAD-схем)
  *
  * @file vad-validation-rules.js
- * @version 8c
- * @date 2026-01-24
+ * @version 8d
+ * @date 2026-01-27
+ *
+ * Changes in version 8d:
+ * - Added hasParentObj validation for all objects (VADProcessDia, ObjectTree, TypeProcess, TypeExecutor)
+ * - Updated processMetadataInPtree to include vad:hasParentObj
+ * - Updated executorMetadataInRtree to include vad:hasParentObj
+ * - Added new rule: vadProcessDiaHasParentObj
+ * - Added new rule: objectTreeHasParentObj
  */
 
 /**
@@ -15,7 +22,7 @@
  * Каждое правило проверяет определенный аспект корректности VAD данных:
  * - Наличие обязательных свойств
  * - Правильность связей между объектами
- * - Согласованность иерархии
+ * - Согласованность иерархии через vad:hasParentObj
  */
 const VAD_VALIDATION_RULES = {
     /**
@@ -178,7 +185,7 @@ const VAD_VALIDATION_RULES = {
     /**
      * Правило 4: Метаданные процессов должны быть в ptree
      *
-     * Триплеты с предикатами rdf:type, rdfs:label, dcterms:description, vad:hasTrig
+     * Триплеты с предикатами rdf:type, rdfs:label, dcterms:description, vad:hasTrig, vad:hasParentObj
      * для процессов (vad:TypeProcess) должны находиться в графе vad:ptree.
      *
      * @param {Array} quads - Массив RDF квадов
@@ -192,7 +199,8 @@ const VAD_VALIDATION_RULES = {
             'http://www.w3.org/1999/02/22-rdf-syntax-ns#type',
             'http://www.w3.org/2000/01/rdf-schema#label',
             'http://purl.org/dc/terms/description',
-            'http://example.org/vad#hasTrig'
+            'http://example.org/vad#hasTrig',
+            'http://example.org/vad#hasParentObj'  // New in v1.2
         ];
 
         const processTypes = new Set();
@@ -236,7 +244,7 @@ const VAD_VALIDATION_RULES = {
     /**
      * Правило 5: Метаданные исполнителей должны быть в rtree
      *
-     * Триплеты с предикатами rdf:type, rdfs:label для исполнителей (vad:TypeExecutor)
+     * Триплеты с предикатами rdf:type, rdfs:label, vad:hasParentObj для исполнителей (vad:TypeExecutor)
      * должны находиться в графе vad:rtree.
      *
      * @param {Array} quads - Массив RDF квадов
@@ -248,7 +256,8 @@ const VAD_VALIDATION_RULES = {
 
         const RTREE_PREDICATES = [
             'http://www.w3.org/1999/02/22-rdf-syntax-ns#type',
-            'http://www.w3.org/2000/01/rdf-schema#label'
+            'http://www.w3.org/2000/01/rdf-schema#label',
+            'http://example.org/vad#hasParentObj'  // New in v1.2
         ];
 
         const executorTypes = new Set();
@@ -281,6 +290,225 @@ const VAD_VALIDATION_RULES = {
                         graph: graphUri ? getPrefixedNameSafe(graphUri, prefixes) : 'default graph'
                     });
                 }
+            }
+        });
+
+        return violations;
+    },
+
+    /**
+     * Правило 6: VADProcessDia должен иметь hasParentObj
+     *
+     * Все схемы процессов (vad:VADProcessDia) должны иметь предикат vad:hasParentObj,
+     * указывающий на концепт процесса, который они детализируют.
+     *
+     * @param {Array} quads - Массив RDF квадов
+     * @param {Object} prefixes - Объект префиксов
+     * @returns {Array<Object>} - Массив нарушений правила
+     */
+    vadProcessDiaHasParentObj: (quads, prefixes) => {
+        const violations = [];
+
+        const vadProcessDiaGraphs = new Set();
+        const graphsWithParentObj = new Set();
+
+        quads.forEach(quad => {
+            const predicateUri = quad.predicate.value;
+            const subjectUri = quad.subject.value;
+
+            // Найти все VADProcessDia по rdf:type
+            if ((predicateUri === 'http://www.w3.org/1999/02/22-rdf-syntax-ns#type' ||
+                 predicateUri.endsWith('#type')) &&
+                (quad.object.value === 'http://example.org/vad#VADProcessDia' ||
+                 quad.object.value.endsWith('#VADProcessDia'))) {
+                vadProcessDiaGraphs.add(subjectUri);
+            }
+
+            // Найти графы с hasParentObj
+            if (predicateUri === 'http://example.org/vad#hasParentObj' ||
+                predicateUri.endsWith('#hasParentObj')) {
+                graphsWithParentObj.add(subjectUri);
+            }
+        });
+
+        // Проверить, что все VADProcessDia имеют hasParentObj
+        vadProcessDiaGraphs.forEach(graphUri => {
+            if (!graphsWithParentObj.has(graphUri)) {
+                violations.push({
+                    rule: 'vadProcessDiaHasParentObj',
+                    subject: getPrefixedNameSafe(graphUri, prefixes),
+                    message: `VADProcessDia должен иметь предикат vad:hasParentObj, указывающий на концепт процесса`,
+                    severity: 'error'
+                });
+            }
+        });
+
+        return violations;
+    },
+
+    /**
+     * Правило 7: ObjectTree должен иметь hasParentObj = vad:root
+     *
+     * Деревья объектов (vad:ObjectTree) должны иметь vad:hasParentObj = vad:root.
+     *
+     * @param {Array} quads - Массив RDF квадов
+     * @param {Object} prefixes - Объект префиксов
+     * @returns {Array<Object>} - Массив нарушений правила
+     */
+    objectTreeHasParentObj: (quads, prefixes) => {
+        const violations = [];
+
+        const objectTreeInstances = new Set();
+        const objectTreeParents = new Map(); // objectTreeUri -> parentUri
+
+        quads.forEach(quad => {
+            const predicateUri = quad.predicate.value;
+            const subjectUri = quad.subject.value;
+
+            // Найти все ObjectTree по rdf:type
+            if ((predicateUri === 'http://www.w3.org/1999/02/22-rdf-syntax-ns#type' ||
+                 predicateUri.endsWith('#type')) &&
+                (quad.object.value === 'http://example.org/vad#ObjectTree' ||
+                 quad.object.value.endsWith('#ObjectTree') ||
+                 quad.object.value === 'http://example.org/vad#ProcessTree' ||
+                 quad.object.value.endsWith('#ProcessTree') ||
+                 quad.object.value === 'http://example.org/vad#ExecutorTree' ||
+                 quad.object.value.endsWith('#ExecutorTree'))) {
+                objectTreeInstances.add(subjectUri);
+            }
+
+            // Найти hasParentObj для ObjectTree
+            if (predicateUri === 'http://example.org/vad#hasParentObj' ||
+                predicateUri.endsWith('#hasParentObj')) {
+                objectTreeParents.set(subjectUri, quad.object.value);
+            }
+        });
+
+        // Проверить, что все ObjectTree имеют hasParentObj = vad:root
+        objectTreeInstances.forEach(treeUri => {
+            if (!objectTreeParents.has(treeUri)) {
+                violations.push({
+                    rule: 'objectTreeHasParentObj',
+                    subject: getPrefixedNameSafe(treeUri, prefixes),
+                    message: `ObjectTree должен иметь предикат vad:hasParentObj, указывающий на vad:root`,
+                    severity: 'error'
+                });
+            } else {
+                const parentUri = objectTreeParents.get(treeUri);
+                if (!parentUri.includes('root')) {
+                    violations.push({
+                        rule: 'objectTreeHasParentObj',
+                        subject: getPrefixedNameSafe(treeUri, prefixes),
+                        message: `ObjectTree должен иметь vad:hasParentObj = vad:root (текущее значение: ${getPrefixedNameSafe(parentUri, prefixes)})`,
+                        severity: 'warning'
+                    });
+                }
+            }
+        });
+
+        return violations;
+    },
+
+    /**
+     * Правило 8: Концепты процессов должны иметь hasParentObj
+     *
+     * Все концепты процессов (vad:TypeProcess) в ptree должны иметь vad:hasParentObj,
+     * указывающий на родительский объект (другой процесс или vad:ptree).
+     *
+     * @param {Array} quads - Массив RDF квадов
+     * @param {Object} prefixes - Объект префиксов
+     * @returns {Array<Object>} - Массив нарушений правила
+     */
+    processConceptsHaveParentObj: (quads, prefixes) => {
+        const violations = [];
+
+        const processConceptsInPtree = new Set();
+        const objectsWithParentObj = new Set();
+
+        quads.forEach(quad => {
+            const graphUri = quad.graph ? quad.graph.value : null;
+            const predicateUri = quad.predicate.value;
+            const subjectUri = quad.subject.value;
+
+            // Найти концепты процессов в ptree (по rdf:type vad:TypeProcess в графе ptree)
+            if (graphUri && graphUri.includes('ptree')) {
+                if ((predicateUri === 'http://www.w3.org/1999/02/22-rdf-syntax-ns#type' ||
+                     predicateUri.endsWith('#type')) &&
+                    (quad.object.value === 'http://example.org/vad#TypeProcess' ||
+                     quad.object.value.endsWith('#TypeProcess'))) {
+                    processConceptsInPtree.add(subjectUri);
+                }
+            }
+
+            // Найти все объекты с hasParentObj
+            if (predicateUri === 'http://example.org/vad#hasParentObj' ||
+                predicateUri.endsWith('#hasParentObj')) {
+                objectsWithParentObj.add(subjectUri);
+            }
+        });
+
+        // Проверить, что все концепты процессов имеют hasParentObj
+        processConceptsInPtree.forEach(processUri => {
+            if (!objectsWithParentObj.has(processUri)) {
+                violations.push({
+                    rule: 'processConceptsHaveParentObj',
+                    subject: getPrefixedNameSafe(processUri, prefixes),
+                    message: `Концепт процесса должен иметь предикат vad:hasParentObj в vad:ptree`,
+                    severity: 'error'
+                });
+            }
+        });
+
+        return violations;
+    },
+
+    /**
+     * Правило 9: Концепты исполнителей должны иметь hasParentObj
+     *
+     * Все концепты исполнителей (vad:TypeExecutor) в rtree должны иметь vad:hasParentObj,
+     * указывающий на родительский объект (другой исполнитель или vad:rtree).
+     *
+     * @param {Array} quads - Массив RDF квадов
+     * @param {Object} prefixes - Объект префиксов
+     * @returns {Array<Object>} - Массив нарушений правила
+     */
+    executorConceptsHaveParentObj: (quads, prefixes) => {
+        const violations = [];
+
+        const executorConceptsInRtree = new Set();
+        const objectsWithParentObj = new Set();
+
+        quads.forEach(quad => {
+            const graphUri = quad.graph ? quad.graph.value : null;
+            const predicateUri = quad.predicate.value;
+            const subjectUri = quad.subject.value;
+
+            // Найти концепты исполнителей в rtree (по rdf:type vad:TypeExecutor в графе rtree)
+            if (graphUri && graphUri.includes('rtree')) {
+                if ((predicateUri === 'http://www.w3.org/1999/02/22-rdf-syntax-ns#type' ||
+                     predicateUri.endsWith('#type')) &&
+                    (quad.object.value === 'http://example.org/vad#TypeExecutor' ||
+                     quad.object.value.endsWith('#TypeExecutor'))) {
+                    executorConceptsInRtree.add(subjectUri);
+                }
+            }
+
+            // Найти все объекты с hasParentObj
+            if (predicateUri === 'http://example.org/vad#hasParentObj' ||
+                predicateUri.endsWith('#hasParentObj')) {
+                objectsWithParentObj.add(subjectUri);
+            }
+        });
+
+        // Проверить, что все концепты исполнителей имеют hasParentObj
+        executorConceptsInRtree.forEach(executorUri => {
+            if (!objectsWithParentObj.has(executorUri)) {
+                violations.push({
+                    rule: 'executorConceptsHaveParentObj',
+                    subject: getPrefixedNameSafe(executorUri, prefixes),
+                    message: `Концепт исполнителя должен иметь предикат vad:hasParentObj в vad:rtree`,
+                    severity: 'error'
+                });
             }
         });
 
