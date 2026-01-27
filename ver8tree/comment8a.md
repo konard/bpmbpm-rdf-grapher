@@ -1,25 +1,10 @@
-# Comment 8a: Treeview Observations and hasParentObj Concept
+# Comment 8a: Концепция vad:hasParentObj
 
-## 1. Наблюдения по treeview ("Дерево TriG")
+## 1. Концепция vad:hasParentObj
 
-### 1.1 Текущая реализация (до изменений)
+### 1.1 Основные принципы
 
-В текущей реализации treeview строится на основе предиката `vad:hasParentTrig`, который:
-- Определяет иерархию **только для TriG-графов** (VADProcessDia, ProcessTree, ExecutorTree)
-- Не отображает объекты других типов (TypeProcess, TypeExecutor) в дереве
-- Строит плоскую структуру для процессов внутри каждого TriG
-
-### 1.2 Проблемы текущей реализации
-
-1. **Несогласованность иерархии**: Процессы и исполнители не имеют явной иерархии в дереве
-2. **Дублирование предикатов**: Используется `vad:hasParentTrig` для TriG и `vad:definesProcess` для обратной связи
-3. **Сложность навигации**: Нет возможности видеть полную иерархию объектов в одном дереве
-
-## 2. Новая концепция: vad:hasParentObj
-
-### 2.1 Основные принципы
-
-Предикат `vad:hasParentObj` (hasParentObject) заменяет `vad:hasParentTrig` и обеспечивает:
+Предикат `vad:hasParentObj` (hasParentObject) обеспечивает:
 
 1. **Единую иерархию для всех объектов**: TriG, TypeProcess, TypeExecutor
 2. **Упрощение связей**: Не требуется `vad:definesProcess` - достаточно `vad:hasParentObj`
@@ -113,11 +98,11 @@ vad:exec1 rdf:type vad:TypeExecutor ;
 1. **processMetadataInPtree**: Добавлен vad:hasParentObj в список PTREE_PREDICATES
 2. **executorMetadataInRtree**: Добавлен vad:hasParentObj в список RTREE_PREDICATES
 
-## 5. Устаревшие элементы
+## 5. Удалённые элементы (см. CHANGELOG.md)
 
-### 5.1 Устаревшие предикаты
+### 5.1 Удалённые предикаты
 
-- `vad:hasParentTrig` → заменён на `vad:hasParentObj`
+- `vad:hasParentTrig` - удалён из онтологии, заменён на `vad:hasParentObj`
 - `vad:definesProcess` → больше не используется (достаточно hasParentObj)
 
 ### 5.2 Устаревшие классы
@@ -144,7 +129,7 @@ vad:exec1 rdf:type vad:TypeExecutor ;
 ### 7.1 Обратная совместимость
 
 Для поддержки старых данных:
-- При парсинге проверяется как `vad:hasParentObj`, так и `vad:hasParentTrig`
+- При парсинге код продолжает поддерживать `vad:hasParentTrig`, автоматически интерпретируя его как `vad:hasParentObj`
 - Классы ProcessTree и ExecutorTree сохранены как подклассы ObjectTree
 
 ### 7.2 Миграция данных
@@ -152,8 +137,9 @@ vad:exec1 rdf:type vad:TypeExecutor ;
 При загрузке данных в старом формате:
 - `vad:hasParentTrig` автоматически интерпретируется как `vad:hasParentObj`
 - Рекомендуется обновить данные до нового формата
+- См. CHANGELOG.md для полной истории изменений
 
 ---
 
 Дата: 2026-01-27
-Версия: 8d
+Версия: 8e
