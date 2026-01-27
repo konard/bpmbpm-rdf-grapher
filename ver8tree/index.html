@@ -2153,7 +2153,7 @@ WHERE {
          * @param {number} level - Уровень вложенности (для отступов)
          * @returns {string} - HTML дерева
          */
-        function buildTriGTreeHtml(objUri, hierarchy, prefixes, level = 0) {
+        function buildTriGTreeHtml(objUri, hierarchy, prefixes, level = 0, parentIsPtree = false) {
             const objInfo = hierarchy[objUri];
             if (!objInfo) return '';
 
@@ -2166,6 +2166,14 @@ WHERE {
             const hasExpandableContent = hasChildren || hasProcesses;
             const isTrig = objInfo.isTrig;  // Объект типа TriG отображается жирным
 
+            // Определяем, является ли текущий объект ptree (Дерево Процессов)
+            const isPtree = objUri === PTREE_GRAPH_URI || objUri.endsWith('#ptree');
+
+            // Определяем, должен ли узел быть раскрыт по умолчанию:
+            // - ptree раскрыт на один уровень (сам ptree раскрыт, но его дети - нет)
+            // - Остальные TriG деревья свернуты по умолчанию
+            const shouldBeExpanded = isPtree;  // Only ptree is expanded by default
+
             // Генерируем уникальные ID для переключения свертывания/развертывания
             const childrenId = `tree-children-${escapeHtml(objUri).replace(/[^a-zA-Z0-9]/g, '_')}`;
             const toggleId = `tree-toggle-${escapeHtml(objUri).replace(/[^a-zA-Z0-9]/g, '_')}`;
@@ -2174,9 +2182,16 @@ WHERE {
 
             // Элемент дерева
             // Для объектов типа TriG (VADProcessDia, ObjectTree) - кликабельные, можно выбрать для отображения схемы
-            // Для других объектов (TypeProcess, TypeExecutor) - просто элементы дерева
-            const isClickable = isTrig && objInfo.quads && objInfo.quads.length > 0;
-            const clickHandler = isClickable ? `onclick="selectTriG('${escapeHtml(objUri)}')"` : '';
+            // Для других объектов (TypeProcess, TypeExecutor) - кликабельные для отображения свойств
+            const isTriGClickable = isTrig && objInfo.quads && objInfo.quads.length > 0;
+            let clickHandler;
+            if (isTriGClickable) {
+                // Клик по TriG - выбираем его для отображения схемы
+                clickHandler = `onclick="selectTriG('${escapeHtml(objUri)}')"`;
+            } else {
+                // Клик по не-TriG объекту - показываем свойства объекта
+                clickHandler = `onclick="selectTreeObject('${escapeHtml(objUri)}')"`;
+            }
             const trigClass = isTrig ? 'trig-item-bold' : 'trig-item-normal';
 
             html += `<div class="trig-tree-item ${isSelected ? 'selected active' : ''} ${trigClass}"
@@ -2184,8 +2199,10 @@ WHERE {
                          ${clickHandler}>`;
 
             // Значок раскрытия/закрытия (кликабельный для свертывания/развертывания)
+            // По умолчанию свернуто (▶), кроме ptree (▼)
             if (hasExpandableContent) {
-                html += `<span class="trig-tree-toggle" id="${toggleId}" onclick="event.stopPropagation(); toggleTreeNode('${childrenId}', '${toggleId}')">▼</span>`;
+                const toggleIcon = shouldBeExpanded ? '▼' : '▶';
+                html += `<span class="trig-tree-toggle" id="${toggleId}" onclick="event.stopPropagation(); toggleTreeNode('${childrenId}', '${toggleId}')">${toggleIcon}</span>`;
             } else {
                 html += `<span class="trig-tree-toggle"></span>`;
             }
@@ -2200,13 +2217,16 @@ WHERE {
             html += `</div>`;
 
             // Содержимое дерева (дочерние объекты и состав объектов)
+            // По умолчанию скрыто (display: none), кроме ptree
             if (hasExpandableContent) {
-                html += `<div class="trig-tree-children" id="${childrenId}">`;
+                const displayStyle = shouldBeExpanded ? '' : 'style="display: none;"';
+                html += `<div class="trig-tree-children" id="${childrenId}" ${displayStyle}>`;
 
                 // Сначала показываем дочерние объекты
+                // Дети ptree передаются с флагом parentIsPtree=true, чтобы они были свернуты
                 if (hasChildren) {
                     objInfo.children.forEach(childUri => {
-                        html += buildTriGTreeHtml(childUri, hierarchy, prefixes, level + 1);
+                        html += buildTriGTreeHtml(childUri, hierarchy, prefixes, level + 1, isPtree);
                     });
                 }
 
@@ -2335,6 +2355,120 @@ WHERE {
 
             // Подсвечиваем процесс на диаграмме
             highlightProcessOnDiagram(processUri);
+
+            // Отображаем свойства выбранного объекта
+            displayObjectProperties(processUri, trigUri, currentPrefixes);
+        }
+
+        /**
+         * Отображает свойства любого объекта (не только TriG) в панели свойств
+         * Собирает свойства из всех графов, где объект упоминается как subject
+         * @param {string} objectUri - URI объекта
+         * @param {string} contextTrigUri - URI TriG контекста (может быть null)
+         * @param {Object} prefixes - Словарь префиксов
+         */
+        function displayObjectProperties(objectUri, contextTrigUri, prefixes) {
+            const propertiesContent = document.getElementById('trig-properties-content');
+            if (!propertiesContent) return;
+
+            const prefixedUri = getPrefixedName(objectUri, prefixes);
+            const localName = getLocalName(objectUri);
+
+            // Собираем все свойства объекта из всех квадов
+            const properties = [];
+            let objectLabel = null;
+
+            currentQuads.forEach(quad => {
+                if (quad.subject.value === objectUri) {
+                    const predicateUri = quad.predicate.value;
+                    const predicateLabel = getPrefixedName(predicateUri, prefixes);
+                    const objectValue = quad.object.termType === 'Literal'
+                        ? `"${quad.object.value}"`
+                        : getPrefixedName(quad.object.value, prefixes);
+                    const isLiteral = quad.object.termType === 'Literal';
+                    const graphUri = quad.graph ? quad.graph.value : null;
+                    const graphLabel = graphUri ? getPrefixedName(graphUri, prefixes) : 'default';
+
+                    // Запоминаем rdfs:label для отображения
+                    if (predicateLabel === 'rdfs:label' || predicateUri === 'http://www.w3.org/2000/01/rdf-schema#label') {
+                        objectLabel = quad.object.value;
+                    }
+
+                    properties.push({
+                        predicate: predicateLabel,
+                        predicateUri: predicateUri,
+                        value: objectValue,
+                        valueUri: quad.object.termType === 'Literal' ? null : quad.object.value,
+                        isLiteral: isLiteral,
+                        graph: graphLabel
+                    });
+                }
+            });
+
+            let html = '';
+
+            // Заголовок - URI объекта с кнопкой копирования
+            html += `<div class="trig-property-item">`;
+            html += `<div class="trig-property-predicate">URI</div>`;
+            html += `<div class="trig-property-value-container">`;
+            html += `<div class="trig-property-value uri">${escapeHtml(prefixedUri)}</div>`;
+            html += `<button class="copy-id-btn" onclick="copyObjectId('${escapeHtml(objectUri)}', this)">Копировать</button>`;
+            html += `</div>`;
+            html += `</div>`;
+
+            // rdfs:label (если есть)
+            if (objectLabel) {
+                html += `<div class="trig-property-item">`;
+                html += `<div class="trig-property-predicate">rdfs:label</div>`;
+                html += `<div class="trig-property-value literal">"${escapeHtml(objectLabel)}"</div>`;
+                html += `</div>`;
+            }
+
+            // Остальные свойства (кроме rdfs:label, который уже показан)
+            properties.forEach(prop => {
+                if (prop.predicate === 'rdfs:label' || prop.predicateUri === 'http://www.w3.org/2000/01/rdf-schema#label') {
+                    return; // Уже показано выше
+                }
+
+                html += `<div class="trig-property-item">`;
+                html += `<div class="trig-property-predicate">${escapeHtml(prop.predicate)}</div>`;
+                if (prop.isLiteral) {
+                    html += `<div class="trig-property-value literal">${escapeHtml(prop.value)}</div>`;
+                } else {
+                    html += `<div class="trig-property-value uri">${escapeHtml(prop.value)}</div>`;
+                }
+                html += `</div>`;
+            });
+
+            // Если нет свойств, показываем сообщение
+            if (properties.length === 0) {
+                html += `<div class="trig-properties-empty">Нет свойств для объекта ${escapeHtml(prefixedUri)}</div>`;
+            }
+
+            propertiesContent.innerHTML = html;
+        }
+
+        /**
+         * Обработчик выбора объекта в дереве (для не-TriG объектов)
+         * Отображает свойства объекта без изменения выбранного TriG
+         * @param {string} objectUri - URI выбранного объекта
+         */
+        function selectTreeObject(objectUri) {
+            // Выделяем элемент в дереве
+            const treeItems = document.querySelectorAll('.trig-tree-item');
+            treeItems.forEach(item => {
+                if (item.getAttribute('data-trig-uri') === objectUri) {
+                    item.classList.add('selected');
+                } else {
+                    // Не снимаем выделение с активного TriG, только с других не-TriG элементов
+                    if (!item.classList.contains('active')) {
+                        item.classList.remove('selected');
+                    }
+                }
+            });
+
+            // Отображаем свойства объекта
+            displayObjectProperties(objectUri, selectedTrigUri, currentPrefixes);
         }
 
         /**
@@ -8079,6 +8213,10 @@ ${triples.join('\n')}
         /**
          * Заполняет выпадающий список концептов процессов в модальном окне New TriG
          * Загружает из ptree только те процессы, у которых ещё нет TriG схемы
+         * Исключает:
+         * - Процессы с уже созданными TriG схемами (по hasParentObj связи)
+         * - pNotDefined и t_pNotDefined (специальные системные объекты)
+         * - Созданные TriG контейнеры (t_* объекты типа VADProcessDia)
          */
         function populateNewTrigProcessConcepts() {
             const processConceptSelect = document.getElementById('new-trig-process-concept');
@@ -8089,8 +8227,10 @@ ${triples.join('\n')}
             // Получаем все концепты процессов из ptree
             const processConcepts = getProcessSubjects();
 
-            // Получаем процессы, которые уже имеют TriG схему
+            // Получаем процессы, которые уже имеют TriG схему (по hasParentObj связи)
             const processesWithTrig = new Set();
+
+            // Метод 1: Проверяем по hasTrig предикату
             currentQuads.forEach(quad => {
                 const predicate = quad.predicate.value;
                 if (predicate === 'http://example.org/vad#hasTrig' ||
@@ -8099,8 +8239,63 @@ ${triples.join('\n')}
                 }
             });
 
-            // Фильтруем - показываем только процессы без TriG (исключаем те, у которых уже есть TriG)
+            // Метод 2: Проверяем по hasParentObj - если существует TriG с таким hasParentObj, значит процесс уже имеет TriG
+            currentQuads.forEach(quad => {
+                const predicate = quad.predicate.value;
+                const subject = quad.subject.value;
+                const object = quad.object.value;
+
+                // Проверяем hasParentObj связи TriG объектов
+                if ((predicate === 'http://example.org/vad#hasParentObj' ||
+                     predicate.endsWith('#hasParentObj'))) {
+                    // Проверяем, является ли subject TriG типом (VADProcessDia)
+                    const isTriGSubject = currentQuads.some(q =>
+                        q.subject.value === subject &&
+                        (q.predicate.value === 'http://www.w3.org/1999/02/22-rdf-syntax-ns#type' ||
+                         q.predicate.value.endsWith('#type')) &&
+                        (q.object.value === 'http://example.org/vad#VADProcessDia' ||
+                         q.object.value.endsWith('#VADProcessDia'))
+                    );
+
+                    if (isTriGSubject) {
+                        // object - это концепт процесса, у которого уже есть TriG
+                        processesWithTrig.add(object);
+                    }
+                }
+            });
+
+            // Получаем URI для pNotDefined и t_pNotDefined
+            const pNotDefinedUris = new Set([
+                'http://example.org/vad#pNotDefined',
+                'http://example.org/vad#t_pNotDefined'
+            ]);
+
+            // Фильтруем - показываем только процессы без TriG
             processConcepts.forEach(p => {
+                // Исключаем pNotDefined и t_pNotDefined
+                if (pNotDefinedUris.has(p.uri) ||
+                    p.uri.endsWith('#pNotDefined') ||
+                    p.uri.endsWith('#t_pNotDefined')) {
+                    return; // Пропускаем pNotDefined
+                }
+
+                // Исключаем созданные TriG контейнеры (объекты типа t_* которые являются VADProcessDia)
+                const localName = getLocalName(p.uri);
+                if (localName.startsWith('t_')) {
+                    // Проверяем, является ли это TriG контейнером
+                    const isTriGContainer = currentQuads.some(q =>
+                        q.subject.value === p.uri &&
+                        (q.predicate.value === 'http://www.w3.org/1999/02/22-rdf-syntax-ns#type' ||
+                         q.predicate.value.endsWith('#type')) &&
+                        (q.object.value === 'http://example.org/vad#VADProcessDia' ||
+                         q.object.value.endsWith('#VADProcessDia'))
+                    );
+
+                    if (isTriGContainer) {
+                        return; // Пропускаем TriG контейнеры
+                    }
+                }
+
                 // Исключаем процессы, у которых уже есть TriG
                 if (processesWithTrig.has(p.uri)) {
                     return; // Пропускаем концепты с уже созданными TriG
