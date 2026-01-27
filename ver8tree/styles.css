@@ -1086,6 +1086,40 @@
             background-color: #4CAF50;
         }
 
+        /* Стили для разделителя и виртуальных свойств */
+        .trig-property-separator {
+            display: flex;
+            align-items: center;
+            margin: 15px 0 10px 0;
+            gap: 10px;
+        }
+
+        .trig-property-separator .separator-line {
+            flex: 1;
+            height: 1px;
+            background: linear-gradient(to right, transparent, #9C27B0, transparent);
+        }
+
+        .trig-property-separator .separator-text {
+            font-size: 11px;
+            color: #9C27B0;
+            font-weight: bold;
+            text-transform: uppercase;
+            white-space: nowrap;
+        }
+
+        .trig-property-item.virtual-property {
+            background-color: #F3E5F5;
+            border-left: 3px solid #9C27B0;
+            margin-left: -10px;
+            padding-left: 10px;
+        }
+
+        .trig-property-value.virtual {
+            color: #7B1FA2;
+            font-style: italic;
+        }
+
         /* ============================================================================
            СТИЛИ ДЛЯ РЕЖИМА SPARQL SMART DESIGN
            ============================================================================ */
@@ -1391,6 +1425,19 @@
 
         .show-in-window-btn:hover {
             background-color: #1976D2;
+        }
+
+        /* Стили для кнопки "virtualRDFdata" */
+        .virtual-rdf-btn {
+            background-color: #9C27B0;
+            padding: 8px 15px !important;
+            font-size: 13px !important;
+            margin-left: 5px;
+            vertical-align: middle;
+        }
+
+        .virtual-rdf-btn:hover {
+            background-color: #7B1FA2;
         }
 
         .rdf-input-header {

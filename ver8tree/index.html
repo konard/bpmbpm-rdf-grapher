@@ -35,6 +35,7 @@
         <div class="rdf-input-header">
             <label for="rdf-input">RDF данные или URI:</label>
             <button class="show-in-window-btn" onclick="showRdfInSeparateWindow()">Показать в окне</button>
+            <button class="virtual-rdf-btn" onclick="showVirtualRDFdataWindow()" title="Показать виртуальные вычисляемые данные (vad:processSubtype)">virtualRDFdata</button>
             <button class="clear-btn" onclick="clearRdfInput()">Очистить</button>
             <button class="save-as-btn" onclick="saveAsFile()">Сохранить как</button>
             <button class="load-btn" onclick="document.getElementById('file-input').click()">Загрузить</button>
@@ -1082,12 +1083,30 @@ vad:t_p1 {
 
         /**
          * PROCESS_SUBTYPES - Подтипы процессов в VAD онтологии
+         * Подтипы вычисляются автоматически и хранятся в virtualRDFdata
+         *
+         * Детализированные (имеют vad:hasTrig в ptree):
+         * - DetailedChild - в схеме родительского процесса
+         * - DetailedExternal - во внешней схеме
+         *
+         * Не детализированные (НЕ имеют vad:hasTrig в ptree):
+         * - notDetailedChild - в схеме родительского процесса
+         * - notDetailedExternal - во внешней схеме
+         *
+         * Специальный:
+         * - NotDefinedType - hasParentObj = pNotDefined
          */
         const PROCESS_SUBTYPES = {
-            BASIC: ['vad:Basic', 'http://example.org/vad#Basic'],
+            // Детализированные подтипы (с vad:hasTrig)
             DETAILED: ['vad:Detailed', 'http://example.org/vad#Detailed'],
             DETAILED_CHILD: ['vad:DetailedChild', 'http://example.org/vad#DetailedChild'],
-            DETAILED_EXTERNAL: ['vad:DetailedExternal', 'http://example.org/vad#DetailedExternal']
+            DETAILED_EXTERNAL: ['vad:DetailedExternal', 'http://example.org/vad#DetailedExternal'],
+            // Не детализированные подтипы (без vad:hasTrig)
+            NOT_DETAILED: ['vad:notDetailed', 'http://example.org/vad#notDetailed'],
+            NOT_DETAILED_CHILD: ['vad:notDetailedChild', 'http://example.org/vad#notDetailedChild'],
+            NOT_DETAILED_EXTERNAL: ['vad:notDetailedExternal', 'http://example.org/vad#notDetailedExternal'],
+            // Специальный подтип для процессов с pNotDefined
+            NOT_DEFINED_TYPE: ['vad:NotDefinedType', 'http://example.org/vad#NotDefinedType']
         };
 
         /**
@@ -1308,6 +1327,57 @@ vad:t_p1 {
             return PROCESS_SUBTYPES.DETAILED.some(t => subtypeUri === t || subtypeUri.endsWith('#Detailed')) ||
                    PROCESS_SUBTYPES.DETAILED_CHILD.some(t => subtypeUri === t || subtypeUri.endsWith('#DetailedChild')) ||
                    PROCESS_SUBTYPES.DETAILED_EXTERNAL.some(t => subtypeUri === t || subtypeUri.endsWith('#DetailedExternal'));
+        }
+
+        /**
+         * Проверяет, является ли подтип процесса не детализированным (notDetailed, notDetailedChild, notDetailedExternal)
+         * @param {string} subtypeUri - URI подтипа
+         * @returns {boolean}
+         */
+        function isNotDetailedSubtype(subtypeUri) {
+            return PROCESS_SUBTYPES.NOT_DETAILED.some(t => subtypeUri === t || subtypeUri.endsWith('#notDetailed')) ||
+                   PROCESS_SUBTYPES.NOT_DETAILED_CHILD.some(t => subtypeUri === t || subtypeUri.endsWith('#notDetailedChild')) ||
+                   PROCESS_SUBTYPES.NOT_DETAILED_EXTERNAL.some(t => subtypeUri === t || subtypeUri.endsWith('#notDetailedExternal'));
+        }
+
+        /**
+         * Проверяет, является ли подтип процесса NotDefinedType (hasParentObj = pNotDefined)
+         * @param {string} subtypeUri - URI подтипа
+         * @returns {boolean}
+         */
+        function isNotDefinedTypeSubtype(subtypeUri) {
+            return PROCESS_SUBTYPES.NOT_DEFINED_TYPE.some(t => subtypeUri === t || subtypeUri.endsWith('#NotDefinedType'));
+        }
+
+        /**
+         * Получает конкретный подтип процесса из URI
+         * @param {string} subtypeUri - URI подтипа
+         * @returns {string|null} - название подтипа или null
+         */
+        function getProcessSubtypeName(subtypeUri) {
+            if (PROCESS_SUBTYPES.DETAILED_CHILD.some(t => subtypeUri === t || subtypeUri.endsWith('#DetailedChild'))) {
+                return 'DetailedChild';
+            }
+            if (PROCESS_SUBTYPES.DETAILED_EXTERNAL.some(t => subtypeUri === t || subtypeUri.endsWith('#DetailedExternal'))) {
+                return 'DetailedExternal';
+            }
+            if (PROCESS_SUBTYPES.NOT_DETAILED_CHILD.some(t => subtypeUri === t || subtypeUri.endsWith('#notDetailedChild'))) {
+                return 'notDetailedChild';
+            }
+            if (PROCESS_SUBTYPES.NOT_DETAILED_EXTERNAL.some(t => subtypeUri === t || subtypeUri.endsWith('#notDetailedExternal'))) {
+                return 'notDetailedExternal';
+            }
+            if (PROCESS_SUBTYPES.NOT_DEFINED_TYPE.some(t => subtypeUri === t || subtypeUri.endsWith('#NotDefinedType'))) {
+                return 'NotDefinedType';
+            }
+            // Общие типы
+            if (PROCESS_SUBTYPES.DETAILED.some(t => subtypeUri === t || subtypeUri.endsWith('#Detailed'))) {
+                return 'Detailed';
+            }
+            if (PROCESS_SUBTYPES.NOT_DETAILED.some(t => subtypeUri === t || subtypeUri.endsWith('#notDetailed'))) {
+                return 'notDetailed';
+            }
+            return null;
         }
 
         /**
@@ -1619,32 +1689,87 @@ vad:t_p1 {
         // ============================================================================
 
         const VADNodeStyles = {
-            'ProcessStyleBasic': {
+            // =====================================================
+            // Детализированные процессы (имеют vad:hasTrig в ptree)
+            // =====================================================
+            'ProcessStyleDetailedChild': {
                 types: ['vad:TypeProcess', 'http://example.org/vad#TypeProcess'],
-                subtypes: ['vad:Basic', 'http://example.org/vad#Basic'],
-                // cds shape (chevron) с зелёной заливкой для базового типа
-                dot: 'shape="cds" height="0.8" width="1.5" color="#2E7D32" fillcolor="#A5D6A7" fontname="Arial" fontsize="11" style="filled"',
-                label: 'Процесс Базовый (vad:Basic)',
-                description: 'Базовый бизнес-процесс в VAD диаграмме'
+                subtypes: ['vad:DetailedChild', 'http://example.org/vad#DetailedChild'],
+                // cds shape (chevron) с голубой заливкой для детализированного подпроцесса
+                dot: 'shape="cds" height="0.8" width="1.5" color="#1565C0" fillcolor="#90CAF9" fontname="Arial" fontsize="11" style="filled"',
+                label: 'Детализ. подпроцесс (DetailedChild)',
+                description: 'Детализированный подпроцесс (в схеме родителя)'
             },
+            'ProcessStyleDetailedExternal': {
+                types: ['vad:TypeProcess', 'http://example.org/vad#TypeProcess'],
+                subtypes: ['vad:DetailedExternal', 'http://example.org/vad#DetailedExternal'],
+                // cds shape (chevron) с синей заливкой для внешнего детализированного
+                dot: 'shape="cds" height="0.8" width="1.5" color="#0D47A1" fillcolor="#64B5F6" fontname="Arial" fontsize="11" style="filled"',
+                label: 'Детализ. внешний (DetailedExternal)',
+                description: 'Детализированный внешний процесс (из другой схемы)'
+            },
+            // =====================================================
+            // Не детализированные процессы (НЕ имеют vad:hasTrig в ptree)
+            // =====================================================
+            'ProcessStyleNotDetailedChild': {
+                types: ['vad:TypeProcess', 'http://example.org/vad#TypeProcess'],
+                subtypes: ['vad:notDetailedChild', 'http://example.org/vad#notDetailedChild'],
+                // cds shape (chevron) с зелёной заливкой для не детализированного подпроцесса
+                dot: 'shape="cds" height="0.8" width="1.5" color="#2E7D32" fillcolor="#A5D6A7" fontname="Arial" fontsize="11" style="filled"',
+                label: 'Не детализ. подпроцесс (notDetailedChild)',
+                description: 'Не детализированный подпроцесс (в схеме родителя)'
+            },
+            'ProcessStyleNotDetailedExternal': {
+                types: ['vad:TypeProcess', 'http://example.org/vad#TypeProcess'],
+                subtypes: ['vad:notDetailedExternal', 'http://example.org/vad#notDetailedExternal'],
+                // cds shape (chevron) с светло-зелёной заливкой для внешнего не детализированного
+                dot: 'shape="cds" height="0.8" width="1.5" color="#1B5E20" fillcolor="#C8E6C9" fontname="Arial" fontsize="11" style="filled"',
+                label: 'Не детализ. внешний (notDetailedExternal)',
+                description: 'Не детализированный внешний процесс (из другой схемы)'
+            },
+            // =====================================================
+            // Специальный тип для процессов с pNotDefined
+            // =====================================================
+            'ProcessStyleNotDefinedType': {
+                types: ['vad:TypeProcess', 'http://example.org/vad#TypeProcess'],
+                subtypes: ['vad:NotDefinedType', 'http://example.org/vad#NotDefinedType'],
+                // cds shape (chevron) с серой заливкой для неопределённого типа
+                dot: 'shape="cds" height="0.8" width="1.5" color="#616161" fillcolor="#BDBDBD" fontname="Arial" fontsize="11" style="filled,dashed"',
+                label: 'Неопред. родитель (NotDefinedType)',
+                description: 'Процесс с неопределённым родителем (hasParentObj = pNotDefined)'
+            },
+            // =====================================================
+            // Общие стили (для обратной совместимости)
+            // =====================================================
             'ProcessStyleDetailed': {
                 types: ['vad:TypeProcess', 'http://example.org/vad#TypeProcess'],
                 subtypes: ['vad:Detailed', 'http://example.org/vad#Detailed'],
                 // cds shape (chevron) с голубой заливкой для детализированного типа
                 dot: 'shape="cds" height="0.8" width="1.5" color="#1565C0" fillcolor="#90CAF9" fontname="Arial" fontsize="11" style="filled"',
-                label: 'Процесс Детализированный (vad:Detailed)',
-                description: 'Детализированный бизнес-процесс в VAD диаграмме'
+                label: 'Детализированный (Detailed)',
+                description: 'Детализированный бизнес-процесс (общий)'
             },
+            'ProcessStyleNotDetailed': {
+                types: ['vad:TypeProcess', 'http://example.org/vad#TypeProcess'],
+                subtypes: ['vad:notDetailed', 'http://example.org/vad#notDetailed'],
+                // cds shape (chevron) с зелёной заливкой для не детализированного типа
+                dot: 'shape="cds" height="0.8" width="1.5" color="#2E7D32" fillcolor="#A5D6A7" fontname="Arial" fontsize="11" style="filled"',
+                label: 'Не детализированный (notDetailed)',
+                description: 'Не детализированный бизнес-процесс (общий)'
+            },
+            // =====================================================
+            // Другие типы узлов
+            // =====================================================
             'ExecutorGroupStyle': {
                 types: ['vad:ExecutorGroup', 'http://example.org/vad#ExecutorGroup'],
                 dot: 'shape="ellipse" color="#B8860B" fillcolor="#FFFFCC" fontname="Arial" fontsize="9" style="filled"',
-                label: 'Группа исполнителей (vad:ExecutorGroup)',
+                label: 'Группа исполнителей (ExecutorGroup)',
                 description: 'Группа исполнителей процесса (эллипс с желтоватой заливкой)'
             },
             'ExecutorStyle': {
                 types: ['vad:TypeExecutor', 'http://example.org/vad#TypeExecutor'],
                 dot: 'shape="ellipse" height="0.4" width="0.8" color="#6A1B9A" fillcolor="#E1BEE7" fontname="Arial" fontsize="9" style="filled"',
-                label: 'Исполнитель (vad:TypeExecutor)',
+                label: 'Исполнитель (TypeExecutor)',
                 description: 'Исполнитель процесса'
             },
             'default': {
@@ -1749,6 +1874,289 @@ vad:t_p1 {
         let currentStore = null;
         let comunicaEngine = null;
         let currentDotCode = '';
+
+        // ============================================================================
+        // ВИРТУАЛЬНЫЕ ДАННЫЕ (VIRTUAL RDF DATA)
+        // ============================================================================
+        // Хранилище для автоматически вычисляемых свойств процессов
+        // Формат: { processUri: { processSubtype: 'DetailedChild', ... } }
+        // Пересчитывается при загрузке данных и изменении схемы
+        // ============================================================================
+
+        let virtualRDFdata = {};  // Виртуальные вычисляемые свойства
+
+        /**
+         * Вычисляет vad:processSubtype для всех процессов
+         * Алгоритм:
+         * 1. Если hasParentObj = pNotDefined -> NotDefinedType
+         * 2. Если концепт имеет hasTrig -> Detailed*
+         *    - Если индивид в схеме родительского процесса -> DetailedChild
+         *    - Иначе -> DetailedExternal
+         * 3. Если концепт НЕ имеет hasTrig -> notDetailed*
+         *    - Если индивид в схеме родительского процесса -> notDetailedChild
+         *    - Иначе -> notDetailedExternal
+         *
+         * @param {Object} trigHierarchy - Иерархия TriG графов
+         * @param {Object} prefixes - Словарь префиксов
+         * @returns {Object} - virtualRDFdata с вычисленными подтипами
+         */
+        function calculateProcessSubtypes(hierarchy, prefixes) {
+            const result = {};
+            const pNotDefinedUris = [
+                'http://example.org/vad#pNotDefined',
+                'vad:pNotDefined'
+            ];
+
+            // Проходим по всем TriG в иерархии
+            for (const [trigUri, trigInfo] of Object.entries(hierarchy)) {
+                // Пропускаем служебные графы (ptree, rtree, root)
+                if (trigUri.endsWith('#ptree') || trigUri.endsWith('#rtree') ||
+                    trigUri.endsWith('#root') || !trigInfo.quads) {
+                    continue;
+                }
+
+                // Получаем hasParentObj текущего TriG (это концепт процесса, которому принадлежит схема)
+                const trigParentObj = trigInfo.hasParentObj;
+
+                // Получаем все процессы из текущего TriG
+                trigInfo.quads.forEach(quad => {
+                    const subjectUri = quad.subject.value;
+                    const predicateUri = quad.predicate.value;
+                    const objectValue = quad.object.value;
+
+                    // Ищем процессы (rdf:type = TypeProcess)
+                    if (predicateUri === 'http://www.w3.org/1999/02/22-rdf-syntax-ns#type' &&
+                        (objectValue === 'http://example.org/vad#TypeProcess' ||
+                         objectValue.endsWith('#TypeProcess'))) {
+
+                        // Инициализируем запись для процесса
+                        if (!result[subjectUri]) {
+                            result[subjectUri] = {
+                                processSubtype: null,
+                                trigUri: trigUri,
+                                label: null,
+                                hasParentObj: null,
+                                hasTrig: null
+                            };
+                        }
+                        result[subjectUri].trigUri = trigUri;
+                    }
+                });
+            }
+
+            // Получаем метаданные процессов из ptree
+            const ptreeUri = 'http://example.org/vad#ptree';
+            const ptreeInfo = hierarchy[ptreeUri];
+
+            if (ptreeInfo && ptreeInfo.quads) {
+                ptreeInfo.quads.forEach(quad => {
+                    const subjectUri = quad.subject.value;
+                    const predicateUri = quad.predicate.value;
+                    const predicateLabel = getPrefixedName(predicateUri, prefixes);
+                    const objectValue = quad.object.value;
+
+                    // Собираем hasParentObj и hasTrig для всех процессов
+                    if (predicateLabel === 'vad:hasParentObj' ||
+                        predicateUri === 'http://example.org/vad#hasParentObj') {
+                        if (!result[subjectUri]) {
+                            result[subjectUri] = {
+                                processSubtype: null,
+                                trigUri: null,
+                                label: null,
+                                hasParentObj: objectValue,
+                                hasTrig: null
+                            };
+                        } else {
+                            result[subjectUri].hasParentObj = objectValue;
+                        }
+                    }
+
+                    if (predicateLabel === 'vad:hasTrig' ||
+                        predicateUri === 'http://example.org/vad#hasTrig') {
+                        if (!result[subjectUri]) {
+                            result[subjectUri] = {
+                                processSubtype: null,
+                                trigUri: null,
+                                label: null,
+                                hasParentObj: null,
+                                hasTrig: objectValue
+                            };
+                        } else {
+                            result[subjectUri].hasTrig = objectValue;
+                        }
+                    }
+
+                    if (predicateLabel === 'rdfs:label' ||
+                        predicateUri === 'http://www.w3.org/2000/01/rdf-schema#label') {
+                        if (result[subjectUri]) {
+                            result[subjectUri].label = objectValue;
+                        }
+                    }
+                });
+            }
+
+            // Вычисляем processSubtype для каждого процесса
+            for (const [processUri, processInfo] of Object.entries(result)) {
+                const hasParentObj = processInfo.hasParentObj;
+                const hasTrig = processInfo.hasTrig;
+                const processTrigUri = processInfo.trigUri;
+
+                // 1. Проверяем pNotDefined
+                if (hasParentObj && pNotDefinedUris.some(uri =>
+                    hasParentObj === uri || hasParentObj.endsWith('#pNotDefined'))) {
+                    processInfo.processSubtype = 'NotDefinedType';
+                    continue;
+                }
+
+                // 2. Определяем, находится ли индивид в схеме родительского процесса
+                // Для этого проверяем, совпадает ли hasParentObj TriG с hasParentObj процесса
+                let isChild = false;
+                if (processTrigUri && hierarchy[processTrigUri]) {
+                    const trigParentObj = hierarchy[processTrigUri].hasParentObj;
+                    // Процесс является подпроцессом, если его hasParentObj совпадает с
+                    // объектом, на который указывает hasParentObj его TriG
+                    if (trigParentObj && hasParentObj === trigParentObj) {
+                        isChild = true;
+                    }
+                }
+
+                // 3. Вычисляем подтип на основе hasTrig и isChild
+                if (hasTrig) {
+                    // Детализированный процесс
+                    processInfo.processSubtype = isChild ? 'DetailedChild' : 'DetailedExternal';
+                } else {
+                    // Не детализированный процесс
+                    processInfo.processSubtype = isChild ? 'notDetailedChild' : 'notDetailedExternal';
+                }
+            }
+
+            return result;
+        }
+
+        /**
+         * Генерирует строковое представление virtualRDFdata в формате Turtle/TriG
+         * @param {Object} virtualData - Виртуальные данные
+         * @param {Object} prefixes - Словарь префиксов
+         * @returns {string} - Строка в формате Turtle
+         */
+        function formatVirtualRDFdata(virtualData, prefixes) {
+            let output = '# ==============================================================================\n';
+            output += '# VIRTUAL RDF DATA - Автоматически вычисленные свойства процессов\n';
+            output += '# ==============================================================================\n';
+            output += '# Эти данные вычисляются автоматически при загрузке и не хранятся в RDF.\n';
+            output += '# Пересчёт происходит при изменении схемы процесса.\n';
+            output += '# ==============================================================================\n\n';
+
+            // Добавляем префиксы
+            output += '@prefix rdf:      <http://www.w3.org/1999/02/22-rdf-syntax-ns#> .\n';
+            output += '@prefix rdfs:     <http://www.w3.org/2000/01/rdf-schema#> .\n';
+            output += '@prefix vad:      <http://example.org/vad#> .\n\n';
+
+            // Группируем по TriG
+            const byTrig = {};
+            for (const [processUri, processInfo] of Object.entries(virtualData)) {
+                const trigUri = processInfo.trigUri || 'unknown';
+                if (!byTrig[trigUri]) {
+                    byTrig[trigUri] = [];
+                }
+                byTrig[trigUri].push({ uri: processUri, ...processInfo });
+            }
+
+            // Выводим для каждого TriG
+            for (const [trigUri, processes] of Object.entries(byTrig)) {
+                const trigLabel = getPrefixedName(trigUri, prefixes);
+                output += `# TriG: ${trigLabel}\n`;
+                output += `# Виртуальный контейнер: vt_${trigLabel.replace('vad:t_', '').replace('vad:', '')}\n\n`;
+
+                processes.forEach(processInfo => {
+                    const processLabel = getPrefixedName(processInfo.uri, prefixes);
+                    const subtype = processInfo.processSubtype || 'unknown';
+                    const label = processInfo.label || '';
+
+                    output += `${processLabel}\n`;
+                    output += `    vad:processSubtype vad:${subtype} ;  # Вычислено автоматически\n`;
+                    if (label) {
+                        output += `    rdfs:label "${label}" ;\n`;
+                    }
+                    if (processInfo.hasParentObj) {
+                        output += `    vad:hasParentObj ${getPrefixedName(processInfo.hasParentObj, prefixes)} ;\n`;
+                    }
+                    if (processInfo.hasTrig) {
+                        output += `    vad:hasTrig ${getPrefixedName(processInfo.hasTrig, prefixes)} ;\n`;
+                    }
+                    output += `    # trigUri: ${trigLabel} .\n\n`;
+                });
+            }
+
+            return output;
+        }
+
+        /**
+         * Открывает окно с виртуальными RDF данными
+         */
+        function showVirtualRDFdataWindow() {
+            const virtualContent = formatVirtualRDFdata(virtualRDFdata, currentPrefixes);
+
+            // Создаем новое окно
+            const newWindow = window.open('', '_blank', 'width=800,height=600,scrollbars=yes,resizable=yes');
+
+            if (newWindow) {
+                // Формируем HTML для нового окна
+                const htmlContent = '<!DOCTYPE html>' +
+                    '<html><head><title>virtualRDFdata - Виртуальные данные</title>' +
+                    '<style>' +
+                    'body { font-family: Consolas, Monaco, monospace; padding: 20px; background-color: #f5f5f5; margin: 0; }' +
+                    '.container { background-color: white; padding: 20px; border-radius: 8px; box-shadow: 0 2px 4px rgba(0,0,0,0.1); }' +
+                    'h1 { color: #333; font-size: 18px; margin-top: 0; border-bottom: 2px solid #9C27B0; padding-bottom: 10px; }' +
+                    '.info { background-color: #F3E5F5; border-left: 4px solid #9C27B0; padding: 10px 15px; margin-bottom: 15px; font-size: 13px; }' +
+                    'pre { white-space: pre-wrap; word-wrap: break-word; font-size: 13px; line-height: 1.5; margin: 0; color: #333; background-color: #fafafa; padding: 15px; border-radius: 4px; }' +
+                    '.copy-btn { background-color: #9C27B0; color: white; border: none; padding: 8px 16px; border-radius: 4px; cursor: pointer; margin-bottom: 15px; margin-right: 10px; }' +
+                    '.copy-btn:hover { background-color: #7B1FA2; }' +
+                    '.refresh-btn { background-color: #4CAF50; color: white; border: none; padding: 8px 16px; border-radius: 4px; cursor: pointer; margin-bottom: 15px; }' +
+                    '.refresh-btn:hover { background-color: #45a049; }' +
+                    '</style></head>' +
+                    '<body><div class="container">' +
+                    '<h1>virtualRDFdata - Виртуальные вычисляемые данные</h1>' +
+                    '<div class="info">' +
+                    '<strong>Описание:</strong> Эти данные вычисляются автоматически на основе RDF-данных и ' +
+                    'не хранятся в файлах. Значения vad:processSubtype определяются по наличию vad:hasTrig ' +
+                    'и положению процесса в иерархии схем.' +
+                    '</div>' +
+                    '<button class="copy-btn" id="copy-btn">Копировать в буфер</button>' +
+                    '<pre id="virtual-content"></pre>' +
+                    '</div></body></html>';
+
+                newWindow.document.write(htmlContent);
+                newWindow.document.close();
+
+                // Заполняем содержимое после записи документа
+                const preElement = newWindow.document.getElementById('virtual-content');
+                if (preElement) {
+                    preElement.textContent = virtualContent;
+                }
+
+                // Добавляем обработчик для кнопки копирования
+                const copyBtn = newWindow.document.getElementById('copy-btn');
+                if (copyBtn) {
+                    copyBtn.onclick = function() {
+                        newWindow.navigator.clipboard.writeText(virtualContent).then(function() {
+                            newWindow.alert('Скопировано в буфер обмена');
+                        }).catch(function() {
+                            // Fallback для старых браузеров
+                            const textarea = newWindow.document.createElement('textarea');
+                            textarea.value = virtualContent;
+                            newWindow.document.body.appendChild(textarea);
+                            textarea.select();
+                            newWindow.document.execCommand('copy');
+                            newWindow.document.body.removeChild(textarea);
+                            newWindow.alert('Скопировано в буфер обмена');
+                        });
+                    };
+                }
+            } else {
+                alert('Не удалось открыть новое окно. Проверьте настройки блокировки всплывающих окон.');
+            }
+        }
 
         const defaultSparqlQuery = `SELECT ?s ?p ?o
 WHERE {
@@ -2443,6 +2851,52 @@ WHERE {
             // Если нет свойств, показываем сообщение
             if (properties.length === 0) {
                 html += `<div class="trig-properties-empty">Нет свойств для объекта ${escapeHtml(prefixedUri)}</div>`;
+            }
+
+            // Проверяем, есть ли вычисляемые свойства в virtualRDFdata
+            const virtualData = virtualRDFdata[objectUri];
+            if (virtualData) {
+                // Добавляем разделитель
+                html += `<div class="trig-property-separator">`;
+                html += `<span class="separator-line"></span>`;
+                html += `<span class="separator-text">Вычисляемые свойства (virtualRDFdata)</span>`;
+                html += `<span class="separator-line"></span>`;
+                html += `</div>`;
+
+                // vad:processSubtype
+                if (virtualData.processSubtype) {
+                    html += `<div class="trig-property-item virtual-property">`;
+                    html += `<div class="trig-property-predicate">vad:processSubtype</div>`;
+                    html += `<div class="trig-property-value uri virtual">vad:${escapeHtml(virtualData.processSubtype)}</div>`;
+                    html += `</div>`;
+                }
+
+                // hasTrig (из ptree)
+                if (virtualData.hasTrig) {
+                    const hasTrigLabel = getPrefixedName(virtualData.hasTrig, prefixes);
+                    html += `<div class="trig-property-item virtual-property">`;
+                    html += `<div class="trig-property-predicate">vad:hasTrig (ptree)</div>`;
+                    html += `<div class="trig-property-value uri virtual">${escapeHtml(hasTrigLabel)}</div>`;
+                    html += `</div>`;
+                }
+
+                // hasParentObj (из ptree)
+                if (virtualData.hasParentObj) {
+                    const parentLabel = getPrefixedName(virtualData.hasParentObj, prefixes);
+                    html += `<div class="trig-property-item virtual-property">`;
+                    html += `<div class="trig-property-predicate">vad:hasParentObj (ptree)</div>`;
+                    html += `<div class="trig-property-value uri virtual">${escapeHtml(parentLabel)}</div>`;
+                    html += `</div>`;
+                }
+
+                // trigUri (где находится индивид)
+                if (virtualData.trigUri) {
+                    const trigLabel = getPrefixedName(virtualData.trigUri, prefixes);
+                    html += `<div class="trig-property-item virtual-property">`;
+                    html += `<div class="trig-property-predicate">trigUri (расположение)</div>`;
+                    html += `<div class="trig-property-value uri virtual">${escapeHtml(trigLabel)}</div>`;
+                    html += `</div>`;
+                }
             }
 
             propertiesContent.innerHTML = html;
@@ -6440,6 +6894,8 @@ WHERE {
                     const hierarchyResult = parseTriGHierarchy(quads, prefixes);
                     if (hierarchyResult.valid) {
                         trigHierarchy = hierarchyResult.hierarchy;
+                        // Вычисляем виртуальные данные (processSubtype)
+                        virtualRDFdata = calculateProcessSubtypes(trigHierarchy, prefixes);
                     }
                 }
 
@@ -6877,6 +7333,39 @@ WHERE {
                 return;
             }
 
+            // Проверяем, что у концепта процесса hasParentObj НЕ указывает на pNotDefined
+            // Такие процессы не могут быть использованы для создания новых TriG
+            const pNotDefinedUris = [
+                'http://example.org/vad#pNotDefined',
+                'vad:pNotDefined'
+            ];
+
+            // Получаем hasParentObj для выбранного концепта из ptree
+            let hasParentObjValue = null;
+            const ptreeUri = 'http://example.org/vad#ptree';
+            if (trigHierarchy && trigHierarchy[ptreeUri] && trigHierarchy[ptreeUri].quads) {
+                trigHierarchy[ptreeUri].quads.forEach(quad => {
+                    if (quad.subject.value === processConcept) {
+                        const predicateUri = quad.predicate.value;
+                        if (predicateUri === 'http://example.org/vad#hasParentObj' ||
+                            predicateUri.endsWith('#hasParentObj')) {
+                            hasParentObjValue = quad.object.value;
+                        }
+                    }
+                });
+            }
+
+            // Проверяем, является ли hasParentObj = pNotDefined
+            if (hasParentObjValue && pNotDefinedUris.some(uri =>
+                hasParentObjValue === uri || hasParentObjValue.endsWith('#pNotDefined'))) {
+                const processLabel = getPrefixedName(processConcept, currentPrefixes);
+                alert(`Ошибка: Процесс "${processLabel}" имеет неопределённый родительский элемент (hasParentObj = pNotDefined).\n\n` +
+                      `Для создания TriG необходимо сначала указать корректный родительский элемент ` +
+                      `для этого процесса в vad:ptree.\n\n` +
+                      `Процессы с подтипом NotDefinedType не могут иметь собственных TriG схем.`);
+                return;
+            }
+
             // Формируем URI нового TriG
             let trigUri;
             if (currentPrefixes['vad']) {
@@ -7179,6 +7668,9 @@ ${triples.join('\n')}
 
                     // Сохраняем иерархию
                     trigHierarchy = hierarchyResult.hierarchy;
+
+                    // Вычисляем виртуальные данные (processSubtype)
+                    virtualRDFdata = calculateProcessSubtypes(trigHierarchy, prefixes);
 
                     // Выбираем корневой TriG для начального отображения
                     // Используем первый из корневых TriG, если есть
