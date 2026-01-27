@@ -215,6 +215,23 @@
         </div>
     </div>
 
+    <!-- Модальное окно для отображения результатов тестирования -->
+    <div id="test-result-modal" class="test-result-modal">
+        <div class="test-result-modal-content">
+            <div class="test-result-modal-header">
+                <h3 id="test-result-modal-title">Результат проверки</h3>
+                <button class="test-result-modal-close" onclick="closeTestResultModal()">&times;</button>
+            </div>
+            <div class="test-result-modal-body">
+                <textarea id="test-result-modal-text" class="test-result-textarea" readonly></textarea>
+            </div>
+            <div class="test-result-modal-buttons">
+                <button class="test-result-copy-btn" onclick="copyTestResultToClipboard()">Копировать</button>
+                <button class="test-result-close-btn" onclick="closeTestResultModal()">Закрыть</button>
+            </div>
+        </div>
+    </div>
+
     <div class="result-container" id="result-container">
         <h2>Результат:</h2>
 
@@ -337,8 +354,8 @@ WHERE {
 
         const EXAMPLE_DATA = {
             // TriG VADv5 пример с иерархией объектов через hasParentObj
-            'trig-vad-v5': `# Пример TriG VADv5 (Value Added Chain Diagram с иерархией объектов)
-# Демонстрация иерархии объектов через vad:hasParentObj
+            'trig-vad-v5': `# Пример TriG VADv5 (Value Added Chain Diagram с иерархией TriG)
+# Демонстрация иерархии TriG графов через hasParentTrig
 # Исполнители определены в vad:rtree (Дерево Исполнителей)
 #
 
@@ -360,6 +377,7 @@ vad:root {
 vad:ptree {
     vad:ptree rdf:type vad:ObjectTree ;
         rdfs:label "Дерево Процессов (TriG)" ;
+#        vad:hasParentTrig vad:root .
          vad:hasParentObj vad:root .
 
     vad:p1 rdf:type vad:TypeProcess ;
@@ -378,17 +396,20 @@ vad:ptree {
         rdfs:label "Процесс 1.2" ;
         dcterms:description "Второй процесс, выполняется после Процесса 1" ;
          vad:hasParentObj vad:p1 .
+ #       vad:hasParentProcess vad:p1 .
 
     # p1.1.1
     vad:p1.1.1 rdf:type vad:TypeProcess ;
         rdfs:label "p1.1.1 Процесс 1.1.1" ;
         dcterms:description "Первый процесс в цепочке добавленной стоимости" ;
         vad:hasParentObj vad:p1.1 .
+#        vad:hasParentProcess vad:p1.1 .
 
     vad:p1.1.2 rdf:type vad:TypeProcess ;
         rdfs:label "p1.1.2 Процесс 1.1.2" ;
         dcterms:description "Второй процесс в цепочке добавленной стоимости" ;
         vad:hasParentObj vad:p1.1 .
+#       vad:hasParentProcess vad:p1.1 .
 
     vad:p2 rdf:type vad:TypeProcess ;
         rdfs:label "p2 Процесс 2" ;
@@ -400,21 +421,25 @@ vad:ptree {
         rdfs:label "p2.1 Процесс 2.1" ;
         dcterms:description "Первый процесс в цепочке добавленной стоимости" ;
         vad:hasParentObj vad:p2 .
+#        vad:hasParentProcess vad:p2 .
 
     vad:p2.2 rdf:type vad:TypeProcess ;
         rdfs:label "p2.2 Процесс 2.2" ;
         dcterms:description "Второй процесс" ;
         vad:hasParentObj vad:p2 .
+#        vad:hasParentProcess vad:p2 .
 
    vad:pх.х rdf:type vad:TypeProcess ;
         rdfs:label "pх.х Процесс х.х" ;
         dcterms:description "Какой-то процесс" ;
+#        vad:hasParentProcess vad:pNotDefined .
         vad:hasParentObj vad:pNotDefined .
 
    vad:pNotDefined rdf:type vad:TypeProcess ;
         rdfs:label "pNotDefined Процесс" ;
         dcterms:description "Какой-то процесс" ;
         vad:hasParentObj vad:ptree .
+#        vad:hasParentProcess vad:NotDefined .
 
 }
 
@@ -427,246 +452,216 @@ vad:rtree {
     vad:rtree rdf:type vad:ObjectTree ;
         rdfs:label "Дерево Исполнителей (TriG)" ;
         vad:hasParentObj vad:root .
+#        vad:hasParentTrig vad:root .
 
-    # Исполнители для t_pGA
+    vad:Org-structure rdf:type vad:TypeExecutor ;
+        rdfs:label "Исполнитель Org-structure" ;
+        vad:hasParentObj vad:rtree .
+
+    # Исполнители
     vad:Executor1 rdf:type vad:TypeExecutor ;
-        rdfs:label "Исполнитель 1" .
+        rdfs:label "Исполнитель 1" ;
+        vad:hasParentObj vad:Org-structure .
 
     vad:Executor2 rdf:type vad:TypeExecutor ;
-        rdfs:label "Исполнитель 2" .
+        rdfs:label "Исполнитель 2" ;
+        vad:hasParentObj vad:Org-structure .
 
     vad:Executor3 rdf:type vad:TypeExecutor ;
-        rdfs:label "Исполнитель 3" .
+        rdfs:label "Исполнитель 3" ;
+        vad:hasParentObj vad:Org-structure .
 
     vad:Executor4 rdf:type vad:TypeExecutor ;
-        rdfs:label "Исполнитель 4" .
+        rdfs:label "Исполнитель 4" ;
+        vad:hasParentObj vad:Org-structure .
 
     vad:Executor5 rdf:type vad:TypeExecutor ;
-        rdfs:label "Исполнитель 5" .
+        rdfs:label "Исполнитель 5" ;
+        vad:hasParentObj vad:Org-structure .
 
     vad:Executor6 rdf:type vad:TypeExecutor ;
-        rdfs:label "Исполнитель 6" .
+        rdfs:label "Исполнитель 6" ;
+        vad:hasParentObj vad:Org-structure .
 
     vad:Executor7 rdf:type vad:TypeExecutor ;
-        rdfs:label "Исполнитель 7" .
+        rdfs:label "Исполнитель 7" ;
+        vad:hasParentObj vad:Org-structure .
 
     vad:Executor8 rdf:type vad:TypeExecutor ;
-        rdfs:label "Исполнитель 8" .
+        rdfs:label "Исполнитель 8" ;
+        vad:hasParentObj vad:Org-structure .
 
-    # Исполнители для t_p1
+    # Исполнители
     vad:Executor21 rdf:type vad:TypeExecutor ;
-        rdfs:label "Исполнитель 21" .
+        rdfs:label "Исполнитель 21" ;
+        vad:hasParentObj vad:Org-structure .
 
     vad:Executor22 rdf:type vad:TypeExecutor ;
-        rdfs:label "Исполнитель 22" .
+        rdfs:label "Исполнитель 22" ;
+        vad:hasParentObj vad:Org-structure .
 
     vad:Executor23 rdf:type vad:TypeExecutor ;
-        rdfs:label "Исполнитель 23" .
+        rdfs:label "Исполнитель 23" ;
+        vad:hasParentObj vad:Org-structure .
 
     vad:Executor24 rdf:type vad:TypeExecutor ;
-        rdfs:label "Исполнитель 24" .
+        rdfs:label "Исполнитель 24" ;
+        vad:hasParentObj vad:Org-structure .
 
     vad:Executor25 rdf:type vad:TypeExecutor ;
-        rdfs:label "Исполнитель 25" .
+        rdfs:label "Исполнитель 25" ;
+        vad:hasParentObj vad:Org-structure .
 
     vad:Executor26 rdf:type vad:TypeExecutor ;
-        rdfs:label "Исполнитель 26" .
+        rdfs:label "Исполнитель 26" ;
+        vad:hasParentObj vad:Org-structure .
 
     vad:Executor27 rdf:type vad:TypeExecutor ;
-        rdfs:label "Исполнитель 27" .
+        rdfs:label "Исполнитель 27" ;
+        vad:hasParentObj vad:Org-structure .
 
     vad:Executor28 rdf:type vad:TypeExecutor ;
-        rdfs:label "Исполнитель 28" .
+        rdfs:label "Исполнитель 28" ;
+        vad:hasParentObj vad:Org-structure .
 }
 
 # ============================================================================
-# Корневой TriG граф: t_pGA (hasParentObj = pGA, pGA hasParentObj = ptree)
-# ============================================================================
-
-vad:t_pGA {
-    vad:t_pGA rdf:type vad:VADProcessDia ;
-        rdfs:label "Схема t_pGA процесса pGA" ;
-        vad:hasParentObj vad:pGA .
-
-    # Процесс 1 - DetailedChild (имеет дочернюю схему vad:t_p1 с hasParentObj на p1)
-    # rdf:type находится в vad:ptree
-    # isSubprocessTrig указывается первым для явной связи с TriG
-    vad:p1 vad:isSubprocessTrig vad:t_pGA ;
-        vad:hasExecutor vad:ExecutorGroup_p1 ;
-        vad:processSubtype vad:DetailedChild ;
-        vad:hasNext vad:Process2 .
-
-    # Процесс 2 - Базовый
-    vad:Process2 vad:isSubprocessTrig vad:t_pGA ;
-        vad:hasExecutor vad:ExecutorGroup_Process2 ;
-        vad:processSubtype vad:Basic ;
-        vad:hasNext vad:Process3, vad:Process4 .
-
-    # Процесс 3 - Базовый
-    vad:Process3 vad:isSubprocessTrig vad:t_pGA ;
-        vad:hasExecutor vad:ExecutorGroup_Process3 ;
-        vad:processSubtype vad:Basic ;
-        vad:hasNext vad:Process4 .
-
-    # Процесс 4 - Базовый
-    vad:Process4 vad:isSubprocessTrig vad:t_pGA ;
-        vad:hasExecutor vad:ExecutorGroup_Process4 ;
-        vad:processSubtype vad:Basic ;
-        vad:hasNext vad:Process5 .
-
-    # Процесс 5 - Базовый
-    vad:Process5 vad:isSubprocessTrig vad:t_pGA ;
-        vad:hasExecutor vad:ExecutorGroup_Process5 ;
-        vad:processSubtype vad:Basic ;
-        vad:hasNext vad:Process6 .
-
-    # Процесс 6 - Базовый
-    vad:Process6 vad:isSubprocessTrig vad:t_pGA ;
-        vad:hasExecutor vad:ExecutorGroup_Process6 ;
-        vad:processSubtype vad:Basic ;
-        vad:hasNext vad:Process7 .
-
-    # Процесс 7 - Базовый
-    vad:Process7 vad:isSubprocessTrig vad:t_pGA ;
-        vad:hasExecutor vad:ExecutorGroup_Process7 ;
-        vad:processSubtype vad:Basic ;
-        vad:hasNext vad:Process8 .
-
-    # Процесс 8 - Базовый
-    vad:Process8 vad:isSubprocessTrig vad:t_pGA ;
-        vad:hasExecutor vad:ExecutorGroup_Process8 ;
-        vad:processSubtype vad:Basic .
-
-    # Группы исполнителей (ID формируется как ExecutorGroup_ + ID процесса)
-    vad:ExecutorGroup_p1 rdf:type vad:ExecutorGroup ;
-        rdfs:label "Группа исполнителей процесса p1" ;
-        vad:includes vad:Executor1 .
-
-    vad:ExecutorGroup_Process2 rdf:type vad:ExecutorGroup ;
-        rdfs:label "Группа исполнителей процесса Process2" ;
-        vad:includes vad:Executor1, vad:Executor2 .
-
-    vad:ExecutorGroup_Process3 rdf:type vad:ExecutorGroup ;
-        rdfs:label "Группа исполнителей процесса Process3" ;
-        vad:includes vad:Executor3 .
-
-    vad:ExecutorGroup_Process4 rdf:type vad:ExecutorGroup ;
-        rdfs:label "Группа исполнителей процесса Process4" ;
-        vad:includes vad:Executor3, vad:Executor4 .
-
-    vad:ExecutorGroup_Process5 rdf:type vad:ExecutorGroup ;
-        rdfs:label "Группа исполнителей процесса Process5" ;
-        vad:includes vad:Executor5, vad:Executor6 .
-
-    vad:ExecutorGroup_Process6 rdf:type vad:ExecutorGroup ;
-        rdfs:label "Группа исполнителей процесса Process6" ;
-        vad:includes vad:Executor7, vad:Executor8 .
-
-    vad:ExecutorGroup_Process7 rdf:type vad:ExecutorGroup ;
-        rdfs:label "Группа исполнителей процесса Process7" ;
-        vad:includes vad:Executor1, vad:Executor5 .
-
-    vad:ExecutorGroup_Process8 rdf:type vad:ExecutorGroup ;
-        rdfs:label "Группа исполнителей процесса Process8" ;
-        vad:includes vad:Executor2, vad:Executor7 .
-
-    # Примечание: Исполнители (vad:Executor1..8) определены в vad:rtree
-}
-
-# ============================================================================
-# Дочерний TriG граф: t_p1 (hasParentObj = p1, p1 hasParentObj = p1)
-# Это детализация процесса p1 из родительского графа t_pGA
-# Все объекты имеют префикс 2 в номерах (Process21, Исполнитель 21 и т.д.)
+# Корневой TriG граф: t_p1 (hasParentTrig = root)
 # ============================================================================
 
 vad:t_p1 {
     vad:t_p1 rdf:type vad:VADProcessDia ;
         rdfs:label "Схема t_p1 процесса p1" ;
         vad:hasParentObj vad:p1 .
+#        vad:hasParentTrig vad:root ;
+#        vad:definesProcess vad:p1 .
 
-    # Процесс 21 - Базовый
+    # Процесс p1.1 - DetailedChild (имеет дочернюю схему vad:t_p1.1 с hasParentTrig на текущую)
     # rdf:type находится в vad:ptree
     # isSubprocessTrig указывается первым для явной связи с TriG
-    vad:Process21 vad:isSubprocessTrig vad:t_p1 ;
-        vad:hasExecutor vad:ExecutorGroup_Process21 ;
-        vad:processSubtype vad:Basic ;
-        vad:hasNext vad:Process22 .
+    vad:p1.1 vad:isSubprocessTrig vad:t_p1 ;
+        vad:hasExecutor vad:ExecutorGroup_p1.1 ;
+        vad:hasNext vad:p1.2 .
 
-    # Процесс 22 - Базовый
-    vad:Process22 vad:isSubprocessTrig vad:t_p1 ;
-        vad:hasExecutor vad:ExecutorGroup_Process22 ;
-        vad:processSubtype vad:Basic ;
-        vad:hasNext vad:Process23, vad:Process24 .
-
-    # Процесс 23 - Базовый
-    vad:Process23 vad:isSubprocessTrig vad:t_p1 ;
-        vad:hasExecutor vad:ExecutorGroup_Process23 ;
-        vad:processSubtype vad:Basic ;
-        vad:hasNext vad:Process24 .
-
-    # Процесс 24 - Базовый
-    vad:Process24 vad:isSubprocessTrig vad:t_p1 ;
-        vad:hasExecutor vad:ExecutorGroup_Process24 ;
-        vad:processSubtype vad:Basic ;
-        vad:hasNext vad:Process25 .
-
-    # Процесс 25 - Базовый
-    vad:Process25 vad:isSubprocessTrig vad:t_p1 ;
-        vad:hasExecutor vad:ExecutorGroup_Process25 ;
-        vad:processSubtype vad:Basic ;
-        vad:hasNext vad:Process26 .
-
-    # Процесс 26 - Базовый
-    vad:Process26 vad:isSubprocessTrig vad:t_p1 ;
-        vad:hasExecutor vad:ExecutorGroup_Process26 ;
-        vad:processSubtype vad:Basic ;
-        vad:hasNext vad:Process27 .
-
-    # Процесс 27 - Базовый
-    vad:Process27 vad:isSubprocessTrig vad:t_p1 ;
-        vad:hasExecutor vad:ExecutorGroup_Process27 ;
-        vad:processSubtype vad:Basic ;
-        vad:hasNext vad:Process28 .
-
-    # Процесс 28 - Базовый
-    vad:Process28 vad:isSubprocessTrig vad:t_p1 ;
-        vad:hasExecutor vad:ExecutorGroup_Process28 ;
-        vad:processSubtype vad:Basic .
+    # Процесс p1.2 - notDetailedChild
+    vad:p1.2 vad:isSubprocessTrig vad:t_p1 ;
+        vad:hasExecutor vad:ExecutorGroup_p1.2 .
 
     # Группы исполнителей (ID формируется как ExecutorGroup_ + ID процесса)
-    vad:ExecutorGroup_Process21 rdf:type vad:ExecutorGroup ;
-        rdfs:label "Группа исполнителей процесса Process21" ;
+    vad:ExecutorGroup_p1.1 rdf:type vad:ExecutorGroup ;
+        rdfs:label "Группа исполнителей процесса p1.1" ;
+        vad:includes vad:Executor1 .
+
+    vad:ExecutorGroup_p1.2 rdf:type vad:ExecutorGroup ;
+        rdfs:label "Группа исполнителей процесса p1.2" ;
+        vad:includes vad:Executor1, vad:Executor2 .
+
+    # Примечание: Исполнители (vad:Executor1..8) определены в vad:rtree
+}
+
+# ============================================================================
+# Дочерний TriG граф: t_p1.1 (hasParentTrig = t_p1)
+# Это детализация процесса p1.1 из родительского графа t_p1
+# ============================================================================
+
+vad:t_p1.1 {
+    vad:t_p1.1 rdf:type vad:VADProcessDia ;
+        rdfs:label "Схема t_p1.1 процесса p1.1" ;
+        vad:hasParentObj vad:p1.1 .
+#        vad:hasParentTrig vad:t_p1 ;
+#        vad:definesProcess vad:p1.1 .
+
+    # Процесс p1.1.1 - notDetailedChild
+    # rdf:type находится в vad:ptree
+    # isSubprocessTrig указывается первым для явной связи с TriG
+    vad:p1.1.1 vad:isSubprocessTrig vad:t_p1.1 ;
+        vad:hasExecutor vad:ExecutorGroup_p1.1.1 ;
+        vad:hasNext vad:p1.1.2 .
+
+    # Процесс p1.1.2 - notDetailedExternal (hasParentProcess = p2, не совпадает с p1.1)
+    vad:p1.1.2 vad:isSubprocessTrig vad:t_p1.1 ;
+        vad:hasExecutor vad:ExecutorGroup_p1.1.2 .
+
+    # Группы исполнителей (ID формируется как ExecutorGroup_ + ID процесса)
+    vad:ExecutorGroup_p1.1.1 rdf:type vad:ExecutorGroup ;
+        rdfs:label "Группа исполнителей процесса p1.1.1" ;
         vad:includes vad:Executor21 .
 
-    vad:ExecutorGroup_Process22 rdf:type vad:ExecutorGroup ;
-        rdfs:label "Группа исполнителей процесса Process22" ;
+    vad:ExecutorGroup_p1.1.2 rdf:type vad:ExecutorGroup ;
+        rdfs:label "Группа исполнителей процесса p1.1.2" ;
         vad:includes vad:Executor21, vad:Executor22 .
+}
 
-    vad:ExecutorGroup_Process23 rdf:type vad:ExecutorGroup ;
-        rdfs:label "Группа исполнителей процесса Process23" ;
-        vad:includes vad:Executor23 .
+# ============================================================================
+# Корневой TriG граф: t_p2 (hasParentTrig = root)
+# ============================================================================
 
-    vad:ExecutorGroup_Process24 rdf:type vad:ExecutorGroup ;
-        rdfs:label "Группа исполнителей процесса Process24" ;
-        vad:includes vad:Executor23, vad:Executor24 .
+vad:t_p2 {
+    vad:t_p2 rdf:type vad:VADProcessDia ;
+        rdfs:label "Схема t_p2 процесса p2" ;
+        vad:hasParentObj vad:p2 .
+#        vad:hasParentTrig vad:root ;
+#        vad:definesProcess vad:p2 .
 
-    vad:ExecutorGroup_Process25 rdf:type vad:ExecutorGroup ;
-        rdfs:label "Группа исполнителей процесса Process25" ;
-        vad:includes vad:Executor25, vad:Executor26 .
+    # Процесс p2.1 - notDetailedChild
+    # rdf:type находится в vad:ptree
+    # isSubprocessTrig указывается первым для явной связи с TriG
+    vad:p2.1 vad:isSubprocessTrig vad:t_p2 ;
+        vad:hasExecutor vad:ExecutorGroup_p2.1 ;
+        vad:hasNext vad:p2.2, vad:p1.1 .
 
-    vad:ExecutorGroup_Process26 rdf:type vad:ExecutorGroup ;
-        rdfs:label "Группа исполнителей процесса Process26" ;
-        vad:includes vad:Executor27, vad:Executor28 .
+    # Процесс p2.2
+    vad:p2.2 vad:isSubprocessTrig vad:t_p2 ;
+        vad:hasExecutor vad:ExecutorGroup_p2.2 .
 
-    vad:ExecutorGroup_Process27 rdf:type vad:ExecutorGroup ;
-        rdfs:label "Группа исполнителей процесса Process27" ;
-        vad:includes vad:Executor21, vad:Executor25 .
+    # rdf:type находится в vad:ptree
+    # isSubprocessTrig указывается первым для явной связи с TriG
+    vad:p1.1 vad:isSubprocessTrig vad:t_p2 ;
+        vad:hasExecutor vad:ExecutorGroup_p1.1 ;
+        vad:hasNext vad:p1.1.1 .
 
-    vad:ExecutorGroup_Process28 rdf:type vad:ExecutorGroup ;
-        rdfs:label "Группа исполнителей процесса Process28" ;
-        vad:includes vad:Executor22, vad:Executor27 .
+## vad:p1.1 в vad:t_p2 должен быть показан как детализируемый внешний
+## vad:p1.1.1 в vad:t_p2 должен быть показан как НЕдетализируемый внешний
+## vad:pх.х  в vad:t_p2 должен быть показан как pNotDefined
 
-    # Примечание: Исполнители (vad:Executor21..28) определены в vad:rtree
+    # Процесс p1.1.1 - notDetailedChild
+    # rdf:type находится в vad:ptree
+    # isSubprocessTrig указывается первым для явной связи с TriG
+    vad:p1.1.1 vad:isSubprocessTrig vad:t_p2 ;
+        vad:hasExecutor vad:ExecutorGroup_p1.1.1 ;
+        vad:hasNext vad:pх.х .
+
+    # Процесс pх.х
+    # rdf:type находится в vad:ptree
+    # isSubprocessTrig указывается первым для явной связи с TriG
+    vad:pх.х vad:isSubprocessTrig vad:t_p2 ;
+        vad:hasExecutor vad:ExecutorGroup_pх.х .
+
+    # Группы исполнителей (ID формируется как ExecutorGroup_ + ID процесса)
+
+    vad:ExecutorGroup_p2.1 rdf:type vad:ExecutorGroup ;
+        rdfs:label "Группа исполнителей процесса p2.1" ;
+        vad:includes vad:Executor1 .
+
+    vad:ExecutorGroup_p2.2 rdf:type vad:ExecutorGroup ;
+        rdfs:label "Группа исполнителей процесса p2.2" ;
+        vad:includes vad:Executor1, vad:Executor2 .
+
+## vad:p1.1 в vad:t_p2
+    vad:ExecutorGroup_p1.1 rdf:type vad:ExecutorGroup ;
+        rdfs:label "Группа исполнителей процесса p1.1" ;
+        vad:includes vad:Executor1, vad:Executor2 .
+
+## vad:p1.1.1 в vad:t_p2
+    vad:ExecutorGroup_p1.1.1 rdf:type vad:ExecutorGroup ;
+        rdfs:label "Группа исполнителей процесса p1.1.1" ;
+        vad:includes vad:Executor1, vad:Executor2 .
+
+## pх.х в vad:t_p2
+    vad:ExecutorGroup_pх.х rdf:type vad:ExecutorGroup ;
+        rdfs:label "Группа исполнителей процесса pх.х" ;
+        vad:includes vad:Executor1, vad:Executor2 .
+
 }`,
             // TriG VADv2tree пример с множественной иерархией (t_pGA, t_pGA2, t_pGA3 на одном уровне)
             'trig-vad-v2tree': `# Пример TriG VADv2tree (Value Added Chain Diagram с множественной иерархией TriG)
@@ -2171,6 +2166,10 @@ WHERE {
             const hasExpandableContent = hasChildren || hasProcesses;
             const isTrig = objInfo.isTrig;  // Объект типа TriG отображается жирным
 
+            // Генерируем уникальные ID для переключения свертывания/развертывания
+            const childrenId = `tree-children-${escapeHtml(objUri).replace(/[^a-zA-Z0-9]/g, '_')}`;
+            const toggleId = `tree-toggle-${escapeHtml(objUri).replace(/[^a-zA-Z0-9]/g, '_')}`;
+
             let html = '';
 
             // Элемент дерева
@@ -2184,9 +2183,9 @@ WHERE {
                          data-trig-uri="${escapeHtml(objUri)}"
                          ${clickHandler}>`;
 
-            // Значок раскрытия/закрытия
+            // Значок раскрытия/закрытия (кликабельный для свертывания/развертывания)
             if (hasExpandableContent) {
-                html += `<span class="trig-tree-toggle">▼</span>`;
+                html += `<span class="trig-tree-toggle" id="${toggleId}" onclick="event.stopPropagation(); toggleTreeNode('${childrenId}', '${toggleId}')">▼</span>`;
             } else {
                 html += `<span class="trig-tree-toggle"></span>`;
             }
@@ -2202,7 +2201,7 @@ WHERE {
 
             // Содержимое дерева (дочерние объекты и состав объектов)
             if (hasExpandableContent) {
-                html += `<div class="trig-tree-children">`;
+                html += `<div class="trig-tree-children" id="${childrenId}">`;
 
                 // Сначала показываем дочерние объекты
                 if (hasChildren) {
@@ -2220,6 +2219,26 @@ WHERE {
             }
 
             return html;
+        }
+
+        /**
+         * Переключает видимость дочерних элементов в дереве TriG
+         * @param {string} childrenId - ID контейнера с дочерними элементами
+         * @param {string} toggleId - ID значка переключения
+         */
+        function toggleTreeNode(childrenId, toggleId) {
+            const children = document.getElementById(childrenId);
+            const toggle = document.getElementById(toggleId);
+
+            if (children && toggle) {
+                if (children.style.display === 'none') {
+                    children.style.display = 'block';
+                    toggle.textContent = '▼';
+                } else {
+                    children.style.display = 'none';
+                    toggle.textContent = '▶';
+                }
+            }
         }
 
         /**
@@ -3402,6 +3421,74 @@ WHERE {
         }
 
         /**
+         * Открывает модальное окно с результатами тестирования
+         * @param {string} title - Заголовок окна
+         * @param {string} message - Текст сообщения
+         * @param {boolean} isError - true если это ошибка
+         */
+        function showTestResultModal(title, message, isError = false) {
+            const modal = document.getElementById('test-result-modal');
+            const titleEl = document.getElementById('test-result-modal-title');
+            const textEl = document.getElementById('test-result-modal-text');
+            const headerEl = modal.querySelector('.test-result-modal-header');
+
+            titleEl.textContent = title;
+            textEl.value = message;
+
+            if (isError) {
+                headerEl.classList.add('error');
+            } else {
+                headerEl.classList.remove('error');
+            }
+
+            modal.style.display = 'block';
+        }
+
+        /**
+         * Закрывает модальное окно результатов тестирования
+         */
+        function closeTestResultModal() {
+            const modal = document.getElementById('test-result-modal');
+            modal.style.display = 'none';
+        }
+
+        /**
+         * Копирует содержимое результата тестирования в буфер обмена
+         */
+        function copyTestResultToClipboard() {
+            const textEl = document.getElementById('test-result-modal-text');
+            const copyBtn = document.querySelector('.test-result-copy-btn');
+
+            textEl.select();
+            textEl.setSelectionRange(0, 99999);
+
+            navigator.clipboard.writeText(textEl.value).then(function() {
+                copyBtn.textContent = 'Скопировано!';
+                copyBtn.classList.add('copied');
+                setTimeout(() => {
+                    copyBtn.textContent = 'Копировать';
+                    copyBtn.classList.remove('copied');
+                }, 2000);
+            }).catch(function() {
+                document.execCommand('copy');
+                copyBtn.textContent = 'Скопировано!';
+                copyBtn.classList.add('copied');
+                setTimeout(() => {
+                    copyBtn.textContent = 'Копировать';
+                    copyBtn.classList.remove('copied');
+                }, 2000);
+            });
+        }
+
+        // Закрытие модального окна результатов тестирования при клике вне его
+        window.addEventListener('click', function(event) {
+            const modal = document.getElementById('test-result-modal');
+            if (event.target === modal) {
+                closeTestResultModal();
+            }
+        });
+
+        /**
          * Тестирует валидность RDF данных вручную
          *
          * Выполняет комплексную проверку RDF данных из текстового поля:
@@ -3409,7 +3496,7 @@ WHERE {
          * 2. Проверяет соответствие правилам VAD онтологии (через validateVAD)
          *
          * Вызывается при нажатии кнопки "Тест" в заголовке поля RDF данных.
-         * Результаты отображаются через alert() с подробным описанием ошибок.
+         * Результаты отображаются в модальном окне с возможностью выделения и копирования.
          *
          * @returns {void}
          *
@@ -3425,7 +3512,7 @@ WHERE {
             const inputFormat = document.getElementById('input-format').value;
 
             if (!rdfInput || !rdfInput.value.trim()) {
-                alert('Нет данных для проверки. Введите RDF данные в поле выше.');
+                showTestResultModal('Ошибка', 'Нет данных для проверки. Введите RDF данные в поле выше.', true);
                 return;
             }
 
@@ -3440,7 +3527,7 @@ WHERE {
             try {
                 parser.parse(rdfData, (error, quad, prefixesParsed) => {
                     if (error) {
-                        alert(`❌ ОШИБКА СИНТАКСИСА RDF\n\n${error.message}\n\nПроверьте корректность синтаксиса RDF данных.`);
+                        showTestResultModal('❌ ОШИБКА СИНТАКСИСА RDF', `${error.message}\n\nПроверьте корректность синтаксиса RDF данных.`, true);
                         return;
                     }
 
@@ -3460,11 +3547,10 @@ WHERE {
                         let resultMessage = '';
 
                         if (validation.valid && schemaValidation.valid) {
-                            resultMessage = '✅ ВАЛИДАЦИЯ УСПЕШНА\n\n' +
-                                  'RDF данные полностью соответствуют правилам VAD онтологии и схемы.\n\n' +
+                            resultMessage = 'RDF данные полностью соответствуют правилам VAD онтологии и схемы.\n\n' +
                                   `Всего триплетов: ${quads.length}\n` +
                                   `Префиксов: ${Object.keys(prefixes).length}`;
-                            alert(resultMessage);
+                            showTestResultModal('✅ ВАЛИДАЦИЯ УСПЕШНА', resultMessage, false);
                         } else {
                             // Есть ошибки - показываем детали
                             if (!validation.valid) {
@@ -3474,12 +3560,12 @@ WHERE {
                             if (!schemaValidation.valid || schemaValidation.warnings.length > 0) {
                                 resultMessage += formatVADSchemaValidation(schemaValidation);
                             }
-                            alert(resultMessage);
+                            showTestResultModal('❌ ОШИБКИ ВАЛИДАЦИИ', resultMessage, true);
                         }
                     }
                 });
             } catch (error) {
-                alert(`❌ ОШИБКА ПРИ ПРОВЕРКЕ\n\n${error.message}\n\nПроверьте корректность RDF данных.`);
+                showTestResultModal('❌ ОШИБКА ПРИ ПРОВЕРКЕ', `${error.message}\n\nПроверьте корректность RDF данных.`, true);
             }
         }
 
@@ -4539,21 +4625,25 @@ WHERE {
             const trigs = [];
             const seen = new Set();
 
-            // Собираем из trigHierarchy (если есть)
+            // Собираем из trigHierarchy (если есть) - только объекты с isTrig === true
             for (const [uri, info] of Object.entries(trigHierarchy)) {
-                if (!seen.has(uri)) {
+                if (!seen.has(uri) && info.isTrig === true) {
                     seen.add(uri);
                     const label = info.label || getPrefixedName(uri, currentPrefixes);
                     trigs.push({ uri: uri, label: label });
                 }
             }
 
-            // Также проверяем allTrigGraphs
+            // Также проверяем allTrigGraphs (эти всегда являются TriG по определению)
             for (const trigUri of allTrigGraphs) {
                 if (!seen.has(trigUri)) {
-                    seen.add(trigUri);
-                    const label = getPrefixedName(trigUri, currentPrefixes);
-                    trigs.push({ uri: trigUri, label: label });
+                    // Проверяем, есть ли объект в trigHierarchy с isTrig
+                    const info = trigHierarchy[trigUri];
+                    if (!info || info.isTrig === true) {
+                        seen.add(trigUri);
+                        const label = getPrefixedName(trigUri, currentPrefixes);
+                        trigs.push({ uri: trigUri, label: label });
+                    }
                 }
             }
 
@@ -6014,10 +6104,10 @@ WHERE {
                 return;
             }
 
-            // Паттерн для извлечения URI/префиксного имени (поддерживает <uri> и prefix:name)
-            const uriPattern = '(?:<[^>]+>|[a-zA-Z_][a-zA-Z0-9_]*:[a-zA-Z0-9_-]+)';
+            // Паттерн для извлечения URI/префиксного имени (поддерживает <uri> и prefix:name с точками)
+            const uriPattern = '(?:<[^>]+>|[a-zA-Z_][a-zA-Z0-9_]*:[a-zA-Z0-9_.-]+)';
             // Паттерн для извлечения объекта (может быть URI, префиксное имя или литерал в кавычках)
-            const objectPattern = '(?:<[^>]+>|[a-zA-Z_][a-zA-Z0-9_]*:[a-zA-Z0-9_-]+|"[^"]*")';
+            const objectPattern = '(?:<[^>]+>|[a-zA-Z_][a-zA-Z0-9_]*:[a-zA-Z0-9_.-]+|"[^"]*")';
 
             // Извлекаем GRAPH и триплеты из запроса
             const graphMatch = sparqlQuery.match(new RegExp(`GRAPH\\s+(${uriPattern})\\s*\\{([\\s\\S]*?)\\}`, 'i'));
@@ -8009,20 +8099,16 @@ ${triples.join('\n')}
                 }
             });
 
-            // Фильтруем - показываем только процессы без TriG
+            // Фильтруем - показываем только процессы без TriG (исключаем те, у которых уже есть TriG)
             processConcepts.forEach(p => {
-                // Показываем все процессы, но помечаем те, у которых уже есть TriG
-                const option = document.createElement('option');
-                option.value = p.uri;
-
+                // Исключаем процессы, у которых уже есть TriG
                 if (processesWithTrig.has(p.uri)) {
-                    option.textContent = `${p.label} (уже имеет TriG)`;
-                    option.disabled = true;
-                    option.style.color = '#999';
-                } else {
-                    option.textContent = p.label;
+                    return; // Пропускаем концепты с уже созданными TriG
                 }
 
+                const option = document.createElement('option');
+                option.value = p.uri;
+                option.textContent = p.label;
                 processConceptSelect.appendChild(option);
             });
         }
