@@ -2073,8 +2073,8 @@ vad:t_p1 {
                 output += `# Виртуальный контейнер для ${trigLabel}\n`;
                 output += `${virtualContainerName} {\n`;
 
-                // Свойства самого виртуального TriG
-                output += `    ${trigLabel} rdf:type vad:Virtual .\n\n`;
+                // Свойства самого виртуального TriG (используем virtualContainerName, а не trigLabel)
+                output += `    ${virtualContainerName} rdf:type vad:Virtual .\n\n`;
 
                 // Свойства процессов
                 for (const [processUri, processInfo] of Object.entries(processes)) {
@@ -2769,7 +2769,11 @@ WHERE {
 
         /**
          * Отображает свойства любого объекта (не только TriG) в панели свойств
-         * Собирает свойства из всех графов, где объект упоминается как subject
+         * Разделяет свойства на три блока:
+         * 1. Свойства индивида из текущего TriG (IndividProcessPredicate)
+         * 2. virtualRDFdata - вычисляемые свойства (отделённые горизонтальной линией)
+         * 3. Свойства концепта из ptree (ConceptProcessPredicate)
+         *
          * @param {string} objectUri - URI объекта
          * @param {string} contextTrigUri - URI TriG контекста (может быть null)
          * @param {Object} prefixes - Словарь префиксов
@@ -2779,10 +2783,21 @@ WHERE {
             if (!propertiesContent) return;
 
             const prefixedUri = getPrefixedName(objectUri, prefixes);
-            const localName = getLocalName(objectUri);
 
-            // Собираем все свойства объекта из всех квадов
-            const properties = [];
+            // Предикаты для концепта процесса (из vad:ConceptProcessPredicate)
+            // Эти свойства хранятся в ptree
+            const conceptPredicates = [
+                'http://www.w3.org/1999/02/22-rdf-syntax-ns#type',
+                'http://www.w3.org/2000/01/rdf-schema#label',
+                'http://purl.org/dc/terms/description',
+                'http://example.org/vad#hasTrig',
+                'http://example.org/vad#hasParentObj'
+            ];
+
+            // Собираем свойства из текущего TriG контекста (индивидуальные свойства)
+            const trigProperties = [];
+            // Собираем свойства из ptree (свойства концепта)
+            const conceptProperties = [];
             let objectLabel = null;
 
             currentQuads.forEach(quad => {
@@ -2794,25 +2809,38 @@ WHERE {
                         : getPrefixedName(quad.object.value, prefixes);
                     const isLiteral = quad.object.termType === 'Literal';
                     const graphUri = quad.graph ? quad.graph.value : null;
-                    const graphLabel = graphUri ? getPrefixedName(graphUri, prefixes) : 'default';
 
-                    // Запоминаем rdfs:label для отображения
+                    // Запоминаем rdfs:label для отображения в заголовке
                     if (predicateLabel === 'rdfs:label' || predicateUri === 'http://www.w3.org/2000/01/rdf-schema#label') {
                         objectLabel = quad.object.value;
                     }
 
-                    properties.push({
+                    const propInfo = {
                         predicate: predicateLabel,
                         predicateUri: predicateUri,
                         value: objectValue,
                         valueUri: quad.object.termType === 'Literal' ? null : quad.object.value,
                         isLiteral: isLiteral,
-                        graph: graphLabel
-                    });
+                        graphUri: graphUri
+                    };
+
+                    // Разделяем свойства по источнику
+                    if (graphUri === PTREE_GRAPH_URI) {
+                        // Свойства из ptree (концепт)
+                        conceptProperties.push(propInfo);
+                    } else if (contextTrigUri && graphUri === contextTrigUri) {
+                        // Свойства из текущего TriG (индивид)
+                        trigProperties.push(propInfo);
+                    }
                 }
             });
 
             let html = '';
+
+            // ============================================================================
+            // БЛОК 1: Свойства индивида из текущего TriG
+            // ============================================================================
+            html += `<div class="trig-property-section">`;
 
             // Заголовок - URI объекта с кнопкой копирования
             html += `<div class="trig-property-item">`;
@@ -2823,20 +2851,8 @@ WHERE {
             html += `</div>`;
             html += `</div>`;
 
-            // rdfs:label (если есть)
-            if (objectLabel) {
-                html += `<div class="trig-property-item">`;
-                html += `<div class="trig-property-predicate">rdfs:label</div>`;
-                html += `<div class="trig-property-value literal">"${escapeHtml(objectLabel)}"</div>`;
-                html += `</div>`;
-            }
-
-            // Остальные свойства (кроме rdfs:label, который уже показан)
-            properties.forEach(prop => {
-                if (prop.predicate === 'rdfs:label' || prop.predicateUri === 'http://www.w3.org/2000/01/rdf-schema#label') {
-                    return; // Уже показано выше
-                }
-
+            // Свойства из текущего TriG
+            trigProperties.forEach(prop => {
                 html += `<div class="trig-property-item">`;
                 html += `<div class="trig-property-predicate">${escapeHtml(prop.predicate)}</div>`;
                 if (prop.isLiteral) {
@@ -2847,34 +2863,62 @@ WHERE {
                 html += `</div>`;
             });
 
-            // Если нет свойств, показываем сообщение
-            if (properties.length === 0) {
-                html += `<div class="trig-properties-empty">Нет свойств для объекта ${escapeHtml(prefixedUri)}</div>`;
-            }
+            html += `</div>`; // end section 1
 
-            // Проверяем, есть ли вычисляемые свойства в virtualRDFdata для текущего контекста TriG
-            // Новый формат virtualRDFdata: { trigUri: { processUri: { processSubtype, ... } } }
+            // ============================================================================
+            // БЛОК 2: virtualRDFdata - вычисляемые свойства (отделённые линией)
+            // ============================================================================
             let virtualData = null;
             if (contextTrigUri && virtualRDFdata[contextTrigUri]) {
                 virtualData = virtualRDFdata[contextTrigUri][objectUri];
             }
 
-            // Если процесс не найден в текущем TriG, ищем его в любом TriG
-            if (!virtualData) {
-                for (const [trigUri, processes] of Object.entries(virtualRDFdata)) {
-                    if (processes[objectUri]) {
-                        virtualData = processes[objectUri];
-                        break;
-                    }
-                }
-            }
-
-            // Добавляем вычисляемые свойства в основной список (без отдельной секции)
             if (virtualData && virtualData.processSubtype) {
+                // Добавляем разделитель
+                html += `<div class="trig-property-separator">`;
+                html += `<div class="separator-line"></div>`;
+                html += `<div class="separator-text">virtualRDFdata</div>`;
+                html += `<div class="separator-line"></div>`;
+                html += `</div>`;
+
+                html += `<div class="trig-property-section">`;
                 html += `<div class="trig-property-item virtual-property">`;
                 html += `<div class="trig-property-predicate">vad:processSubtype</div>`;
                 html += `<div class="trig-property-value uri virtual">vad:${escapeHtml(virtualData.processSubtype)}</div>`;
                 html += `</div>`;
+                html += `</div>`; // end section 2
+            }
+
+            // ============================================================================
+            // БЛОК 3: Свойства концепта из ptree (отделённые линией)
+            // ============================================================================
+            if (conceptProperties.length > 0) {
+                // Добавляем разделитель
+                html += `<div class="trig-property-separator">`;
+                html += `<div class="separator-line"></div>`;
+                html += `<div class="separator-text">Свойства концепта (ptree)</div>`;
+                html += `<div class="separator-line"></div>`;
+                html += `</div>`;
+
+                html += `<div class="trig-property-section concept-section">`;
+
+                conceptProperties.forEach(prop => {
+                    html += `<div class="trig-property-item concept-property">`;
+                    html += `<div class="trig-property-predicate">${escapeHtml(prop.predicate)}</div>`;
+                    if (prop.isLiteral) {
+                        html += `<div class="trig-property-value literal">${escapeHtml(prop.value)}</div>`;
+                    } else {
+                        html += `<div class="trig-property-value uri">${escapeHtml(prop.value)}</div>`;
+                    }
+                    html += `</div>`;
+                });
+
+                html += `</div>`; // end section 3
+            }
+
+            // Если нет свойств вообще
+            if (trigProperties.length === 0 && conceptProperties.length === 0 && !virtualData) {
+                html = `<div class="trig-properties-empty">Нет свойств для объекта ${escapeHtml(prefixedUri)}</div>`;
             }
 
             propertiesContent.innerHTML = html;
