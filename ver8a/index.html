@@ -2932,8 +2932,22 @@ WHERE {
                 addNodeClickHandlers();
 
             } catch (error) {
-                console.error('Ошибка при перевизуализации:', error);
+                console.error('Ошибка при визуализации:', error);
+                showError('Ошибка при визуализации: ' + error.message);
+            } finally {
+                const button = document.getElementById('visualize-btn');
+                if (button) {
+                    button.disabled = false;
+                    button.textContent = 'Показать';
+                }
+                hideLoading();
             }
+            
+            console.log('visualize: Visualization completed');
+        } catch (error) {
+            console.error('Critical error in visualize function:', error);
+            showError('Критическая ошибка: ' + error.message);
+        }
         }
 
         // ============================================================================
@@ -3031,7 +3045,20 @@ WHERE {
          * - Вычисляемые подтипы: DetailedChild, notDetailedChild, notDetailedExternal, NotDefinedType
          */
         function loadExampleTrigVADv4() {
-            loadExampleFromFile('Trig_VADv4.ttl', 'Trig VADv4', 'trig', 'vad-trig', 'trig-vad-v4');
+            try {
+                console.log('loadExampleTrigVADv4: Loading example...');
+                loadExampleFromFile('Trig_VADv4.ttl', 'Trig VADv4', 'trig', 'vad-trig', 'trig-vad-v4');
+            } catch (error) {
+                console.error('Error in loadExampleTrigVADv4:', error);
+                const statusEl = document.getElementById('example-status');
+                if (statusEl) {
+                    statusEl.textContent = `Ошибка загрузки примера: ${error.message}`;
+                    statusEl.style.backgroundColor = '#f8d7da';
+                    statusEl.style.borderColor = '#f5c6cb';
+                    statusEl.style.color = '#721c24';
+                    statusEl.style.display = 'block';
+                }
+            }
         }
 
         /**
@@ -3045,18 +3072,35 @@ WHERE {
          * Очищает содержимое поля RDF данных
          */
         function clearRdfInput() {
-            document.getElementById('rdf-input').value = '';
+            try {
+                const input = document.getElementById('rdf-input');
+                if (input) {
+                    input.value = '';
+                    console.log('clearRdfInput: Input cleared');
+                } else {
+                    console.warn('clearRdfInput: rdf-input element not found');
+                }
+            } catch (error) {
+                console.error('Error in clearRdfInput:', error);
+            }
         }
 
         /**
          * Сохраняет содержимое RDF поля как файл
          */
         function saveAsFile() {
-            const content = document.getElementById('rdf-input').value;
-            if (!content.trim()) {
-                alert('Нет данных для сохранения');
-                return;
-            }
+            try {
+                const input = document.getElementById('rdf-input');
+                if (!input) {
+                    console.warn('saveAsFile: rdf-input element not found');
+                    return;
+                }
+                
+                const content = input.value;
+                if (!content.trim()) {
+                    alert('Нет данных для сохранения');
+                    return;
+                }
 
             const format = document.getElementById('input-format').value;
             let extension = 'ttl';
@@ -3073,6 +3117,11 @@ WHERE {
             a.click();
             document.body.removeChild(a);
             URL.revokeObjectURL(url);
+            console.log('saveAsFile: File saved successfully');
+            } catch (error) {
+                console.error('Error in saveAsFile:', error);
+                alert('Ошибка при сохранении файла: ' + error.message);
+            }
         }
 
         /**
@@ -3129,13 +3178,21 @@ WHERE {
          * @see formatVADErrors - Форматирование ошибок валидации
          */
         function testRdfValidation() {
-            const rdfInput = document.getElementById('rdf-input');
-            const inputFormat = document.getElementById('input-format').value;
+            try {
+                console.log('testRdfValidation: Starting validation...');
+                
+                const rdfInput = document.getElementById('rdf-input');
+                const inputFormat = document.getElementById('input-format')?.value;
 
-            if (!rdfInput || !rdfInput.value.trim()) {
-                alert('Нет данных для проверки. Введите RDF данные в поле выше.');
-                return;
-            }
+                if (!rdfInput || !rdfInput.value.trim()) {
+                    alert('Нет данных для проверки. Введите RDF данные в поле выше.');
+                    return;
+                }
+                
+                if (!inputFormat) {
+                    alert('Ошибка: формат ввода не установлен');
+                    return;
+                }
 
             const rdfData = rdfInput.value;
 
@@ -3187,8 +3244,15 @@ WHERE {
                     }
                 });
             } catch (error) {
+                console.error('Error in testRdfValidation:', error);
                 alert(`❌ ОШИБКА ПРИ ПРОВЕРКЕ\n\n${error.message}\n\nПроверьте корректность RDF данных.`);
             }
+            
+            console.log('testRdfValidation: Validation completed');
+        } catch (criticalError) {
+            console.error('Critical error in testRdfValidation:', criticalError);
+            alert('Критическая ошибка при проверке: ' + criticalError.message);
+        }
         }
 
         // ============================================================================
@@ -7141,11 +7205,17 @@ WHERE {
         });
 
         function updateModeDescription() {
-            const mode = document.getElementById('visualization-mode').value;
-            const description = document.getElementById('mode-description');
-            const maxVadRowLengthGroup = document.getElementById('max-vad-row-length-group');
-            const sparqlModeSelect = document.getElementById('sparql-mode');
-            const smartDesignOption = sparqlModeSelect ? sparqlModeSelect.querySelector('option[value="smart-design"]') : null;
+            try {
+                const mode = document.getElementById('visualization-mode')?.value;
+                const description = document.getElementById('mode-description');
+                const maxVadRowLengthGroup = document.getElementById('max-vad-row-length-group');
+                const sparqlModeSelect = document.getElementById('sparql-mode');
+                const smartDesignOption = sparqlModeSelect ? sparqlModeSelect.querySelector('option[value="smart-design"]') : null;
+
+                if (!mode) {
+                    console.error('updateModeDescription: visualization-mode element not found');
+                    return;
+                }
 
             const descriptions = {
                 'notation': 'С выделением типов объектов и предикатов цветом и формами',
@@ -7155,13 +7225,20 @@ WHERE {
                 'vad-trig': 'VAD TriG: иерархия TriG с деревом и свойствами'
             };
 
-            description.textContent = descriptions[mode] || '';
+            if (description) {
+                description.textContent = descriptions[mode] || '';
+            }
 
             // Показываем/скрываем параметр "Макс. длина VAD" для режимов VAD и VAD TriG
-            if (mode === 'vad' || mode === 'vad-trig') {
-                maxVadRowLengthGroup.style.display = 'block';
+            if (maxVadRowLengthGroup) {
+                if (mode === 'vad' || mode === 'vad-trig') {
+                    maxVadRowLengthGroup.style.display = 'block';
+                    console.log(`Showing max VAD length field for mode: ${mode}`);
+                } else {
+                    maxVadRowLengthGroup.style.display = 'none';
+                }
             } else {
-                maxVadRowLengthGroup.style.display = 'none';
+                console.warn('max-vad-row-length-group element not found');
             }
 
             // Показываем/скрываем опцию "SPARQL Smart Design" в зависимости от режима визуализации
@@ -7179,17 +7256,30 @@ WHERE {
 
             // Обновляем состояние SPARQL панели
             toggleSparqlPanel();
+            
+            console.log(`updateModeDescription completed for mode: ${mode}`);
+            } catch (error) {
+                console.error('Error in updateModeDescription:', error);
+            }
         }
 
         function toggleSparqlPanel() {
-            const sparqlMode = document.getElementById('sparql-mode').value;
-            const visualizationMode = document.getElementById('visualization-mode').value;
-            const sparqlPanel = document.getElementById('sparql-panel');
-            const smartDesignContainer = document.getElementById('smart-design-container');
+            try {
+                const sparqlMode = document.getElementById('sparql-mode')?.value;
+                const visualizationMode = document.getElementById('visualization-mode')?.value;
+                const sparqlPanel = document.getElementById('sparql-panel');
+                const smartDesignContainer = document.getElementById('smart-design-container');
 
-            // Скрываем оба панели по умолчанию
-            sparqlPanel.classList.remove('visible');
-            smartDesignContainer.classList.remove('visible');
+                if (!sparqlMode || !visualizationMode) {
+                    console.warn('toggleSparqlPanel: Required elements not found');
+                    return;
+                }
+
+                console.log(`toggleSparqlPanel: sparqlMode=${sparqlMode}, visualizationMode=${visualizationMode}`);
+
+                // Скрываем оба панели по умолчанию
+                if (sparqlPanel) sparqlPanel.classList.remove('visible');
+                if (smartDesignContainer) smartDesignContainer.classList.remove('visible');
 
             if (sparqlMode === 'smart-design') {
                 // SPARQL Smart Design отображается только в режиме VAD TriG
@@ -7207,6 +7297,11 @@ WHERE {
                     showSmartDesignMessage('SPARQL Smart Design доступен только в режиме "Режим VAD TriG"', 'info');
                 }
             }
+            
+            console.log('toggleSparqlPanel completed');
+            } catch (error) {
+                console.error('Error in toggleSparqlPanel:', error);
+            }
         }
 
         // ============================================================================
@@ -7214,11 +7309,26 @@ WHERE {
         // ============================================================================
 
         async function visualize() {
-            const rdfInput = document.getElementById('rdf-input').value.trim();
-            const inputFormat = document.getElementById('input-format').value;
-            const outputFormat = document.getElementById('output-format').value;
-            const layoutEngine = document.getElementById('layout-engine').value;
-            const visualizationMode = document.getElementById('visualization-mode').value;
+            try {
+                console.log('visualize: Starting visualization...');
+                
+                const rdfInput = document.getElementById('rdf-input')?.value?.trim();
+                const inputFormat = document.getElementById('input-format')?.value;
+                const outputFormat = document.getElementById('output-format')?.value;
+                const layoutEngine = document.getElementById('layout-engine')?.value;
+                const visualizationMode = document.getElementById('visualization-mode')?.value;
+
+                if (!rdfInput) {
+                    showError('Пожалуйста, введите RDF данные');
+                    return;
+                }
+                
+                if (!inputFormat || !outputFormat || !layoutEngine || !visualizationMode) {
+                    showError('Ошибка: не все параметры формы найдены');
+                    return;
+                }
+
+                console.log(`visualize: mode=${visualizationMode}, format=${inputFormat}`);
 
             const maxLabelLengthInput = document.getElementById('max-label-length');
             const maxLabelLengthValue = parseInt(maxLabelLengthInput.value, 10);
@@ -7946,7 +8056,19 @@ WHERE {
 
         // Инициализация при загрузке страницы
         document.addEventListener('DOMContentLoaded', function() {
+            // Инициализация при загрузке страницы
+            console.log('DOMContentLoaded: Initializing ver8a...');
+            
+            // Убеждаемся что режим визуализации установлен правильно
+            const vizMode = document.getElementById('visualization-mode');
+            if (vizMode && vizMode.value === 'vad-trig') {
+                console.log('Setting VAD TriG mode as default');
+            }
+            
+            // Вызываем updateModeDescription для правильной инициализации отображения
             updateModeDescription();
+            
+            console.log('DOMContentLoaded: Initialization complete');
 
             // Парсим URL параметры
             const params = parseUrlParams();
@@ -8871,6 +8993,32 @@ WHERE {
         // Загружаем технологическое приложение при старте
         document.addEventListener('DOMContentLoaded', function() {
             loadTechAppendix();
+            
+            // Дополнительная инициализация для гарантии работы
+            setTimeout(() => {
+                console.log('DOMContentLoaded: Running additional initialization...');
+                try {
+                    // Принудительно обновляем состояние режимов
+                    if (typeof updateModeDescription === 'function') {
+                        updateModeDescription();
+                    }
+                    
+                    // Проверяем что все элементы на месте
+                    const vizMode = document.getElementById('visualization-mode');
+                    const sparqlMode = document.getElementById('sparql-mode');
+                    
+                    if (vizMode && vizMode.value === 'vad-trig') {
+                        console.log('VAD TriG mode confirmed, ensuring panels are properly set');
+                        if (typeof toggleSparqlPanel === 'function') {
+                            toggleSparqlPanel();
+                        }
+                    }
+                    
+                    console.log('DOMContentLoaded: Additional initialization complete');
+                } catch (error) {
+                    console.error('Error in additional initialization:', error);
+                }
+            }, 500);
         });
     </script>
 </body>

@@ -1,0 +1,154 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Test ver8a fixes</title>
+    <style>
+        body { font-family: Arial, sans-serif; margin: 20px; }
+        .test-section { margin: 20px 0; padding: 15px; border: 1px solid #ddd; border-radius: 5px; }
+        .success { background-color: #d4edda; border-color: #c3e6cb; }
+        .error { background-color: #f8d7da; border-color: #f5c6cb; }
+        .info { background-color: #d1ecf1; border-color: #bee5eb; }
+        button { padding: 10px 15px; margin: 5px; cursor: pointer; }
+        pre { background: #f5f5f5; padding: 10px; overflow-x: auto; }
+    </style>
+</head>
+<body>
+    <h1>Тестирование исправлений ver8a</h1>
+    
+    <div class="test-section info">
+        <h2>Проверка основных функций</h2>
+        <button onclick="testBasicFunctions()">Тестировать базовые функции</button>
+        <div id="basic-results"></div>
+    </div>
+    
+    <div class="test-section info">
+        <h2>Проверка загрузки примера</h2>
+        <button onclick="testExampleLoading()">Тестировать загрузку примера</button>
+        <div id="example-results"></div>
+    </div>
+    
+    <div class="test-section info">
+        <h2>Проверка визуализации</h2>
+        <button onclick="testVisualization()">Тестировать визуализацию</button>
+        <div id="viz-results"></div>
+    </div>
+
+    <div class="test-section">
+        <h2>Ручное тестирование</h2>
+        <p>Откройте <a href="../ver8a/index.html" target="_blank">ver8a/index.html</a> для ручного тестирования:</p>
+        <ol>
+            <li>Проверьте что поле "Макс. длина VAD:" отображается в режиме VAD TriG</li>
+            <li>Проверьте что кнопка "Показать" работает с тестовыми данными</li>
+            <li>Проверьте что кнопки "Очистить", "Тест", "Сохранить как" работают</li>
+            <li>Проверьте что панели Smart Design отображаются правильно</li>
+        </ol>
+    </div>
+
+    <script>
+        function testBasicFunctions() {
+            const results = document.getElementById('basic-results');
+            let html = '<h3>Результаты теста базовых функций:</h3>';
+            
+            // Тестируем в контексте ver8a страницы
+            const ver8aWindow = window.open('../ver8a/index.html', 'ver8a-test', 'width=800,height=600');
+            
+            if (!ver8aWindow) {
+                html += '<p class="error">Не удалось открыть окно ver8a. Проверьте блокировщики всплывающих окон.</p>';
+                results.innerHTML = html;
+                return;
+            }
+            
+            setTimeout(() => {
+                try {
+                    const functions = [
+                        'visualize',
+                        'clearRdfInput', 
+                        'saveAsFile',
+                        'testRdfValidation',
+                        'loadExampleTrigVADv4',
+                        'updateModeDescription',
+                        'toggleSparqlPanel'
+                    ];
+                    
+                    let allGood = true;
+                    html += '<ul>';
+                    
+                    functions.forEach(funcName => {
+                        if (ver8aWindow[funcName] && typeof ver8aWindow[funcName] === 'function') {
+                            html += `<li class="success">✅ ${funcName}: Функция существует</li>`;
+                        } else {
+                            html += `<li class="error">❌ ${funcName}: Функция отсутствует</li>`;
+                            allGood = false;
+                        }
+                    });
+                    
+                    html += '</ul>';
+                    
+                    // Проверяем элементы
+                    const elements = [
+                        'rdf-input',
+                        'visualization-mode',
+                        'sparql-mode', 
+                        'max-vad-row-length-group',
+                        'smart-design-container',
+                        'sparql-panel'
+                    ];
+                    
+                    html += '<h4>Проверка элементов:</h4><ul>';
+                    elements.forEach(id => {
+                        const element = ver8aWindow.document.getElementById(id);
+                        if (element) {
+                            const isVisible = element.offsetWidth > 0 && element.offsetHeight > 0;
+                            const display = ver8aWindow.getComputedStyle(element).display;
+                            html += `<li class="success">✅ ${id}: Существует (display: ${display}, visible: ${isVisible})</li>`;
+                        } else {
+                            html += `<li class="error">❌ ${id}: Отсутствует</li>`;
+                            allGood = false;
+                        }
+                    });
+                    
+                    html += '</ul>';
+                    
+                    if (allGood) {
+                        html += '<p class="success">🎉 Все базовые функции и элементы на месте!</p>';
+                    }
+                    
+                    ver8aWindow.close();
+                } catch (error) {
+                    html += `<p class="error">Ошибка при тестировании: ${error.message}</p>`;
+                }
+                
+                results.innerHTML = html;
+            }, 2000);
+        }
+        
+        function testExampleLoading() {
+            const results = document.getElementById('example-results');
+            results.innerHTML = '<h3>Тестирование загрузки примера...</h3><p>Откройте консоль в окне ver8a для детальной отладки.</p>';
+        }
+        
+        function testVisualization() {
+            const results = document.getElementById('viz-results');
+            results.innerHTML = '<h3>Инструкции по тестированию визуализации:</h3>';
+            results.innerHTML += `
+                <ol>
+                    <li>Нажмите кнопку "Загрузить пример RDF данных" → "Trig VADv4"</li>
+                    <li>Убедитесь что данные загрузились в текстовое поле</li>
+                    <li>Нажмите кнопку "Показать"</li>
+                    <li>Проверьте что появилась визуализация графа</li>
+                    <li>Проверьте что поля "Макс. длина VAD:" видны</li>
+                    <li>Проверьте что панели Smart Design работают</li>
+                </ol>
+                <p>Проверьте консоль браузера на наличие ошибок.</p>
+            `;
+        }
+        
+        // Автоматическая проверка при загрузке
+        window.addEventListener('load', function() {
+            console.log('Test page loaded. Ready for testing ver8a fixes.');
+        });
+    </script>
+</body>
+</html>
