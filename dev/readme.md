@@ -17,4 +17,6 @@ Waiting (pisition #5) - пятый в очереди
 ```
 
 ### also
-https://github.com/bpmbpm/doc/blob/main/AI/dev/hivemind/readme.md
+- https://github.com/bpmbpm/doc/blob/main/AI/dev/hivemind/readme.md
+- browsec for https://www.ldf.fi/  
+Request-URI Too Long
