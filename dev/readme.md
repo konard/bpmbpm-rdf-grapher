@@ -19,5 +19,6 @@ Waiting (pisition #5) - пятый в очереди
 ### also
 - https://github.com/bpmbpm/doc/blob/main/AI/dev/hivemind/readme.md
 - browsec for https://www.ldf.fi/  
-Request-URI Too Long (125 строк пролезает) + по умолчанию RDF, а не TriG 
+Request-URI Too Long (125 строк пролезает) + по умолчанию RDF, а не TriG
+Передает данные RDF в сервис ldf.fi с явным указанием формата TriG ( from=trig)
 
