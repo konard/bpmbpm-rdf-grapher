@@ -1,0 +1,124 @@
+# Пример TriG VADv5min (Value Added Chain Diagram с иерархией TriG)
+# Демонстрация иерархии TriG графов через hasParentTrig
+# Исполнители определены в vad:rtree (Дерево Исполнителей)
+#
+
+@prefix rdf: <http://www.w3.org/1999/02/22-rdf-syntax-ns#> .
+@prefix rdfs: <http://www.w3.org/2000/01/rdf-schema#> .
+@prefix dcterms: <http://purl.org/dc/terms/> .
+@prefix vad: <http://example.org/vad#> .
+
+
+vad:root {
+    vad:root rdf:type vad:TechTree ;
+    rdfs:label "Корень Дерева" .
+}
+
+
+vad:ptree {
+    vad:ptree rdf:type vad:ObjectTree ;
+        rdfs:label "Дерево Процессов (TriG)" ;
+         vad:hasParentObj vad:root .
+
+    vad:p1 rdf:type vad:TypeProcess ;
+        rdfs:label "p1 Процесс 1" ;
+        dcterms:description "p1 Процесс 1" ;
+        vad:hasParentObj vad:ptree ;
+        vad:hasTrig vad:t_p1 .
+
+    vad:p1.1 rdf:type vad:TypeProcess ;
+        rdfs:label "p1.1 Процесс 1.1" ;
+        dcterms:description "Первый процесс в цепочке добавленной стоимости" ;
+        vad:hasParentObj vad:p1 ;
+        vad:hasTrig vad:t_p1.1 .
+
+    vad:p1.2 rdf:type vad:TypeProcess ;
+        rdfs:label "Процесс 1.2" ;
+        dcterms:description "Второй процесс, выполняется после Процесса 1" ;
+         vad:hasParentObj vad:p1 .
+ 
+    # p1.1.1
+    vad:p1.1.1 rdf:type vad:TypeProcess ;
+        rdfs:label "p1.1.1 Процесс 1.1.1" ;
+        dcterms:description "Первый процесс в цепочке добавленной стоимости" ;
+        vad:hasParentObj vad:p1.1 .
+
+    vad:p1.1.2 rdf:type vad:TypeProcess ;
+        rdfs:label "p1.1.2 Процесс 1.1.2" ;
+        dcterms:description "Второй процесс в цепочке добавленной стоимости" ;
+        vad:hasParentObj vad:p1.1 .
+
+    vad:p2 rdf:type vad:TypeProcess ;
+        rdfs:label "p2 Процесс 2" ;
+        dcterms:description "p2 Процесс 2" ;
+        vad:hasParentObj vad:ptree ;
+        vad:hasTrig vad:t_p2 .
+
+    vad:p2.1 rdf:type vad:TypeProcess ;
+        rdfs:label "p2.1 Процесс 2.1" ;
+        dcterms:description "Первый процесс в цепочке добавленной стоимости" ;
+        vad:hasParentObj vad:p2 .
+
+    vad:p2.2 rdf:type vad:TypeProcess ;
+        rdfs:label "p2.2 Процесс 2.2" ;
+        dcterms:description "Второй процесс" ;
+        vad:hasParentObj vad:p2 .
+
+   vad:pх.х rdf:type vad:TypeProcess ;
+        rdfs:label "pх.х Процесс х.х" ;
+        dcterms:description "Какой-то процесс" ;
+        vad:hasParentObj vad:pNotDefined .
+
+   vad:pNotDefined rdf:type vad:TypeProcess ;
+        rdfs:label "pNotDefined Процесс" ;
+        dcterms:description "Какой-то процесс" ;
+        vad:hasParentObj vad:ptree .
+
+}
+
+
+vad:rtree {
+    vad:rtree rdf:type vad:ObjectTree ;
+        rdfs:label "Дерево Исполнителей (TriG)" ;
+        vad:hasParentObj vad:root .
+
+    vad:Org-structure rdf:type vad:TypeExecutor ;
+        rdfs:label "Исполнитель Org-structure" ;
+        vad:hasParentObj vad:rtree .
+
+    # Исполнители
+    vad:Executor1 rdf:type vad:TypeExecutor ;
+        rdfs:label "Исполнитель 1" ;
+        vad:hasParentObj vad:Org-structure .
+
+    vad:Executor2 rdf:type vad:TypeExecutor ;
+        rdfs:label "Исполнитель 2" ;
+        vad:hasParentObj vad:Org-structure .
+
+    vad:Executor3 rdf:type vad:TypeExecutor ;
+        rdfs:label "Исполнитель 3" ;
+        vad:hasParentObj vad:Org-structure .
+
+    vad:Executor4 rdf:type vad:TypeExecutor ;
+        rdfs:label "Исполнитель 4" ;
+        vad:hasParentObj vad:Org-structure .
+
+    vad:Executor5 rdf:type vad:TypeExecutor ;
+        rdfs:label "Исполнитель 5" ;
+        vad:hasParentObj vad:Org-structure .
+
+    vad:Executor6 rdf:type vad:TypeExecutor ;
+        rdfs:label "Исполнитель 6" ;
+        vad:hasParentObj vad:Org-structure .
+
+    vad:Executor7 rdf:type vad:TypeExecutor ;
+        rdfs:label "Исполнитель 7" ;
+        vad:hasParentObj vad:Org-structure .
+
+    vad:Executor8 rdf:type vad:TypeExecutor ;
+        rdfs:label "Исполнитель 8" ;
+        vad:hasParentObj vad:Org-structure .
+  
+}
+
+
