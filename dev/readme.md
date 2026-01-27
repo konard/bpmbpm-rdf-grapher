@@ -11,3 +11,10 @@ agent
 /limits
 
 Waiting (pisition #5) - пятый в очереди
+
+```
+--tool agent --model opencode/big-pickle
+```
+
+### also
+https://github.com/bpmbpm/doc/blob/main/AI/dev/hivemind/readme.md
