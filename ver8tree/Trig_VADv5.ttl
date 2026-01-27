@@ -1,5 +1,5 @@
 # Пример TriG VADv5 (Value Added Chain Diagram с иерархией TriG)
-# Демонстрация иерархии TriG графов через hasParentTrig
+# Демонстрация иерархии TriG графов через hasParentObj
 # Исполнители определены в vad:rtree (Дерево Исполнителей)
 #
 
@@ -21,8 +21,7 @@ vad:root {
 vad:ptree {
     vad:ptree rdf:type vad:ObjectTree ;
         rdfs:label "Дерево Процессов (TriG)" ;
-#        vad:hasParentTrig vad:root .
-         vad:hasParentObj vad:root .
+        vad:hasParentObj vad:root .
 
     vad:p1 rdf:type vad:TypeProcess ;
         rdfs:label "p1 Процесс 1" ;
@@ -96,7 +95,6 @@ vad:rtree {
     vad:rtree rdf:type vad:ObjectTree ;
         rdfs:label "Дерево Исполнителей (TriG)" ;
         vad:hasParentObj vad:root .
-#        vad:hasParentTrig vad:root .
 
     vad:Org-structure rdf:type vad:TypeExecutor ;
         rdfs:label "Исполнитель Org-structure" ;
@@ -170,17 +168,15 @@ vad:rtree {
 }
 
 # ============================================================================
-# Корневой TriG граф: t_p1 (hasParentTrig = root)
+# Корневой TriG граф: t_p1 (hasParentObj = p1)
 # ============================================================================
 
 vad:t_p1 {
     vad:t_p1 rdf:type vad:VADProcessDia ;
         rdfs:label "Схема t_p1 процесса p1" ;
         vad:hasParentObj vad:p1 .
-#        vad:hasParentTrig vad:root ;
-#        vad:definesProcess vad:p1 .
 
-    # Процесс p1.1 - DetailedChild (имеет дочернюю схему vad:t_p1.1 с hasParentTrig на текущую)
+    # Процесс p1.1 - DetailedChild (имеет дочернюю схему vad:t_p1.1)
     # rdf:type находится в vad:ptree
     # isSubprocessTrig указывается первым для явной связи с TriG
     vad:p1.1 vad:isSubprocessTrig vad:t_p1 ;
@@ -204,7 +200,7 @@ vad:t_p1 {
 }
 
 # ============================================================================
-# Дочерний TriG граф: t_p1.1 (hasParentTrig = t_p1)
+# Дочерний TriG граф: t_p1.1 (hasParentObj = p1.1)
 # Это детализация процесса p1.1 из родительского графа t_p1
 # ============================================================================
 
@@ -212,8 +208,6 @@ vad:t_p1.1 {
     vad:t_p1.1 rdf:type vad:VADProcessDia ;
         rdfs:label "Схема t_p1.1 процесса p1.1" ;
         vad:hasParentObj vad:p1.1 .
-#        vad:hasParentTrig vad:t_p1 ;
-#        vad:definesProcess vad:p1.1 .
 
     # Процесс p1.1.1 - notDetailedChild
     # rdf:type находится в vad:ptree
@@ -237,15 +231,13 @@ vad:t_p1.1 {
 }
 
 # ============================================================================
-# Корневой TriG граф: t_p2 (hasParentTrig = root)
+# Корневой TriG граф: t_p2 (hasParentObj = p2)
 # ============================================================================
 
 vad:t_p2 {
     vad:t_p2 rdf:type vad:VADProcessDia ;
         rdfs:label "Схема t_p2 процесса p2" ;
         vad:hasParentObj vad:p2 .
-#        vad:hasParentTrig vad:root ;
-#        vad:definesProcess vad:p2 .
 
     # Процесс p2.1 - notDetailedChild
     # rdf:type находится в vad:ptree
