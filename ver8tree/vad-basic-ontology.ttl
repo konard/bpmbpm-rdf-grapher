@@ -422,117 +422,24 @@ vad:ExecutorTree
 # ==============================================================================
 # ПОДТИПЫ ПРОЦЕССОВ (PROCESS SUBTYPES)
 # ==============================================================================
+# ПРИМЕЧАНИЕ: Подтипы процессов (Detailed, DetailedChild, DetailedExternal,
+# notDetailed, notDetailedChild, notDetailedExternal, NotDefinedType)
+# перенесены в vad-basic-ontology_tech_Appendix.ttl, так как они:
+# - Не используются напрямую в RDF-данных
+# - Вычисляются автоматически при запуске программы
+# - Хранятся в virtualRDFdata (виртуальные вычисляемые данные)
+#
+# Для обратной совместимости здесь оставлены ссылки на классы из tech_Appendix.
+# Полное описание классов смотрите в vad-basic-ontology_tech_Appendix.ttl
+# ==============================================================================
 
-# ------------------------------------------------------------------------------
-# Basic - Базовый процесс
-# ------------------------------------------------------------------------------
-# Процесс без детализации (не имеет дочерней схемы)
-# ------------------------------------------------------------------------------
-
-vad:Basic
-    rdf:type rdfs:Class, owl:Class ;
-    rdfs:subClassOf vad:Process ;
-    rdfs:label "Basic" ;
-    rdfs:comment """
-        Базовый процесс (Basic) - процесс без детализации.
-
-        Не имеет связанной дочерней схемы процесса (vad:hasTrig).
-        Является "листовым" элементом в иерархии процессов.
-
-        Используется через предикат vad:processSubtype:
-        vad:SomeProcess vad:processSubtype vad:Basic .
-    """ ;
-    dcterms:description "Базовый (нетедализируемый) процесс" .
-
-# ------------------------------------------------------------------------------
-# Detailed - Детализированный процесс (базовый класс)
-# ------------------------------------------------------------------------------
-# Процесс с детализацией (имеет дочернюю схему через vad:hasTrig)
-# Родительский класс для DetailedChild и DetailedExternal
-# ------------------------------------------------------------------------------
-
-vad:Detailed
-    rdf:type rdfs:Class, owl:Class ;
-    rdfs:subClassOf vad:Process ;
-    rdfs:label "Detailed" ;
-    rdfs:comment """
-        Детализированный процесс (Detailed) - процесс с детализацией.
-
-        Имеет связанную дочернюю схему процесса через предикат vad:hasTrig
-        в vad:ptree. При двойном клике на такой процесс происходит переход
-        к его детализирующей схеме.
-
-        Используется через предикат vad:processSubtype:
-        vad:SomeProcess vad:processSubtype vad:Detailed .
-
-        В vad:ptree для такого процесса указывается:
-        vad:SomeProcess vad:hasTrig vad:t_SomeProcess .
-
-        Имеет два подтипа:
-        - vad:DetailedChild - детализация является подпроцессом текущего процесса
-        - vad:DetailedExternal - детализация не является подпроцессом текущего процесса
-    """ ;
-    dcterms:description "Детализированный процесс (имеет дочернюю схему)" .
-
-# ------------------------------------------------------------------------------
-# DetailedChild - Детализированный процесс (подпроцесс)
-# ------------------------------------------------------------------------------
-# Детализированный процесс, который является подпроцессом текущего процесса
-# (связан через vad:hasParentObj с текущим концептом процесса)
-# ------------------------------------------------------------------------------
-
-vad:DetailedChild
-    rdf:type rdfs:Class, owl:Class ;
-    rdfs:subClassOf vad:Detailed ;
-    rdfs:label "DetailedChild" ;
-    rdfs:comment """
-        DetailedChild - детализированный процесс, являющийся подпроцессом.
-
-        Признак того, что детализируемый процесс (с синей заливкой и кликабельный)
-        является подпроцессом текущего процесса.
-
-        Определяется через vad:hasParentObj в vad:ptree:
-        Если vad:hasParentObj концепта процесса указывает на тот же процесс,
-        схема которого сейчас отображается - это DetailedChild.
-
-        Визуализация:
-        - Синяя заливка (как у Detailed)
-        - Кликабельный (переход к дочерней схеме)
-
-        Связь с JS-кодом: входит в VAD_ALLOWED_TYPES
-    """ ;
-    dcterms:description "Детализированный процесс-подпроцесс" .
-
-# ------------------------------------------------------------------------------
-# DetailedExternal - Детализированный процесс (внешний)
-# ------------------------------------------------------------------------------
-# Детализированный процесс, который НЕ является подпроцессом текущего процесса
-# (не связан через vad:hasParentObj с текущим концептом процесса)
-# ------------------------------------------------------------------------------
-
-vad:DetailedExternal
-    rdf:type rdfs:Class, owl:Class ;
-    rdfs:subClassOf vad:Detailed ;
-    rdfs:label "DetailedExternal" ;
-    rdfs:comment """
-        DetailedExternal - детализированный процесс, не являющийся подпроцессом.
-
-        Признак того, что детализируемый процесс (с синей заливкой и кликабельный)
-        НЕ является подпроцессом текущего процесса. Это может быть ссылка
-        на внешний процесс или процесс из другой ветви иерархии.
-
-        Определяется через vad:hasParentObj в vad:ptree:
-        Если vad:hasParentObj концепта процесса НЕ указывает на процесс,
-        схема которого сейчас отображается - это DetailedExternal.
-
-        Визуализация:
-        - Синяя заливка (как у Detailed)
-        - Кликабельный (переход к внешней схеме)
-        - Возможно отличие в визуальном стиле для индикации внешней ссылки
-
-        Связь с JS-кодом: входит в VAD_ALLOWED_TYPES
-    """ ;
-    dcterms:description "Детализированный внешний процесс" .
+# Ссылка: vad:Detailed - см. vad-basic-ontology_tech_Appendix.ttl
+# Ссылка: vad:DetailedChild - см. vad-basic-ontology_tech_Appendix.ttl
+# Ссылка: vad:DetailedExternal - см. vad-basic-ontology_tech_Appendix.ttl
+# Ссылка: vad:notDetailed - см. vad-basic-ontology_tech_Appendix.ttl
+# Ссылка: vad:notDetailedChild - см. vad-basic-ontology_tech_Appendix.ttl
+# Ссылка: vad:notDetailedExternal - см. vad-basic-ontology_tech_Appendix.ttl
+# Ссылка: vad:NotDefinedType - см. vad-basic-ontology_tech_Appendix.ttl
 
 # ==============================================================================
 # ТЕХНИЧЕСКИЕ ЭКЗЕМПЛЯРЫ (TECHNICAL INSTANCES)
@@ -802,36 +709,52 @@ vad:hasExecutor
     dcterms:description "Связывает процесс с группой исполнителей" .
 
 # ------------------------------------------------------------------------------
-# vad:processSubtype - Подтип процесса
+# vad:processSubtype - Подтип процесса (ВЫЧИСЛЯЕТСЯ АВТОМАТИЧЕСКИ)
 # ------------------------------------------------------------------------------
-# Указывает подтип процесса (Basic или Detailed)
+# Указывает подтип процесса - значение вычисляется автоматически
+# и хранится в virtualRDFdata, а не в RDF-данных
 # ------------------------------------------------------------------------------
 
 vad:processSubtype
     rdf:type rdf:Property, owl:ObjectProperty ;
     rdfs:label "processSubtype" ;
     rdfs:domain vad:Process ;
-    rdfs:range [ owl:oneOf ( vad:Basic vad:Detailed vad:DetailedChild vad:DetailedExternal ) ] ;
+    rdfs:range [ owl:oneOf ( vad:Detailed vad:DetailedChild vad:DetailedExternal
+                             vad:notDetailed vad:notDetailedChild vad:notDetailedExternal
+                             vad:NotDefinedType ) ] ;
     rdfs:comment """
         Предикат processSubtype указывает подтип процесса.
 
+        ВАЖНО: Значение vad:processSubtype ВЫЧИСЛЯЕТСЯ АВТОМАТИЧЕСКИ
+        и хранится в virtualRDFdata, а не в RDF-данных напрямую.
+
         Возможные значения:
-        - vad:Basic - базовый процесс (без детализации)
-        - vad:Detailed - детализированный процесс (имеет дочернюю схему)
-        - vad:DetailedChild - детализированный процесс-подпроцесс
+        Детализированные (имеют vad:hasTrig в ptree):
+        - vad:DetailedChild - детализированный подпроцесс (в схеме родителя)
         - vad:DetailedExternal - детализированный внешний процесс
 
-        Пример:
-        vad:Process1 vad:processSubtype vad:DetailedChild .
-        vad:Process2 vad:processSubtype vad:Basic .
-        vad:Process3 vad:processSubtype vad:DetailedExternal .
+        Не детализированные (НЕ имеют vad:hasTrig в ptree):
+        - vad:notDetailedChild - не детализированный подпроцесс
+        - vad:notDetailedExternal - не детализированный внешний процесс
 
-        Свойство хранится в TriG схемы процесса (VADProcessDia),
-        НЕ в vad:ptree.
+        Специальные:
+        - vad:NotDefinedType - процесс с hasParentObj = pNotDefined
+
+        Алгоритм вычисления:
+        1. Если hasParentObj = pNotDefined -> NotDefinedType
+        2. Если концепт имеет hasTrig -> Detailed*
+           - Если индивид в схеме родительского процесса -> DetailedChild
+           - Иначе -> DetailedExternal
+        3. Если концепт НЕ имеет hasTrig -> notDetailed*
+           - Если индивид в схеме родительского процесса -> notDetailedChild
+           - Иначе -> notDetailedExternal
+
+        Значения пересчитываются при запуске и изменении схемы.
+        Просмотр - через кнопку «virtualRDFdata».
 
         Связь с JS-кодом: входит в VAD_ALLOWED_PREDICATES
     """ ;
-    dcterms:description "Указывает подтип процесса (Basic, Detailed, DetailedChild или DetailedExternal)" .
+    dcterms:description "Подтип процесса (вычисляется автоматически, хранится в virtualRDFdata)" .
 
 # ------------------------------------------------------------------------------
 # vad:hasParentTrig - УСТАРЕВШИЙ ПРЕДИКАТ
