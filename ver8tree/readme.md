@@ -9,9 +9,12 @@ https://bpmbpm.github.io/rdf-grapher/ver8tree/
 
 *Загрузить пример RDF данных:*  
 выбрать (choose): **Trig VADv5**  
-Нажать кнопку (press the button) **Визуализировать**
+Нажать кнопку (press the button) **Показать**  
+В Дерево TriG выбирать объеты, схемы или процессы. При выборе схема - в окне Диаграмма отобразится схема процесса.
 
-Выбор режима:  "SPARQL Smart Design"
+Режим:  "SPARQL Smart Design" позволяет генерировать новые объекты.
 
 ### target
-Семантический аналог для http://www.bpm.processoffice.ru/
+Семантический аналог для http://www.bpm.processoffice.ru/  
+Тезис: от табличек и SQL   
+к онтологиям (в Protege) + tripleDtore + SPARQL 
