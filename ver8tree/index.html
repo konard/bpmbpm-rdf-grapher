@@ -6629,9 +6629,12 @@ WHERE {
 
         /**
          * Обработчик кнопки "Очистить" - очищает все поля
+         * Fix #4: Также очищает сообщение статуса в панели Result in SPARQL
          */
         function smartDesignClear() {
             hideSmartDesignMessage();
+            // Fix #4: Также очищаем сообщение в панели Result in SPARQL
+            hideResultSparqlMessage();
 
             const trigSelect = document.getElementById('smart-design-trig');
             const subjectSelect = document.getElementById('smart-design-subject');
