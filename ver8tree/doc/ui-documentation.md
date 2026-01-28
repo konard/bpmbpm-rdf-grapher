@@ -289,7 +289,75 @@ vad:definesProcess: vad:p2
 4. Обновляет визуализацию
 5. Закрывает модальное окно
 
-### 5.2 Модальное окно валидации
+### 5.2 Модальное окно создания концепта (New Concept)
+
+Модуль создания новых концептов (`create_new_concept.js`) реализует SPARQL-ориентированный подход к программированию.
+
+| Элемент | ID | Описание | Алгоритм |
+|---------|-----|----------|----------|
+| Modal Container | `#new-concept-modal` | Контейнер модального окна | Overlay с формой |
+| Concept Type | `#new-concept-type` | Выбор типа концепта | Dropdown с TypeProcess/TypeExecutor |
+| Fields Container | `#new-concept-fields-container` | Контейнер полей | Динамически генерируется |
+| Intermediate SPARQL | `#new-concept-intermediate-sparql` | Промежуточные запросы | Показывает SPARQL для получения предикатов |
+| Create Button | — | Кнопка создания | `createNewConceptSparql()` |
+
+**Доступные типы концептов:**
+- `vad:TypeProcess` — новый Концепт процесса (добавляется в vad:ptree)
+- `vad:TypeExecutor` — новый Концепт исполнителя (добавляется в vad:rtree)
+
+**Алгоритм `openNewConceptModal()`:**
+1. Очищает предыдущее состояние
+2. Сбрасывает форму
+3. Отображает модальное окно
+
+**Алгоритм `onNewConceptTypeChange()`:**
+1. Получает выбранный тип концепта
+2. Формирует SPARQL запрос к vad:techtree для получения предикатов:
+   ```sparql
+   SELECT ?predicate WHERE {
+       vad:ConceptProcessPredicate vad:includePredicate ?predicate .
+   }
+   ```
+3. Получает список автогенерируемых предикатов
+4. Строит форму с полями для каждого предиката
+5. Отображает промежуточные SPARQL запросы
+
+**Поля формы для vad:TypeProcess:**
+
+| Предикат | Тип поля | Статус | Описание |
+|----------|----------|--------|----------|
+| ID | text + radio | редактируемое | Режим: автоматически из label или вручную |
+| rdf:type | text | авто | Автоматически = vad:TypeProcess |
+| rdfs:label | text | редактируемое | Название концепта |
+| dcterms:description | textarea | редактируемое | Описание (необязательно) |
+| vad:hasParentObj | select | редактируемое | Справочник: vad:ptree + объекты TypeProcess |
+| vad:hasTrig | text | только чтение | TriG создаётся после создания концепта |
+
+**Генерация ID:**
+- Автоматический режим: пробелы заменяются на `_`
+- Ручной режим: пользователь вводит ID
+
+**Алгоритм `createNewConceptSparql()`:**
+1. Валидирует ID (не пустой, уникальный)
+2. Собирает значения из формы
+3. Генерирует SPARQL INSERT DATA запрос:
+   ```sparql
+   INSERT DATA {
+       GRAPH vad:ptree {
+           vad:NewProcess rdf:type vad:TypeProcess .
+           vad:NewProcess rdfs:label "Новый процесс" .
+           vad:NewProcess vad:hasParentObj vad:ptree .
+       }
+   }
+   ```
+4. Выводит запрос в "Result in SPARQL"
+5. Закрывает модальное окно
+
+**Связанная документация:**
+- [SPARQL-driven Programming Guide](sparql-driven-programming.md)
+- [Tech Appendix](../vad-basic-ontology_tech_Appendix.ttl)
+
+### 5.3 Модальное окно валидации
 
 | Элемент | ID | Описание | Алгоритм |
 |---------|-----|----------|----------|
