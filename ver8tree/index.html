@@ -6687,13 +6687,14 @@ WHERE {
                 return;
             }
 
-            // Паттерн для извлечения URI/префиксного имени (поддерживает <uri> и prefix:name с точками)
-            const uriPattern = '(?:<[^>]+>|[a-zA-Z_][a-zA-Z0-9_]*:[a-zA-Z0-9_.-]+)';
+            // Issue #209 Fix #4: Паттерн для извлечения URI/префиксного имени
+            // Поддерживает <uri>, prefix:name с точками и кириллицу (\u0400-\u04FF)
+            const uriPattern = '(?:<[^>]+>|[a-zA-Z_][a-zA-Z0-9_]*:[a-zA-Z0-9_.\u0400-\u04FF-]+)';
             // Паттерн для извлечения объекта (может быть URI, префиксное имя или литерал в кавычках)
-            const objectPattern = '(?:<[^>]+>|[a-zA-Z_][a-zA-Z0-9_]*:[a-zA-Z0-9_.-]+|"[^"]*")';
+            const objectPattern = '(?:<[^>]+>|[a-zA-Z_][a-zA-Z0-9_]*:[a-zA-Z0-9_.\u0400-\u04FF-]+|"[^"]*")';
 
             // Извлекаем GRAPH и триплеты из запроса
-            const graphMatch = sparqlQuery.match(new RegExp(`GRAPH\\s+(${uriPattern})\\s*\\{([\\s\\S]*?)\\}`, 'i'));
+            const graphMatch = sparqlQuery.match(new RegExp(`GRAPH\\s+(${uriPattern})\\s*\\{([\\s\\S]*?)\\}`, 'iu'));
 
             if (!graphMatch) {
                 showResultSparqlMessage('Ошибка: Не удалось распознать GRAPH в SPARQL запросе', 'error');
@@ -6703,8 +6704,8 @@ WHERE {
             const graphRef = graphMatch[1];
             const graphBody = graphMatch[2];
 
-            // Извлекаем триплеты из тела GRAPH
-            const triplePattern = new RegExp(`(${uriPattern})\\s+(${uriPattern})\\s+(${objectPattern})\\s*\\.`, 'g');
+            // Извлекаем триплеты из тела GRAPH (с поддержкой Unicode)
+            const triplePattern = new RegExp(`(${uriPattern})\\s+(${uriPattern})\\s+(${objectPattern})\\s*\\.`, 'gu');
             const triples = [];
             let tripleMatch;
             while ((tripleMatch = triplePattern.exec(graphBody)) !== null) {
@@ -7034,12 +7035,12 @@ WHERE {
                 return;
             }
 
-            // Паттерн для извлечения URI/префиксного имени
-            const uriPattern = '(?:<[^>]+>|[a-zA-Z_][a-zA-Z0-9_]*:[a-zA-Z0-9_.-]+)';
-            const objectPattern = '(?:<[^>]+>|[a-zA-Z_][a-zA-Z0-9_]*:[a-zA-Z0-9_.-]+|"[^"]*")';
+            // Issue #209 Fix #4: Паттерн для извлечения URI/префиксного имени с поддержкой кириллицы
+            const uriPattern = '(?:<[^>]+>|[a-zA-Z_][a-zA-Z0-9_]*:[a-zA-Z0-9_.\u0400-\u04FF-]+)';
+            const objectPattern = '(?:<[^>]+>|[a-zA-Z_][a-zA-Z0-9_]*:[a-zA-Z0-9_.\u0400-\u04FF-]+|"[^"]*")';
 
             // Извлекаем GRAPH и триплеты из запроса
-            const graphMatch = sparqlQuery.match(new RegExp(`GRAPH\\s+(${uriPattern})\\s*\\{([\\s\\S]*?)\\}`, 'i'));
+            const graphMatch = sparqlQuery.match(new RegExp(`GRAPH\\s+(${uriPattern})\\s*\\{([\\s\\S]*?)\\}`, 'iu'));
 
             if (!graphMatch) {
                 showResultSparqlMessage('Ошибка: Не удалось распознать GRAPH в SPARQL запросе', 'error');
@@ -7049,8 +7050,8 @@ WHERE {
             const graphRef = graphMatch[1];
             const graphBody = graphMatch[2];
 
-            // Извлекаем триплеты из тела GRAPH
-            const triplePattern = new RegExp(`(${uriPattern})\\s+(${uriPattern})\\s+(${objectPattern})\\s*\\.`, 'g');
+            // Извлекаем триплеты из тела GRAPH (с поддержкой Unicode)
+            const triplePattern = new RegExp(`(${uriPattern})\\s+(${uriPattern})\\s+(${objectPattern})\\s*\\.`, 'gu');
             const triples = [];
             let tripleMatch;
             while ((tripleMatch = triplePattern.exec(graphBody)) !== null) {
