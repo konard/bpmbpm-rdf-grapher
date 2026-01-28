@@ -5,7 +5,7 @@
 - old concept
 - predicate.xlsx https://github.com/bpmbpm/rdf-grapher/blob/main/ver7so/predicate.xlsx
 ### history
-- term.md прежний: https://github.com/bpmbpm/rdf-grapher/blob/main/ver7so/term.md
+- term.md прежний: https://github.com/bpmbpm/rdf-grapher/blob/main/ver7so/term.md ; исходный https://github.com/bpmbpm/rdf-grapher/issues/119
 
 ### also
 - https://github.com/bpmbpm/rdf-grapher/blob/main/ver7so/info.md
