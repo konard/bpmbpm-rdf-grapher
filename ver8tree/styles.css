@@ -1432,6 +1432,317 @@
             background-color: #F57C00;
         }
 
+        /* ============================================================================= */
+        /* Стили для модального окна New Concept */
+        /* ============================================================================= */
+
+        .new-concept-btn {
+            background-color: #7B1FA2 !important;
+            color: white !important;
+        }
+
+        .new-concept-btn:hover {
+            background-color: #6A1B9A !important;
+        }
+
+        .new-concept-modal {
+            display: none;
+            position: fixed;
+            z-index: 2000;
+            left: 0;
+            top: 0;
+            width: 100%;
+            height: 100%;
+            background-color: rgba(0,0,0,0.5);
+        }
+
+        .new-concept-modal-content {
+            background-color: white;
+            margin: 5% auto;
+            padding: 20px;
+            border-radius: 8px;
+            width: 95%;
+            max-width: 700px;
+            max-height: 85vh;
+            overflow-y: auto;
+            box-shadow: 0 4px 20px rgba(0,0,0,0.3);
+        }
+
+        .new-concept-modal-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 20px;
+            padding-bottom: 10px;
+            border-bottom: 2px solid #7B1FA2;
+        }
+
+        .new-concept-modal-header h3 {
+            margin: 0;
+            color: #333;
+        }
+
+        .new-concept-modal-close {
+            background: none;
+            border: none;
+            font-size: 28px;
+            cursor: pointer;
+            color: #666;
+            padding: 0;
+            line-height: 1;
+        }
+
+        .new-concept-modal-close:hover {
+            color: #333;
+        }
+
+        .new-concept-modal-body {
+            display: flex;
+            flex-direction: column;
+            gap: 15px;
+        }
+
+        .new-concept-field {
+            display: flex;
+            flex-direction: column;
+            gap: 5px;
+        }
+
+        .new-concept-field label {
+            font-weight: 600;
+            color: #333;
+            font-size: 14px;
+        }
+
+        .new-concept-field select,
+        .new-concept-field input,
+        .new-concept-field textarea {
+            padding: 10px;
+            border: 1px solid #ddd;
+            border-radius: 4px;
+            font-size: 14px;
+            font-family: inherit;
+        }
+
+        .new-concept-field input:focus,
+        .new-concept-field select:focus,
+        .new-concept-field textarea:focus {
+            outline: none;
+            border-color: #7B1FA2;
+            box-shadow: 0 0 5px rgba(123, 31, 162, 0.3);
+        }
+
+        .new-concept-field input:disabled,
+        .new-concept-field select:disabled,
+        .new-concept-field textarea:disabled {
+            background-color: #f5f5f5;
+            cursor: not-allowed;
+            color: #666;
+        }
+
+        .new-concept-field .field-hint {
+            font-size: 12px;
+            color: #888;
+            font-style: italic;
+        }
+
+        .new-concept-hint {
+            color: #666;
+            font-style: italic;
+            padding: 20px;
+            text-align: center;
+            background-color: #f9f9f9;
+            border-radius: 4px;
+        }
+
+        /* Стили для поля ID с режимом генерации */
+        .new-concept-field-id {
+            background-color: #f5f5f5;
+            padding: 15px;
+            border-radius: 6px;
+            border: 1px solid #e0e0e0;
+        }
+
+        .new-concept-id-options {
+            display: flex;
+            gap: 20px;
+            margin: 10px 0;
+        }
+
+        .new-concept-radio {
+            display: flex;
+            align-items: center;
+            gap: 5px;
+            font-weight: normal !important;
+            cursor: pointer;
+        }
+
+        .new-concept-radio input[type="radio"] {
+            width: auto;
+            margin: 0;
+        }
+
+        /* Стили для автоматических полей */
+        .new-concept-field-auto {
+            background-color: #f0f0f0;
+            padding: 10px;
+            border-radius: 4px;
+            border-left: 3px solid #9e9e9e;
+        }
+
+        .new-concept-field-auto label {
+            color: #666;
+        }
+
+        .auto-badge {
+            background-color: #9e9e9e;
+            color: white;
+            padding: 2px 6px;
+            border-radius: 3px;
+            font-size: 11px;
+            font-weight: normal;
+            margin-left: 5px;
+        }
+
+        /* Стили для полей только для чтения */
+        .new-concept-field-readonly {
+            background-color: #fff8e1;
+            padding: 10px;
+            border-radius: 4px;
+            border-left: 3px solid #FFC107;
+        }
+
+        .readonly-badge {
+            background-color: #FFC107;
+            color: #333;
+            padding: 2px 6px;
+            border-radius: 3px;
+            font-size: 11px;
+            font-weight: normal;
+            margin-left: 5px;
+        }
+
+        /* Промежуточный SPARQL */
+        #new-concept-intermediate-sparql {
+            margin-top: 15px;
+            padding: 15px;
+            background-color: #f5f5f5;
+            border-radius: 6px;
+            border: 1px solid #e0e0e0;
+        }
+
+        .intermediate-sparql-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 10px;
+        }
+
+        .intermediate-sparql-header label {
+            font-weight: 600;
+            color: #333;
+        }
+
+        .toggle-sparql-btn {
+            padding: 5px 10px;
+            font-size: 12px;
+            background-color: #9e9e9e;
+            color: white;
+            border: none;
+            border-radius: 3px;
+            cursor: pointer;
+        }
+
+        .toggle-sparql-btn:hover {
+            background-color: #757575;
+        }
+
+        .intermediate-sparql-textarea {
+            width: 100%;
+            font-family: 'Consolas', 'Monaco', monospace;
+            font-size: 12px;
+            background-color: #263238;
+            color: #aed581;
+            border: none;
+            border-radius: 4px;
+            padding: 10px;
+        }
+
+        /* Сообщения */
+        .new-concept-message {
+            padding: 10px 15px;
+            border-radius: 4px;
+            margin-top: 15px;
+            font-size: 14px;
+        }
+
+        .new-concept-message.success {
+            background-color: #e8f5e9;
+            color: #2e7d32;
+            border: 1px solid #a5d6a7;
+        }
+
+        .new-concept-message.error {
+            background-color: #ffebee;
+            color: #c62828;
+            border: 1px solid #ef9a9a;
+        }
+
+        .new-concept-message.warning {
+            background-color: #fff3e0;
+            color: #e65100;
+            border: 1px solid #ffcc80;
+        }
+
+        /* Кнопки модального окна */
+        .new-concept-modal-buttons {
+            display: flex;
+            gap: 10px;
+            justify-content: flex-end;
+            margin-top: 20px;
+            padding-top: 15px;
+            border-top: 1px solid #eee;
+            flex-wrap: wrap;
+        }
+
+        .new-concept-modal-buttons button {
+            padding: 10px 20px;
+            border: none;
+            border-radius: 4px;
+            cursor: pointer;
+            font-size: 14px;
+            margin-top: 0;
+        }
+
+        .new-concept-cancel-btn {
+            background-color: #9e9e9e;
+            color: white;
+        }
+
+        .new-concept-cancel-btn:hover {
+            background-color: #757575;
+        }
+
+        .new-concept-sparql-btn {
+            background-color: #607D8B;
+            color: white;
+        }
+
+        .new-concept-sparql-btn:hover {
+            background-color: #455A64;
+        }
+
+        .new-concept-create-btn {
+            background-color: #7B1FA2;
+            color: white;
+        }
+
+        .new-concept-create-btn:hover {
+            background-color: #6A1B9A;
+        }
+
+        /* ============================================================================= */
+
         /* Стили для кнопки "Показать в отдельном окне" */
         .show-in-window-btn {
             background-color: #2196F3;

@@ -165,6 +165,7 @@
                 </div>
             </div>
             <div class="smart-design-buttons">
+                <button class="new-concept-btn" onclick="openNewConceptModal()">New Concept</button>
                 <button class="new-trig-btn" onclick="openNewTrigModal()">New TriG (VADProcessDia)</button>
                 <button onclick="smartDesignCreate()">Создать SPARQL</button>
                 <button onclick="smartDesignCreateWithPrefix()" style="background-color: #1565C0;">Создать SPARQL (prefix)</button>
@@ -212,6 +213,45 @@
             <div class="new-trig-modal-buttons">
                 <button class="new-trig-cancel-btn" onclick="closeNewTrigModal()">Отмена</button>
                 <button class="new-trig-create-btn" onclick="createNewTrig()">Создать запрос New TriG</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Модальное окно для создания нового Концепта (New Concept) -->
+    <div id="new-concept-modal" class="new-concept-modal">
+        <div class="new-concept-modal-content">
+            <div class="new-concept-modal-header">
+                <h3>Создание нового Концепта</h3>
+                <button class="new-concept-modal-close" onclick="closeNewConceptModal()">&times;</button>
+            </div>
+            <div class="new-concept-modal-body">
+                <div class="new-concept-field">
+                    <label for="new-concept-type">Тип концепта:</label>
+                    <select id="new-concept-type" onchange="onNewConceptTypeChange()">
+                        <option value="">-- Выберите тип концепта --</option>
+                        <option value="vad:TypeProcess">новый Концепт процесса (vad:TypeProcess)</option>
+                        <option value="vad:TypeExecutor">новый Концепт исполнителя (vad:TypeExecutor)</option>
+                    </select>
+                    <small class="field-hint">Выберите тип для отображения формы ввода и промежуточного SPARQL запроса</small>
+                </div>
+                <!-- Контейнер для динамически генерируемых полей -->
+                <div id="new-concept-fields-container">
+                    <p class="new-concept-hint">Выберите тип концепта для отображения полей ввода</p>
+                </div>
+                <!-- Промежуточный SPARQL запрос -->
+                <div id="new-concept-intermediate-sparql" style="display: none;">
+                    <div class="intermediate-sparql-header">
+                        <label>Промежуточный SPARQL:</label>
+                        <button class="toggle-sparql-btn" onclick="toggleIntermediateSparql()">Свернуть/Развернуть</button>
+                    </div>
+                    <textarea class="intermediate-sparql-textarea" rows="8" readonly></textarea>
+                </div>
+            </div>
+            <div id="new-concept-message" class="new-concept-message" style="display: none;"></div>
+            <div class="new-concept-modal-buttons">
+                <button class="new-concept-cancel-btn" onclick="closeNewConceptModal()">Отмена</button>
+                <button class="new-concept-sparql-btn" onclick="toggleIntermediateSparql()">Промежуточный SPARQL</button>
+                <button class="new-concept-create-btn" onclick="createNewConceptSparql()">Создать запрос New Concept</button>
             </div>
         </div>
     </div>
@@ -338,6 +378,9 @@ WHERE {
 
     <!-- Подключение правил валидации VAD схемы -->
     <script src="vad-validation-rules.js"></script>
+
+    <!-- Подключение модуля создания новых концептов (New Concept) -->
+    <script src="create_new_concept.js"></script>
 
     <script>
         /**
