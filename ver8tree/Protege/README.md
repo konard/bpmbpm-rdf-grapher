@@ -340,17 +340,96 @@ If Protege's reasoner reports inconsistencies:
 
 ---
 
+## Using the Reasoner
+
+Protege includes built-in reasoners that can automatically infer new facts based on ontology rules. This is useful for computing derived properties like `vad:processSubtype`.
+
+### Starting the Reasoner
+
+1. Open the ontology in Protege
+2. Go to `Reasoner` menu
+3. Select a reasoner:
+   - **Pellet** - Full OWL 2 reasoner
+   - **HermiT** - Efficient OWL 2 reasoner
+   - **FaCT++** - Fast OWL DL reasoner
+4. Click `Reasoner -> Start reasoner` (or press `Ctrl+R`)
+
+### Viewing Inferred Axioms
+
+After running the reasoner:
+1. Go to **Individuals** tab
+2. Select an individual
+3. Inferred properties are shown with a yellow background
+
+### Exporting Inferred Axioms
+
+To export computed values:
+1. `File -> Export inferred axioms as ontology...`
+2. Select format (Turtle recommended)
+3. Save the file
+
+For detailed information about using the reasoner for computing `vad:processSubtype`, see the Russian documentation ([README.ru.md](README.ru.md)).
+
+---
+
+## WebProtege (Web Version)
+
+WebProtege is a web-based version of Protege available at https://webprotege.stanford.edu/. It enables collaborative ontology editing without installing local software.
+
+### Advantages of WebProtege
+
+| Feature | WebProtege | Protege Desktop |
+|---------|------------|-----------------|
+| Installation | Not required | Required |
+| Collaboration | Built-in | Limited |
+| Comments/Discussion | Yes | No |
+| Change History | Yes | No |
+| Access Control | Yes | No |
+| Offline Work | No | Yes |
+| Full Reasoner Control | No | Yes |
+
+### Getting Started with WebProtege
+
+1. Go to https://webprotege.stanford.edu/
+2. Register or sign in
+3. Create a new project or import an existing ontology
+4. Invite collaborators by email (optional)
+
+### When to Use WebProtege
+
+**Use WebProtege when:**
+- Collaborative editing is needed
+- Working from different locations/devices
+- Change tracking is important
+- Comments and discussions are valuable
+
+**Use Protege Desktop when:**
+- Full reasoner functionality is required
+- Working with large ontologies
+- Offline work is needed
+- Specific plugins are required
+
+---
+
 ## File Structure
 
 ```
 ver8tree/
 ├── Protege/
-│   ├── README.md              # This guide
-│   ├── ttl-to-owl.py          # Converter: TTL -> OWL/XML
-│   ├── owl-to-ttl.py          # Converter: OWL/XML -> TTL
+│   ├── README.md              # This guide (English)
+│   ├── README.ru.md           # This guide (Russian)
+│   ├── ttl-to-owl.py          # Converter: TTL -> OWL/XML (Python)
+│   ├── owl-to-ttl.py          # Converter: OWL/XML -> TTL (Python)
+│   ├── ttl-to-owl.js          # Converter: TTL -> OWL/XML (Browser JS)
+│   ├── owl-to-ttl.js          # Converter: OWL/XML -> TTL (Browser JS)
+│   ├── converter.html         # Browser-based converter UI
 │   └── examples/
-│       ├── add-predicate.md   # Example: adding a predicate
-│       └── add-class.md       # Example: adding a class
+│       ├── add-predicate.md               # Example: adding a predicate (English)
+│       ├── add-predicate.ru.md            # Example: adding a predicate (Russian)
+│       ├── add-class.md                   # Example: adding a class (English)
+│       ├── add-class.ru.md                # Example: adding a class (Russian)
+│       ├── edit-concept-process-predicate.md    # Example: editing Tech object (English)
+│       └── edit-concept-process-predicate.ru.md # Example: editing Tech object (Russian)
 ├── vad-basic-ontology.ttl     # Main ontology (DO NOT edit directly)
 ├── vad-basic-ontology_tech_Appendix.ttl  # Tech appendix (editable)
 └── Trig_VADv5.ttl            # Example RDF data
