@@ -375,6 +375,7 @@ function getObjectsForParentSelector(typeUri, graphUri) {
 
 /**
  * Ручное получение объектов по типу
+ * Issue #209 Fix #2: Улучшено логирование для диагностики пустых результатов
  *
  * @param {string} typeUri - URI типа
  * @param {string} graphUri - URI графа
@@ -385,16 +386,27 @@ function getObjectsByTypeManual(typeUri, graphUri) {
     const rdfTypeUri = 'http://www.w3.org/1999/02/22-rdf-syntax-ns#type';
     const rdfsLabelUri = 'http://www.w3.org/2000/01/rdf-schema#label';
 
+    console.log(`getObjectsByTypeManual: Searching for type=${typeUri} in graph=${graphUri}`);
+
     if (typeof currentQuads !== 'undefined' && Array.isArray(currentQuads)) {
+        console.log(`getObjectsByTypeManual: currentQuads count = ${currentQuads.length}`);
+
         // Сначала находим все субъекты нужного типа в нужном графе
         const subjectsOfType = new Set();
         currentQuads.forEach(quad => {
-            if (quad.predicate.value === rdfTypeUri &&
-                quad.object.value === typeUri &&
-                (quad.graph && quad.graph.value === graphUri)) {
-                subjectsOfType.add(quad.subject.value);
+            // Issue #209 Fix #2: Улучшенная проверка графа
+            // Проверяем соответствие типа и графа
+            const quadGraphValue = quad.graph ? quad.graph.value : null;
+
+            if (quad.predicate.value === rdfTypeUri && quad.object.value === typeUri) {
+                // Проверяем, совпадает ли граф
+                if (quadGraphValue === graphUri) {
+                    subjectsOfType.add(quad.subject.value);
+                }
             }
         });
+
+        console.log(`getObjectsByTypeManual: Found ${subjectsOfType.size} subjects of type ${typeUri}`);
 
         // Затем получаем их label
         subjectsOfType.forEach(subjectUri => {
@@ -412,6 +424,10 @@ function getObjectsByTypeManual(typeUri, graphUri) {
 
             objects.push({ uri: subjectUri, label: label });
         });
+
+        console.log(`getObjectsByTypeManual: Returning ${objects.length} objects`);
+    } else {
+        console.log('getObjectsByTypeManual: currentQuads is not available');
     }
 
     return objects;
@@ -741,6 +757,7 @@ function buildPredicateField(predicatePrefixed, predicateUri, config, isAuto, is
 
 /**
  * Инициализирует справочник родительских объектов
+ * Issue #209 Fix #2: Улучшено логирование для диагностики
  *
  * @param {Object} config - Конфигурация типа концепта
  */
@@ -748,11 +765,18 @@ function initializeParentSelector(config) {
     const parentSelect = document.getElementById('new-concept-field-vad-hasParentObj');
     if (!parentSelect) return;
 
+    console.log('initializeParentSelector: Starting with config:', {
+        typeValueUri: config.typeValueUri,
+        targetGraphUri: config.targetGraphUri
+    });
+
     // Получаем объекты для справочника
     const objects = getObjectsForParentSelector(
         config.typeValueUri,
         config.targetGraphUri
     );
+
+    console.log(`initializeParentSelector: Got ${objects.length} objects from getObjectsForParentSelector`);
 
     // Очищаем и заполняем список
     parentSelect.innerHTML = '<option value="">-- Выберите родительский элемент --</option>';
@@ -778,6 +802,8 @@ function initializeParentSelector(config) {
         option.textContent = obj.label || obj.uri;
         parentSelect.appendChild(option);
     });
+
+    console.log(`initializeParentSelector: Total options in dropdown: ${parentSelect.options.length}`);
 
     // Fix #3: Обновляем состояние кнопки после заполнения справочника
     updateCreateButtonState();
@@ -806,18 +832,21 @@ function onIdGenerationModeChange() {
 /**
  * Обработчик ввода в поле label
  * Автоматически генерирует ID если включён режим автогенерации
+ * Issue #209 Fix #1: Также обновляет состояние кнопки создания
  */
 function onLabelInput() {
-    if (newConceptState.idGenerationMode !== 'auto') return;
-
     const labelInput = document.getElementById('new-concept-field-rdfs-label');
     const idInput = document.getElementById('new-concept-id');
 
-    if (labelInput && idInput) {
+    // Генерируем ID автоматически если режим авто
+    if (newConceptState.idGenerationMode === 'auto' && labelInput && idInput) {
         const label = labelInput.value;
         const generatedId = generateIdFromLabel(label);
         idInput.value = generatedId;
     }
+
+    // Issue #209 Fix #1: Обновляем состояние кнопки при изменении label
+    updateCreateButtonState();
 }
 
 /**
@@ -829,28 +858,36 @@ function onParentObjChange() {
 }
 
 /**
- * Fix #3: Обновляет состояние кнопки "Создать запрос New Concept"
- * Кнопка активна только если выбран родительский объект (vad:hasParentObj)
+ * Issue #209 Fix #1: Обновляет состояние кнопки "Создать запрос New Concept"
+ * Кнопка активна только если заполнены все обязательные поля:
+ * - Выбран тип концепта
+ * - Заполнен rdfs:label (название)
+ * - Выбран родительский объект (vad:hasParentObj)
  */
 function updateCreateButtonState() {
     const createBtn = document.querySelector('.new-concept-create-btn');
     const parentSelect = document.getElementById('new-concept-field-vad-hasParentObj');
+    const labelInput = document.getElementById('new-concept-field-rdfs-label');
 
     if (!createBtn) return;
 
     // Кнопка неактивна если:
     // 1. Не выбран тип концепта
-    // 2. Не выбран родительский объект
+    // 2. Не заполнен rdfs:label (название)
+    // 3. Не выбран родительский объект
     const typeSelected = newConceptState.selectedType != null;
+    const labelFilled = labelInput && labelInput.value && labelInput.value.trim() !== '';
     const parentSelected = parentSelect && parentSelect.value && parentSelect.value.trim() !== '';
 
-    if (typeSelected && parentSelected) {
+    if (typeSelected && labelFilled && parentSelected) {
         createBtn.disabled = false;
         createBtn.title = '';
     } else {
         createBtn.disabled = true;
         if (!typeSelected) {
             createBtn.title = 'Сначала выберите тип концепта';
+        } else if (!labelFilled) {
+            createBtn.title = 'Введите название концепта (rdfs:label)';
         } else if (!parentSelected) {
             createBtn.title = 'Сначала выберите родительский элемент (vad:hasParentObj)';
         }
