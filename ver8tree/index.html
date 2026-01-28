@@ -737,14 +737,23 @@ vad:t_p2 {
             'http://example.org/vad#ProcessTree',
             'vad:ExecutorTree',
             'http://example.org/vad#ExecutorTree',
-            'vad:Basic',
-            'http://example.org/vad#Basic',
+            // Детализированные подтипы (имеют vad:hasTrig в ptree)
             'vad:Detailed',
             'http://example.org/vad#Detailed',
             'vad:DetailedChild',
             'http://example.org/vad#DetailedChild',
             'vad:DetailedExternal',
-            'http://example.org/vad#DetailedExternal'
+            'http://example.org/vad#DetailedExternal',
+            // Не детализированные подтипы (НЕ имеют vad:hasTrig в ptree)
+            'vad:notDetailed',
+            'http://example.org/vad#notDetailed',
+            'vad:notDetailedChild',
+            'http://example.org/vad#notDetailedChild',
+            'vad:notDetailedExternal',
+            'http://example.org/vad#notDetailedExternal',
+            // Специальный подтип
+            'vad:NotDefinedType',
+            'http://example.org/vad#NotDefinedType'
         ];
 
         /**

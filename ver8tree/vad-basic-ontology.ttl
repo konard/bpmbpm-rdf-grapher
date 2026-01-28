@@ -173,10 +173,18 @@ vad:TypeProcess
 
         Используется в JavaScript-коде для унификации типов объектов.
         Включает все подтипы процессов:
-        - vad:Basic - базовый процесс
-        - vad:Detailed - детализированный процесс
-        - vad:DetailedChild - детализированный подпроцесс
+        Детализированные (имеют vad:hasTrig в ptree):
+        - vad:Detailed - родительский класс для DetailedChild и DetailedExternal
+        - vad:DetailedChild - детализированный подпроцесс (в схеме родителя)
         - vad:DetailedExternal - детализированный внешний процесс
+
+        Не детализированные (НЕ имеют vad:hasTrig в ptree):
+        - vad:notDetailed - родительский класс для notDetailedChild и notDetailedExternal
+        - vad:notDetailedChild - не детализированный подпроцесс (в схеме родителя)
+        - vad:notDetailedExternal - не детализированный внешний процесс
+
+        Специальные:
+        - vad:NotDefinedType - процесс с hasParentObj = pNotDefined
 
         Связь с JS-кодом: входит в VAD_ALLOWED_TYPES
     """ ;
@@ -665,14 +673,15 @@ vad:isSubprocessTrig
 
         Пример:
         vad:Process2 vad:isSubprocessTrig vad:t_pGA ;
-            vad:hasExecutor vad:ExecutorGroup_Process2 ;
-            vad:processSubtype vad:Basic .
+            vad:hasExecutor vad:ExecutorGroup_Process2 .
+
+        Примечание: vad:processSubtype вычисляется автоматически и хранится
+        в virtualRDFdata, не указывается явно в данных.
 
         Порядок предикатов:
         1. vad:isSubprocessTrig - связь с TriG (первым!)
         2. vad:hasExecutor - группа исполнителей
-        3. vad:processSubtype - подтип процесса
-        4. vad:hasNext - следующий процесс (опционально)
+        3. vad:hasNext - следующий процесс (опционально)
 
         Свойство хранится в TriG схемы процесса (VADProcessDia),
         НЕ в vad:ptree.
