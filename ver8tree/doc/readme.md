@@ -9,3 +9,4 @@
 
 ### also
 - https://github.com/bpmbpm/rdf-grapher/blob/main/ver7so/info.md
+- aris и др. https://github.com/bpmbpm/rdf-grapher/tree/main/ver8/doc
