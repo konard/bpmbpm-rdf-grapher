@@ -1,5 +1,5 @@
 ### ver8tree
-only SPARQL Smart Design + Ontology + file   
+Smart Design + Ontology + SPARQL   
 на основе ver8 (ver8a - проблемный)
 
 ### run
