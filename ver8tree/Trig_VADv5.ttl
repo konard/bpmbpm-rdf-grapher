@@ -39,20 +39,17 @@ vad:ptree {
         rdfs:label "Процесс 1.2" ;
         dcterms:description "Второй процесс, выполняется после Процесса 1" ;
          vad:hasParentObj vad:p1 .
- #       vad:hasParentProcess vad:p1 .
 
     # p1.1.1
     vad:p1.1.1 rdf:type vad:TypeProcess ;
         rdfs:label "p1.1.1 Процесс 1.1.1" ;
         dcterms:description "Первый процесс в цепочке добавленной стоимости" ;
         vad:hasParentObj vad:p1.1 .
-#        vad:hasParentProcess vad:p1.1 .
 
     vad:p1.1.2 rdf:type vad:TypeProcess ;
         rdfs:label "p1.1.2 Процесс 1.1.2" ;
         dcterms:description "Второй процесс в цепочке добавленной стоимости" ;
         vad:hasParentObj vad:p1.1 .
-#       vad:hasParentProcess vad:p1.1 .
 
     vad:p2 rdf:type vad:TypeProcess ;
         rdfs:label "p2 Процесс 2" ;
@@ -64,25 +61,21 @@ vad:ptree {
         rdfs:label "p2.1 Процесс 2.1" ;
         dcterms:description "Первый процесс в цепочке добавленной стоимости" ;
         vad:hasParentObj vad:p2 .
-#        vad:hasParentProcess vad:p2 .
 
     vad:p2.2 rdf:type vad:TypeProcess ;
         rdfs:label "p2.2 Процесс 2.2" ;
         dcterms:description "Второй процесс" ;
         vad:hasParentObj vad:p2 .
-#        vad:hasParentProcess vad:p2 .
 
    vad:pх.х rdf:type vad:TypeProcess ;
         rdfs:label "pх.х Процесс х.х" ;
         dcterms:description "Какой-то процесс" ;
-#        vad:hasParentProcess vad:pNotDefined .
         vad:hasParentObj vad:pNotDefined .
 
    vad:pNotDefined rdf:type vad:TypeProcess ;
         rdfs:label "pNotDefined Процесс" ;
         dcterms:description "Какой-то процесс" ;
         vad:hasParentObj vad:ptree .
-#        vad:hasParentProcess vad:NotDefined .
 
 }
 
