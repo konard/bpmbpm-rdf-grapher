@@ -12,3 +12,6 @@
 - [Basic VAD Ontology - Базовая онтология верхнеуровневых процессов](https://github.com/bpmbpm/rdf-grapher/blob/main/ver8tree/vad-basic-ontology.ttl)
 - Технологическая часть онтологии [Tech Appendix - Технологические классы и объекты](https://github.com/bpmbpm/rdf-grapher/blob/main/ver8tree/vad-basic-ontology_tech_Appendix.ttl)
  
+### requirements
+- triple (requirements for the implementation of triplets)
+  - Должны поддерживаться оба формата записи триплета - в Simple Triple (простая, полная) и в Shorthand Triple форме (сокращенная, составная).
