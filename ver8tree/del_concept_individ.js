@@ -102,16 +102,19 @@ const DEL_CONCEPT_CONFIG = {
     },
     [DEL_OPERATION_TYPES.INDIVID_PROCESS]: {
         displayName: 'Удалить индивид процесса',
-        description: 'Удаление индивида процесса из TriG типа vad:VADProcessDia',
+        // Issue #227: Добавлено предупреждение о том, что функция не рекомендована
+        description: 'Удаление индивида процесса из TriG типа vad:VADProcessDia. ' +
+                     '⚠️ Функция не рекомендована, т.к. не удаляет объекты vad:ExecutorGroup_ ' +
+                     'и предикаты vad:hasNext других индивидов процесса.',
         // Индивиды находятся в разных TriG
-        hasShowIndividualsButton: true,
-        hasDeleteIndividualsButton: true
+        hasShowIndividualsButton: true
+        // Issue #227: hasDeleteIndividualsButton удалён - кнопка дублировала "Создать запрос на удаление"
     },
     [DEL_OPERATION_TYPES.INDIVID_EXECUTOR]: {
         displayName: 'Удалить индивид исполнителя',
         description: 'Удаление vad:includes из TriG типа vad:VADProcessDia',
-        hasShowIndividualsButton: true,
-        hasDeleteIndividualsButton: true
+        hasShowIndividualsButton: true
+        // Issue #227: hasDeleteIndividualsButton удалён - кнопка дублировала "Создать запрос на удаление"
     },
     [DEL_OPERATION_TYPES.TRIG_SCHEMA]: {
         displayName: 'Удалить схему процесса (TriG)',
@@ -1420,7 +1423,7 @@ function hideDelResults() {
  */
 function updateDelButtonsState() {
     const showIndividualsBtn = document.getElementById('del-show-individuals-btn');
-    const deleteIndividualsBtn = document.getElementById('del-delete-individuals-btn');
+    // Issue #227: Кнопка "Удалить индивиды" удалена - дублировала "Создать запрос на удаление"
     const createDeleteBtn = document.querySelector('.del-concept-create-btn');
 
     const operationType = delConceptState.selectedOperation;
@@ -1434,12 +1437,7 @@ function updateDelButtonsState() {
         showIndividualsBtn.style.display = showButton ? 'inline-block' : 'none';
     }
 
-    // Кнопка "Удалить индивиды"
-    if (deleteIndividualsBtn) {
-        const showButton = config && config.hasDeleteIndividualsButton &&
-                          hasSelectedConcept && delConceptState.foundIndividuals.length > 0;
-        deleteIndividualsBtn.style.display = showButton ? 'inline-block' : 'none';
-    }
+    // Issue #227: Логика для кнопки "Удалить индивиды" удалена
 
     // Кнопка "Создать запрос на удаление"
     if (createDeleteBtn) {
