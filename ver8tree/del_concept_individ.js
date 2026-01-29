@@ -105,13 +105,17 @@ const DEL_CONCEPT_CONFIG = {
         description: 'Удаление индивида процесса из TriG типа vad:VADProcessDia',
         // Индивиды находятся в разных TriG
         hasShowIndividualsButton: true,
-        hasDeleteIndividualsButton: true
+        // ВНИМАНИЕ: Функция не рекомендована, т.к. не удаляет объекты vad:ExecutorGroup_
+        // и предикаты vad:hasNext других индивидов процесса.
+        // WARNING: This function is not recommended because it does not delete
+        // vad:ExecutorGroup_ objects and vad:hasNext predicates of other process individuals.
+        notRecommended: true,
+        warningMessage: 'Функция не рекомендована, т.к. не удаляет объекты vad:ExecutorGroup_ и предикаты vad:hasNext других индивидов процесса.'
     },
     [DEL_OPERATION_TYPES.INDIVID_EXECUTOR]: {
         displayName: 'Удалить индивид исполнителя',
         description: 'Удаление vad:includes из TriG типа vad:VADProcessDia',
-        hasShowIndividualsButton: true,
-        hasDeleteIndividualsButton: true
+        hasShowIndividualsButton: true
     },
     [DEL_OPERATION_TYPES.TRIG_SCHEMA]: {
         displayName: 'Удалить схему процесса (TriG)',
@@ -1044,6 +1048,13 @@ function buildDelConceptForm(config, operationType) {
 
     let html = '';
 
+    // Добавляем предупреждение, если функция не рекомендована
+    if (config && config.notRecommended && config.warningMessage) {
+        html += `<div class="del-concept-warning" style="background-color: #fff3cd; border: 1px solid #ffc107; color: #856404; padding: 10px; margin-bottom: 10px; border-radius: 4px;">
+            <strong>⚠️ Внимание:</strong> ${config.warningMessage}
+        </div>`;
+    }
+
     switch (operationType) {
         case DEL_OPERATION_TYPES.CONCEPT_PROCESS:
         case DEL_OPERATION_TYPES.INDIVID_PROCESS:
@@ -1420,7 +1431,6 @@ function hideDelResults() {
  */
 function updateDelButtonsState() {
     const showIndividualsBtn = document.getElementById('del-show-individuals-btn');
-    const deleteIndividualsBtn = document.getElementById('del-delete-individuals-btn');
     const createDeleteBtn = document.querySelector('.del-concept-create-btn');
 
     const operationType = delConceptState.selectedOperation;
@@ -1432,13 +1442,6 @@ function updateDelButtonsState() {
     if (showIndividualsBtn) {
         const showButton = config && config.hasShowIndividualsButton && hasSelectedConcept;
         showIndividualsBtn.style.display = showButton ? 'inline-block' : 'none';
-    }
-
-    // Кнопка "Удалить индивиды"
-    if (deleteIndividualsBtn) {
-        const showButton = config && config.hasDeleteIndividualsButton &&
-                          hasSelectedConcept && delConceptState.foundIndividuals.length > 0;
-        deleteIndividualsBtn.style.display = showButton ? 'inline-block' : 'none';
     }
 
     // Кнопка "Создать запрос на удаление"
