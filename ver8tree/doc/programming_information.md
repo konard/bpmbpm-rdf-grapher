@@ -15,3 +15,5 @@
 ### requirements
 - triple (requirements for the implementation of triplets)
   - Должны поддерживаться оба формата записи триплета - в Simple Triple (простая, полная) и в Shorthand Triple форме (сокращенная, составная).
+### term
+- [Терминологический словарь (Terminology Dictionary)](https://github.com/bpmbpm/rdf-grapher/blob/main/ver8tree/doc/term.md), например,  ptree - это хранилище концептов процесса, а индивиды процесса хранятся в TriG типа VADProcessDia. 
