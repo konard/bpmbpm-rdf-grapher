@@ -927,6 +927,12 @@ function findConceptForTrig(trigUri) {
  * Вызывается по клику на кнопку "Del Concept\Individ"
  */
 function openDelConceptModal() {
+    // Issue #223: Проверяем, что данные загружены и распарсены
+    if (typeof currentQuads === 'undefined' || currentQuads.length === 0) {
+        alert('Сначала загрузите и отобразите RDF данные (нажмите кнопку "Показать").\n\nFirst load and display RDF data (click "Показать" button).');
+        return;
+    }
+
     // Очищаем предыдущее состояние
     delConceptState = {
         isOpen: true,
