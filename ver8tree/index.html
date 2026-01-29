@@ -6861,15 +6861,56 @@ WHERE {
                     const predicatePrefixed = toPrefixed(triple.predicate);
                     const objectPrefixed = toPrefixed(triple.object);
 
-                    // Пробуем найти и удалить в префиксной форме
-                    let deletePattern = new RegExp(`\\s*${escapeRegex(subjectPrefixed)}\\s+${escapeRegex(predicatePrefixed)}\\s+${escapeRegex(objectPrefixed)}\\s*[;.]`, 'g');
                     const prevText = newRdfText;
+
+                    // Вариант 1: Полная форма триплета (Simple Triple): subject predicate object .
+                    let deletePattern = new RegExp(`\\s*${escapeRegex(subjectPrefixed)}\\s+${escapeRegex(predicatePrefixed)}\\s+${escapeRegex(objectPrefixed)}\\s*[;.]`, 'g');
                     newRdfText = newRdfText.replace(deletePattern, '');
 
+                    // Вариант 2: Полная форма с полными URI
                     if (newRdfText === prevText) {
-                        // Попробуем с исходными значениями (на случай, если в RDF текст попали полные URI)
                         deletePattern = new RegExp(`\\s*${escapeRegex(triple.subject)}\\s+${escapeRegex(triple.predicate)}\\s+${escapeRegex(triple.object)}\\s*[;.]`, 'g');
                         newRdfText = newRdfText.replace(deletePattern, '');
+                    }
+
+                    // Вариант 3: Shorthand Triple форма (сокращенная запись)
+                    // Ищем predicate object ; или predicate object . на отдельной строке (с отступом)
+                    if (newRdfText === prevText) {
+                        // Паттерн для shorthand: пробелы/табы в начале строки, затем predicate object [;.]
+                        deletePattern = new RegExp(`(^|\\n)[\\t ]+${escapeRegex(predicatePrefixed)}\\s+${escapeRegex(objectPrefixed)}\\s*[;.]`, 'gm');
+                        const tempText = newRdfText.replace(deletePattern, '$1');
+                        // Проверяем, был ли это правильный subject
+                        // Для этого находим ближайший subject выше по тексту
+                        if (tempText !== newRdfText) {
+                            // Нужно проверить, что это относится к нужному subject
+                            // Простая проверка: ищем subject перед predicate в том же блоке
+                            const matchPos = newRdfText.search(new RegExp(`[\\t ]+${escapeRegex(predicatePrefixed)}\\s+${escapeRegex(objectPrefixed)}\\s*[;.]`));
+                            if (matchPos !== -1) {
+                                // Ищем ближайший subject выше этой позиции
+                                const textBefore = newRdfText.substring(0, matchPos);
+                                // Ищем последний subject (который не с отступа в начале строки)
+                                const subjectMatch = textBefore.match(new RegExp(`(^|[\\n}])\\s*(${escapeRegex(subjectPrefixed)}|${escapeRegex(triple.subject)})\\s+[^\\s]`, 'm'));
+                                if (subjectMatch) {
+                                    newRdfText = tempText;
+                                }
+                            }
+                        }
+                    }
+
+                    // Вариант 4: Shorthand с полными URI
+                    if (newRdfText === prevText) {
+                        deletePattern = new RegExp(`(^|\\n)[\\t ]+${escapeRegex(triple.predicate)}\\s+${escapeRegex(triple.object)}\\s*[;.]`, 'gm');
+                        const tempText = newRdfText.replace(deletePattern, '$1');
+                        if (tempText !== newRdfText) {
+                            const matchPos = newRdfText.search(new RegExp(`[\\t ]+${escapeRegex(triple.predicate)}\\s+${escapeRegex(triple.object)}\\s*[;.]`));
+                            if (matchPos !== -1) {
+                                const textBefore = newRdfText.substring(0, matchPos);
+                                const subjectMatch = textBefore.match(new RegExp(`(^|[\\n}])\\s*(${escapeRegex(subjectPrefixed)}|${escapeRegex(triple.subject)})\\s+[^\\s]`, 'm'));
+                                if (subjectMatch) {
+                                    newRdfText = tempText;
+                                }
+                            }
+                        }
                     }
 
                     if (newRdfText !== prevText) {
@@ -8485,14 +8526,26 @@ ${triples.join('\n')}
 
                 const variables = selectMatch[1].split(/\s+/).map(v => v.substring(1));
 
-                // Парсим WHERE условие (простой парсинг)
-                const whereMatch = sparqlQuery.match(/WHERE\s*\{([^}]+)\}/i);
-                if (!whereMatch) {
+                // Парсим WHERE условие с поддержкой вложенных скобок
+                const whereStartIndex = sparqlQuery.search(/WHERE\s*\{/i);
+                if (whereStartIndex === -1) {
                     console.log('funSPARQLvalues: No WHERE clause found');
                     return results;
                 }
 
-                const whereClause = whereMatch[1].trim();
+                // Находим открывающую скобку WHERE
+                const openBraceIndex = sparqlQuery.indexOf('{', whereStartIndex);
+                let braceCount = 1;
+                let closeIndex = openBraceIndex + 1;
+
+                // Ищем соответствующую закрывающую скобку с учетом вложенности
+                while (braceCount > 0 && closeIndex < sparqlQuery.length) {
+                    if (sparqlQuery[closeIndex] === '{') braceCount++;
+                    else if (sparqlQuery[closeIndex] === '}') braceCount--;
+                    closeIndex++;
+                }
+
+                const whereClause = sparqlQuery.substring(openBraceIndex + 1, closeIndex - 1).trim();
 
                 // Парсим triple patterns (упрощенно)
                 const triplePatterns = parseTriplePatterns(whereClause);
@@ -8530,36 +8583,72 @@ ${triples.join('\n')}
         function parseTriplePatterns(whereClause) {
             const patterns = [];
 
-            // Упрощенный парсинг: разбиваем по точкам и точкам с запятыми
-            const statements = whereClause.split(/\s*\.\s*/).filter(s => s.trim());
+            // Ищем GRAPH блоки с поддержкой вложенных скобок
+            const graphRegex = /GRAPH\s+(\S+)\s*\{/gi;
+            let graphMatch;
+            let processedRanges = [];
 
-            statements.forEach(statement => {
-                // Проверяем GRAPH блок
-                const graphMatch = statement.match(/GRAPH\s+(\S+)\s*\{([^}]+)\}/i);
-                if (graphMatch) {
-                    const graphUri = resolveValue(graphMatch[1]);
-                    const innerStatements = graphMatch[2].split(/\s*\.\s*/).filter(s => s.trim());
-                    innerStatements.forEach(inner => {
-                        const parts = inner.trim().split(/\s+/);
-                        if (parts.length >= 3) {
-                            patterns.push({
-                                subject: resolveValue(parts[0]),
-                                predicate: resolveValue(parts[1]),
-                                object: resolveValue(parts.slice(2).join(' ')),
-                                graph: graphUri
-                            });
-                        }
-                    });
-                } else {
-                    const parts = statement.trim().split(/\s+/);
+            while ((graphMatch = graphRegex.exec(whereClause)) !== null) {
+                const graphUri = resolveValue(graphMatch[1]);
+                const openBraceIndex = graphMatch.index + graphMatch[0].length - 1;
+
+                // Находим закрывающую скобку с учетом вложенности
+                let braceCount = 1;
+                let closeIndex = openBraceIndex + 1;
+                while (braceCount > 0 && closeIndex < whereClause.length) {
+                    if (whereClause[closeIndex] === '{') braceCount++;
+                    else if (whereClause[closeIndex] === '}') braceCount--;
+                    closeIndex++;
+                }
+
+                const graphContent = whereClause.substring(openBraceIndex + 1, closeIndex - 1);
+                processedRanges.push({ start: graphMatch.index, end: closeIndex });
+
+                // Удаляем OPTIONAL блоки из содержимого графа (они пока не поддерживаются)
+                const cleanedContent = graphContent.replace(/OPTIONAL\s*\{[^}]*\}/gi, '');
+
+                // Парсим триплеты внутри графа
+                const innerStatements = cleanedContent.split(/\s*\.\s*/).filter(s => s.trim());
+                innerStatements.forEach(inner => {
+                    // Пропускаем пустые строки и комментарии
+                    const trimmed = inner.trim();
+                    if (!trimmed || trimmed.startsWith('#')) return;
+
+                    const parts = trimmed.split(/\s+/);
                     if (parts.length >= 3) {
                         patterns.push({
                             subject: resolveValue(parts[0]),
                             predicate: resolveValue(parts[1]),
                             object: resolveValue(parts.slice(2).join(' ')),
-                            graph: null
+                            graph: graphUri
                         });
                     }
+                });
+            }
+
+            // Обрабатываем триплеты вне GRAPH блоков
+            let remainingClause = whereClause;
+            // Удаляем обработанные GRAPH блоки (в обратном порядке чтобы индексы не сбились)
+            processedRanges.sort((a, b) => b.start - a.start).forEach(range => {
+                remainingClause = remainingClause.substring(0, range.start) + remainingClause.substring(range.end);
+            });
+
+            // Удаляем OPTIONAL блоки
+            remainingClause = remainingClause.replace(/OPTIONAL\s*\{[^}]*\}/gi, '');
+
+            const statements = remainingClause.split(/\s*\.\s*/).filter(s => s.trim());
+            statements.forEach(statement => {
+                const trimmed = statement.trim();
+                if (!trimmed || trimmed.startsWith('#')) return;
+
+                const parts = trimmed.split(/\s+/);
+                if (parts.length >= 3) {
+                    patterns.push({
+                        subject: resolveValue(parts[0]),
+                        predicate: resolveValue(parts[1]),
+                        object: resolveValue(parts.slice(2).join(' ')),
+                        graph: null
+                    });
                 }
             });
 

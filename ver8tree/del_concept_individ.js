@@ -445,9 +445,13 @@ function getProcessConceptsForDeletion() {
 
     let concepts = [];
 
+    // Пробуем сначала через funSPARQLvalues
     if (typeof funSPARQLvalues === 'function') {
         concepts = funSPARQLvalues(sparqlQuery, 'concept');
-    } else {
+    }
+
+    // Если funSPARQLvalues вернул пустой результат, используем ручной поиск
+    if (concepts.length === 0) {
         concepts = getConceptsManual('http://example.org/vad#TypeProcess', 'http://example.org/vad#ptree');
     }
 
@@ -471,9 +475,13 @@ function getExecutorConceptsForDeletion() {
 
     let concepts = [];
 
+    // Пробуем сначала через funSPARQLvalues
     if (typeof funSPARQLvalues === 'function') {
         concepts = funSPARQLvalues(sparqlQuery, 'concept');
-    } else {
+    }
+
+    // Если funSPARQLvalues вернул пустой результат, используем ручной поиск
+    if (concepts.length === 0) {
         concepts = getConceptsManual('http://example.org/vad#TypeExecutor', 'http://example.org/vad#rtree');
     }
 
@@ -502,6 +510,7 @@ function getConceptsManual(typeUri, graphUri) {
     if (typeof currentQuads !== 'undefined' && Array.isArray(currentQuads)) {
         const conceptUris = new Set();
 
+        // Найти все концепты с указанным типом в указанном графе
         currentQuads.forEach(quad => {
             if (quad.predicate.value === rdfTypeUri &&
                 quad.object.value === typeUri &&
@@ -515,8 +524,11 @@ function getConceptsManual(typeUri, graphUri) {
                 ? getPrefixedName(uri, currentPrefixes)
                 : uri;
 
+            // Ищем label В ТОМ ЖЕ ГРАФЕ, где находится концепт
             currentQuads.forEach(quad => {
-                if (quad.subject.value === uri && quad.predicate.value === rdfsLabelUri) {
+                if (quad.subject.value === uri &&
+                    quad.predicate.value === rdfsLabelUri &&
+                    quad.graph && quad.graph.value === graphUri) {
                     label = quad.object.value;
                 }
             });
