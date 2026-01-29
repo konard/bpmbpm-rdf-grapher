@@ -34,7 +34,8 @@ https://bpmbpm.github.io/rdf-grapher/ver6d/
 ### current
 https://github.com/bpmbpm/rdf-grapher/tree/main/ver8
 
-Если "глобально", то сюда:
+ver1-ver3 это про классический RDF grapher  
+начиная с ver4 "Если глобально", то сюда:
 - [Semantic BPM. Семантика и синтаксис бизнес-процессов](https://habr.com/ru/articles/795883/)
 - [Semantic BPM. Онтологическое моделирование верхнеуровневых процессов. VAD](https://habr.com/ru/articles/828266/)
 - https://github.com/bpmbpm/SemanticBPM
