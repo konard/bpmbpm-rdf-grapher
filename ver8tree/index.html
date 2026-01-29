@@ -167,6 +167,7 @@
             <div class="smart-design-buttons">
                 <button class="new-concept-btn" onclick="openNewConceptModal()">New Concept</button>
                 <button class="new-trig-btn" onclick="openNewTrigModal()">New TriG (VADProcessDia)</button>
+                <button class="del-concept-btn" onclick="openDelConceptModal()">Del Concept\Individ</button>
                 <button onclick="smartDesignCreate()">Создать SPARQL</button>
                 <button onclick="smartDesignCreateWithPrefix()" style="background-color: #1565C0;">Создать SPARQL (prefix)</button>
                 <button class="delete-btn" onclick="smartDesignDelete()">Удалить триплет</button>
@@ -252,6 +253,50 @@
                 <button class="new-concept-cancel-btn" onclick="closeNewConceptModal()">Отмена</button>
                 <button class="new-concept-sparql-btn" onclick="toggleIntermediateSparql()">Промежуточный SPARQL</button>
                 <button class="new-concept-create-btn" onclick="createNewConceptSparql()">Создать запрос New Concept</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Модальное окно для удаления Концепта/Индивида (Del Concept\Individ) -->
+    <div id="del-concept-modal" class="del-concept-modal">
+        <div class="del-concept-modal-content">
+            <div class="del-concept-modal-header">
+                <h3>Удаление Концепта / Индивида</h3>
+                <button class="del-concept-modal-close" onclick="closeDelConceptModal()">&times;</button>
+            </div>
+            <div class="del-concept-modal-body">
+                <div class="del-concept-field">
+                    <label for="del-concept-operation">Тип операции удаления:</label>
+                    <select id="del-concept-operation" onchange="onDelOperationChange()">
+                        <option value="">-- Выберите тип операции --</option>
+                        <option value="concept-process">Удалить концепт процесса</option>
+                        <option value="concept-executor">Удалить концепт исполнителя</option>
+                        <option value="individ-process">Удалить индивид процесса</option>
+                        <option value="individ-executor">Удалить индивид исполнителя</option>
+                        <option value="trig-schema">Удалить схему процесса (TriG)</option>
+                    </select>
+                    <small class="field-hint">Выберите тип операции для отображения доступных элементов</small>
+                </div>
+                <!-- Контейнер для динамически генерируемых полей -->
+                <div id="del-concept-fields-container">
+                    <p class="del-concept-hint">Выберите тип операции для отображения полей</p>
+                </div>
+                <!-- Промежуточный SPARQL запрос -->
+                <div id="del-concept-intermediate-sparql" style="display: none;">
+                    <div class="intermediate-sparql-header">
+                        <label>Промежуточный SPARQL:</label>
+                        <button class="toggle-sparql-btn" onclick="toggleDelIntermediateSparql()">Свернуть/Развернуть</button>
+                    </div>
+                    <textarea class="intermediate-sparql-textarea" rows="8" readonly></textarea>
+                </div>
+            </div>
+            <div id="del-concept-message" class="del-concept-message" style="display: none;"></div>
+            <div class="del-concept-modal-buttons">
+                <button class="del-concept-cancel-btn" onclick="closeDelConceptModal()">Отмена</button>
+                <button id="del-show-individuals-btn" class="del-concept-show-btn" onclick="showIndividuals()" style="display: none;">Показать индивиды</button>
+                <button id="del-delete-individuals-btn" class="del-concept-delete-individs-btn" onclick="deleteIndividuals()" style="display: none;">Удалить индивиды</button>
+                <button class="del-concept-sparql-btn" onclick="toggleDelIntermediateSparql()">Промежуточный SPARQL</button>
+                <button class="del-concept-create-btn" onclick="createDeleteSparql()" disabled>Создать запрос на удаление</button>
             </div>
         </div>
     </div>
@@ -381,6 +426,9 @@ WHERE {
 
     <!-- Подключение модуля создания новых концептов (New Concept) -->
     <script src="create_new_concept.js"></script>
+
+    <!-- Подключение модуля удаления концептов/индивидов (Del Concept\Individ) -->
+    <script src="del_concept_individ.js"></script>
 
     <script>
         /**
