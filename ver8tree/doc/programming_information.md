@@ -1,5 +1,5 @@
 ### programming information
-памятка к программированию  
+памятка к программированию по проекту rdf-grapher 
 папка проекта: https://github.com/bpmbpm/rdf-grapher/tree/main/ver8tree
 #### programming concept
 - Максимальное использование в коде SPARQL-запросов, см. [SPARQL-driven Programming Guide](https://github.com/bpmbpm/rdf-grapher/blob/main/ver8tree/doc/sparql-driven-programming.md)
