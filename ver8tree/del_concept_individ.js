@@ -639,12 +639,30 @@ function findConceptAsIndividualInTrigs(conceptUri) {
     const usages = [];
     const isSubprocessTrigUri = 'http://example.org/vad#isSubprocessTrig';
 
+    // Issue #219 Fix #1: Добавлена отладочная информация (отключена по умолчанию)
+    const DEBUG_INDIVID_DETECTION = false;
+
     if (typeof currentQuads !== 'undefined' && Array.isArray(currentQuads)) {
+        if (DEBUG_INDIVID_DETECTION) {
+            console.log(`[findConceptAsIndividualInTrigs] Поиск для концепта: ${conceptUri}`);
+            console.log(`[findConceptAsIndividualInTrigs] Всего квадов: ${currentQuads.length}`);
+        }
+
         // Ищем все случаи, где данный концепт используется как индивид (subject с isSubprocessTrig)
         currentQuads.forEach(quad => {
-            if (quad.subject.value === conceptUri &&
-                quad.predicate.value === isSubprocessTrigUri &&
-                quad.graph) {
+            // Issue #219 Fix #1: Расширенная проверка - также поддерживаем сокращенные URI
+            const subjectMatches = quad.subject.value === conceptUri ||
+                (typeof getPrefixedName === 'function' &&
+                 getPrefixedName(quad.subject.value, currentPrefixes) === getPrefixedName(conceptUri, currentPrefixes));
+
+            const predicateMatches = quad.predicate.value === isSubprocessTrigUri ||
+                quad.predicate.value.endsWith('#isSubprocessTrig');
+
+            if (DEBUG_INDIVID_DETECTION && predicateMatches) {
+                console.log(`[findConceptAsIndividualInTrigs] Найден isSubprocessTrig: subject=${quad.subject.value}, graph=${quad.graph ? quad.graph.value : 'undefined'}`);
+            }
+
+            if (subjectMatches && predicateMatches && quad.graph) {
                 usages.push({
                     uri: conceptUri,
                     trig: quad.graph.value,
@@ -652,8 +670,20 @@ function findConceptAsIndividualInTrigs(conceptUri) {
                         ? getPrefixedName(conceptUri, currentPrefixes)
                         : conceptUri
                 });
+
+                if (DEBUG_INDIVID_DETECTION) {
+                    console.log(`[findConceptAsIndividualInTrigs] Добавлено использование в TriG: ${quad.graph.value}`);
+                }
             }
         });
+
+        if (DEBUG_INDIVID_DETECTION) {
+            console.log(`[findConceptAsIndividualInTrigs] Найдено использований: ${usages.length}`);
+        }
+    } else {
+        if (DEBUG_INDIVID_DETECTION) {
+            console.log(`[findConceptAsIndividualInTrigs] currentQuads не определён или не массив`);
+        }
     }
 
     return usages;
