@@ -115,7 +115,15 @@
     <div class="smart-design-container" id="smart-design-container">
         <!-- Панель Smart Design -->
         <div class="smart-design-panel">
-            <h3>Smart Design</h3>
+            <!-- Issue #217: Заголовок с кнопками в правом верхнем углу -->
+            <div class="smart-design-header">
+                <h3>Smart Design</h3>
+                <div class="smart-design-header-buttons">
+                    <button class="new-concept-btn" onclick="openNewConceptModal()">New Concept</button>
+                    <button class="new-trig-btn" onclick="openNewTrigModal()">New TriG (VADProcessDia)</button>
+                    <button class="del-concept-btn" onclick="openDelConceptModal()">Del Concept\Individ</button>
+                </div>
+            </div>
             <!-- Верхний ряд: TriG -->
             <div class="smart-design-trig-row">
                 <div class="smart-design-field smart-design-field-trig">
@@ -165,9 +173,6 @@
                 </div>
             </div>
             <div class="smart-design-buttons">
-                <button class="new-concept-btn" onclick="openNewConceptModal()">New Concept</button>
-                <button class="new-trig-btn" onclick="openNewTrigModal()">New TriG (VADProcessDia)</button>
-                <button class="del-concept-btn" onclick="openDelConceptModal()">Del Concept\Individ</button>
                 <button onclick="smartDesignCreate()">Создать SPARQL</button>
                 <button onclick="smartDesignCreateWithPrefix()" style="background-color: #1565C0;">Создать SPARQL (prefix)</button>
                 <button class="delete-btn" onclick="smartDesignDelete()">Удалить триплет</button>
@@ -6726,12 +6731,28 @@ WHERE {
                 return;
             }
 
-            // Определяем тип запроса (INSERT или DELETE)
+            // Определяем тип запроса (INSERT, DELETE DATA, DELETE WHERE, DROP GRAPH)
             const isInsert = sparqlQuery.includes('INSERT DATA');
-            const isDelete = sparqlQuery.includes('DELETE DATA');
+            const isDeleteData = sparqlQuery.includes('DELETE DATA');
+            const isDeleteWhere = sparqlQuery.includes('DELETE WHERE');
+            const isDropGraph = sparqlQuery.includes('DROP GRAPH');
+            const isDelete = isDeleteData || isDeleteWhere;
+
+            // Обрабатываем составные запросы (DELETE DATA + DROP GRAPH)
+            if (isDelete && isDropGraph) {
+                // Составной запрос: сначала удаляем триплеты, затем граф
+                await handleCompoundDeleteQuery(sparqlQuery, rdfInput);
+                return;
+            }
+
+            // Обрабатываем только DROP GRAPH
+            if (isDropGraph && !isDelete) {
+                await handleDropGraphQuery(sparqlQuery, rdfInput);
+                return;
+            }
 
             if (!isInsert && !isDelete) {
-                showResultSparqlMessage('Ошибка: Неизвестный тип SPARQL запроса', 'error');
+                showResultSparqlMessage('Ошибка: Неизвестный тип SPARQL запроса. Поддерживаемые типы: INSERT DATA, DELETE DATA, DELETE WHERE, DROP GRAPH', 'error');
                 return;
             }
 
@@ -6932,6 +6953,208 @@ WHERE {
 
             // Поля Smart Design и Result in SPARQL не очищаются после применения
             // Очистка происходит только по кнопке "Очистить"
+        }
+
+        /**
+         * Обрабатывает составной запрос DELETE DATA/WHERE + DROP GRAPH
+         * Issue #217: Поддержка удаления схемы процесса (TriG)
+         * @param {string} sparqlQuery - SPARQL запрос
+         * @param {HTMLElement} rdfInput - Элемент ввода RDF данных
+         */
+        async function handleCompoundDeleteQuery(sparqlQuery, rdfInput) {
+            // Issue #209 Fix #4: Паттерн для извлечения URI/префиксного имени
+            const uriPattern = '(?:<[^>]+>|[a-zA-Z_][a-zA-Z0-9_]*:[a-zA-Z0-9_.\u0400-\u04FF-]+)';
+            const objectPattern = '(?:<[^>]+>|[a-zA-Z_][a-zA-Z0-9_]*:[a-zA-Z0-9_.\u0400-\u04FF-]+|"[^"]*")';
+
+            // Конвертируем URI/префикс в префиксную форму для RDF текста
+            function toPrefixed(ref) {
+                if (ref.startsWith('<') && ref.endsWith('>')) {
+                    const cleanUri = ref.slice(1, -1);
+                    return getPrefixedName(cleanUri, currentPrefixes);
+                }
+                return ref;
+            }
+
+            let currentRdfText = rdfInput.value;
+            let deleteSuccess = false;
+            let dropSuccess = false;
+
+            // Разбиваем на отдельные команды по ";"
+            const commands = sparqlQuery.split(/;\s*(?=\n|#|DELETE|DROP)/);
+
+            for (const command of commands) {
+                const trimmedCommand = command.trim();
+                if (!trimmedCommand) continue;
+
+                // Обрабатываем DELETE DATA или DELETE WHERE
+                if (trimmedCommand.includes('DELETE DATA') || trimmedCommand.includes('DELETE WHERE')) {
+                    const graphMatch = trimmedCommand.match(new RegExp(`GRAPH\\s+(${uriPattern})\\s*\\{([\\s\\S]*?)\\}`, 'iu'));
+
+                    if (graphMatch) {
+                        const graphRef = graphMatch[1];
+                        const graphBody = graphMatch[2];
+                        const graphPrefixed = toPrefixed(graphRef);
+
+                        // Для DELETE WHERE с ?p ?o - удаляем весь subject из графа
+                        if (trimmedCommand.includes('DELETE WHERE') && graphBody.includes('?p') && graphBody.includes('?o')) {
+                            // Извлекаем subject
+                            const subjectMatch = graphBody.match(new RegExp(`(${uriPattern})\\s+\\?p\\s+\\?o`, 'iu'));
+                            if (subjectMatch) {
+                                const subjectPrefixed = toPrefixed(subjectMatch[1]);
+
+                                // Удаляем все триплеты для данного subject в данном графе
+                                // Паттерн для shorthand записи (subject predicate object ; predicate2 object2 .)
+                                // Ищем subject и все его предикаты-объекты до точки
+                                const shorthandPattern = new RegExp(
+                                    `(\\n\\s*|^\\s*)${escapeRegex(subjectPrefixed)}\\s+[^;.]+(?:\\s*;\\s*[^;.]+)*\\s*\\.`,
+                                    'gm'
+                                );
+                                const newText = currentRdfText.replace(shorthandPattern, '$1');
+
+                                if (newText !== currentRdfText) {
+                                    currentRdfText = newText;
+                                    deleteSuccess = true;
+                                }
+                            }
+                        } else {
+                            // Обычный DELETE DATA с конкретными триплетами
+                            const triplePattern = new RegExp(`(${uriPattern})\\s+(${uriPattern})\\s+(${objectPattern})\\s*\\.`, 'gu');
+                            let tripleMatch;
+                            while ((tripleMatch = triplePattern.exec(graphBody)) !== null) {
+                                const subjectPrefixed = toPrefixed(tripleMatch[1]);
+                                const predicatePrefixed = toPrefixed(tripleMatch[2]);
+                                const objectPrefixed = toPrefixed(tripleMatch[3]);
+
+                                // Удаляем триплет
+                                let deletePattern = new RegExp(
+                                    `\\s*${escapeRegex(subjectPrefixed)}\\s+${escapeRegex(predicatePrefixed)}\\s+${escapeRegex(objectPrefixed)}\\s*[;.]`,
+                                    'g'
+                                );
+                                const prevText = currentRdfText;
+                                currentRdfText = currentRdfText.replace(deletePattern, '');
+
+                                // Также пробуем shorthand формат
+                                if (currentRdfText === prevText) {
+                                    deletePattern = new RegExp(
+                                        `(^|\\n)[\\t ]+${escapeRegex(predicatePrefixed)}\\s+${escapeRegex(objectPrefixed)}\\s*[;.]`,
+                                        'gm'
+                                    );
+                                    currentRdfText = currentRdfText.replace(deletePattern, '$1');
+                                }
+
+                                if (currentRdfText !== prevText) {
+                                    deleteSuccess = true;
+                                }
+                            }
+                        }
+
+                        // Issue #217: После удаления триплета проверяем синтаксис
+                        // Если последний триплет subject заканчивается на ;, заменяем на .
+                        currentRdfText = fixTrailingSemicolons(currentRdfText);
+                    }
+                }
+
+                // Обрабатываем DROP GRAPH
+                if (trimmedCommand.includes('DROP GRAPH')) {
+                    const dropMatch = trimmedCommand.match(new RegExp(`DROP\\s+GRAPH\\s+(${uriPattern})`, 'iu'));
+                    if (dropMatch) {
+                        const graphToDrop = toPrefixed(dropMatch[1]);
+
+                        // Удаляем весь блок графа из текста
+                        // Паттерн: graphName { ... }
+                        const graphBlockPattern = new RegExp(
+                            `\\n*${escapeRegex(graphToDrop)}\\s*\\{[^}]*\\}`,
+                            'gs'
+                        );
+                        const prevText = currentRdfText;
+                        currentRdfText = currentRdfText.replace(graphBlockPattern, '');
+
+                        if (currentRdfText !== prevText) {
+                            dropSuccess = true;
+                        }
+                    }
+                }
+            }
+
+            // Обновляем RDF текст
+            if (deleteSuccess || dropSuccess) {
+                rdfInput.value = currentRdfText;
+                await reparseRdfData();
+
+                let message = 'Операция выполнена: ';
+                if (deleteSuccess) message += 'триплеты удалены';
+                if (deleteSuccess && dropSuccess) message += ', ';
+                if (dropSuccess) message += 'граф удалён';
+                message += '. Нажмите "Показать" для обновления.';
+
+                showResultSparqlMessage(message, 'success');
+            } else {
+                showResultSparqlMessage('Предупреждение: Не удалось найти элементы для удаления в RDF данных', 'info');
+            }
+        }
+
+        /**
+         * Обрабатывает запрос DROP GRAPH
+         * Issue #217: Поддержка удаления графа TriG
+         * @param {string} sparqlQuery - SPARQL запрос
+         * @param {HTMLElement} rdfInput - Элемент ввода RDF данных
+         */
+        async function handleDropGraphQuery(sparqlQuery, rdfInput) {
+            const uriPattern = '(?:<[^>]+>|[a-zA-Z_][a-zA-Z0-9_]*:[a-zA-Z0-9_.\u0400-\u04FF-]+)';
+
+            function toPrefixed(ref) {
+                if (ref.startsWith('<') && ref.endsWith('>')) {
+                    const cleanUri = ref.slice(1, -1);
+                    return getPrefixedName(cleanUri, currentPrefixes);
+                }
+                return ref;
+            }
+
+            const dropMatch = sparqlQuery.match(new RegExp(`DROP\\s+GRAPH\\s+(${uriPattern})`, 'iu'));
+            if (!dropMatch) {
+                showResultSparqlMessage('Ошибка: Не удалось распознать DROP GRAPH в SPARQL запросе', 'error');
+                return;
+            }
+
+            const graphToDrop = toPrefixed(dropMatch[1]);
+            let currentRdfText = rdfInput.value;
+
+            // Удаляем весь блок графа
+            const graphBlockPattern = new RegExp(
+                `\\n*${escapeRegex(graphToDrop)}\\s*\\{[^}]*\\}`,
+                'gs'
+            );
+            const newRdfText = currentRdfText.replace(graphBlockPattern, '');
+
+            if (newRdfText !== currentRdfText) {
+                rdfInput.value = newRdfText;
+                await reparseRdfData();
+                showResultSparqlMessage(`Граф ${graphToDrop} успешно удалён. Нажмите "Показать" для обновления.`, 'success');
+            } else {
+                showResultSparqlMessage(`Предупреждение: Граф ${graphToDrop} не найден в RDF данных`, 'info');
+            }
+        }
+
+        /**
+         * Исправляет синтаксические ошибки после удаления триплетов
+         * Issue #217: Если последний триплет subject заканчивается на ; вместо .
+         * @param {string} rdfText - Текст RDF
+         * @returns {string} - Исправленный текст
+         */
+        function fixTrailingSemicolons(rdfText) {
+            // Паттерн: найти ; перед закрывающей скобкой } или перед следующим subject
+            // Ищем случаи когда ; является последним символом перед переводом строки с новым subject или }
+
+            // Исправляем ; перед пустыми строками и следующим subject (начинающимся без отступа)
+            let result = rdfText.replace(/;\s*\n(\s*\n\s*)(vad:|<)/g, ' .\n$1$2');
+
+            // Исправляем ; перед }
+            result = result.replace(/;\s*\n(\s*)\}/g, ' .\n$1}');
+
+            // Исправляем одинокие ; в конце строки перед пустой строкой
+            result = result.replace(/;\s*\n\s*\n/g, ' .\n\n');
+
+            return result;
         }
 
         /**

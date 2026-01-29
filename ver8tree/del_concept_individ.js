@@ -542,30 +542,53 @@ function getConceptsManual(typeUri, graphUri) {
 
 /**
  * Проверяет наличие индивидов для концепта процесса
+ * Issue #217: Теперь также проверяет, используется ли сам концепт как индивид в других TriG
  * @param {string} conceptUri - URI концепта
  * @returns {Array<{uri: string, trig: string, label: string}>} Найденные индивиды
  */
 function checkProcessIndividuals(conceptUri) {
     const sparqlQuery = DEL_CONCEPT_SPARQL.CHECK_PROCESS_INDIVIDUALS(conceptUri);
 
-    let individuals = [];
-
-    // Используем manual поиск, т.к. funSPARQLvalues может не работать с GRAPH переменными
-    individuals = findProcessIndividualsManual(conceptUri);
+    // 1. Ищем индивиды ВНУТРИ схемы данного концепта (через hasTrig)
+    let individuals = findProcessIndividualsManual(conceptUri);
 
     delIntermediateSparqlQueries.push({
-        description: 'Проверка наличия индивидов процесса',
+        description: 'Проверка наличия индивидов В схеме концепта',
         query: sparqlQuery,
         result: individuals.length > 0
             ? `Найдено ${individuals.length} индивидов: ${individuals.map(i => i.label || i.uri).join(', ')}`
-            : 'Индивиды не найдены'
+            : 'Индивиды в схеме не найдены'
     });
 
-    return individuals;
+    // 2. Issue #217: Проверяем, используется ли сам концепт как индивид в ДРУГИХ TriG
+    const conceptAsIndividual = findConceptAsIndividualInTrigs(conceptUri);
+
+    const checkConceptAsIndividSparql = `
+PREFIX rdf: <http://www.w3.org/1999/02/22-rdf-syntax-ns#>
+PREFIX vad: <http://example.org/vad#>
+
+# Проверка: используется ли концепт как индивид (подпроцесс) в каких-либо TriG
+SELECT ?trig WHERE {
+    GRAPH ?trig {
+        <${conceptUri}> vad:isSubprocessTrig ?trig .
+    }
+}`;
+
+    delIntermediateSparqlQueries.push({
+        description: 'Проверка использования концепта как индивида в TriG',
+        query: checkConceptAsIndividSparql,
+        result: conceptAsIndividual.length > 0
+            ? `Концепт используется как индивид в ${conceptAsIndividual.length} TriG: ${conceptAsIndividual.map(i => typeof getPrefixedName === 'function' ? getPrefixedName(i.trig, currentPrefixes) : i.trig).join(', ')}`
+            : 'Концепт не используется как индивид'
+    });
+
+    // Объединяем результаты: возвращаем индивиды из схемы + использования концепта как индивида
+    return [...individuals, ...conceptAsIndividual];
 }
 
 /**
- * Ручной поиск индивидов процесса
+ * Ручной поиск индивидов процесса, которые находятся В схеме данного концепта
+ * (т.е. внутри TriG, на который ссылается концепт через hasTrig)
  * @param {string} conceptUri - URI концепта
  * @returns {Array} Найденные индивиды
  */
@@ -602,6 +625,38 @@ function findProcessIndividualsManual(conceptUri) {
     }
 
     return individuals;
+}
+
+/**
+ * Issue #217: Проверяет, используется ли концепт процесса как индивид (подпроцесс)
+ * в каких-либо TriG схемах (vad:isSubprocessTrig).
+ * Это проверка для операции "Удаление концепта" - нельзя удалить концепт,
+ * если он используется как индивид в схемах процессов.
+ * @param {string} conceptUri - URI концепта процесса
+ * @returns {Array} Найденные использования концепта как индивида
+ */
+function findConceptAsIndividualInTrigs(conceptUri) {
+    const usages = [];
+    const isSubprocessTrigUri = 'http://example.org/vad#isSubprocessTrig';
+
+    if (typeof currentQuads !== 'undefined' && Array.isArray(currentQuads)) {
+        // Ищем все случаи, где данный концепт используется как индивид (subject с isSubprocessTrig)
+        currentQuads.forEach(quad => {
+            if (quad.subject.value === conceptUri &&
+                quad.predicate.value === isSubprocessTrigUri &&
+                quad.graph) {
+                usages.push({
+                    uri: conceptUri,
+                    trig: quad.graph.value,
+                    label: typeof getPrefixedName === 'function'
+                        ? getPrefixedName(conceptUri, currentPrefixes)
+                        : conceptUri
+                });
+            }
+        });
+    }
+
+    return usages;
 }
 
 /**
@@ -1085,12 +1140,25 @@ function performValidationChecks() {
 
     switch (operationType) {
         case DEL_OPERATION_TYPES.CONCEPT_PROCESS:
-            // Проверка индивидов
+            // Issue #217: Проверка индивидов (включая проверку использования концепта как индивида)
             const individuals = checkProcessIndividuals(conceptUri);
             if (individuals.length > 0) {
+                // Разделяем индивиды на два типа для более понятного сообщения
+                const individualsInSchema = individuals.filter(i => i.uri !== conceptUri);
+                const conceptAsIndividual = individuals.filter(i => i.uri === conceptUri);
+
+                let errorMessage = '';
+                if (individualsInSchema.length > 0 && conceptAsIndividual.length > 0) {
+                    errorMessage = `Найдено ${individualsInSchema.length} индивидов в схеме концепта и концепт используется как индивид в ${conceptAsIndividual.length} TriG. Сначала удалите все индивиды и использования концепта.`;
+                } else if (conceptAsIndividual.length > 0) {
+                    errorMessage = `Концепт используется как индивид (подпроцесс) в ${conceptAsIndividual.length} TriG. Сначала удалите эти индивиды процесса из соответствующих схем.`;
+                } else {
+                    errorMessage = `Найдено ${individualsInSchema.length} индивидов процесса в схеме. Сначала удалите все индивиды.`;
+                }
+
                 delConceptState.validationErrors.push({
                     type: 'individuals',
-                    message: `Найдено ${individuals.length} индивидов процесса. Сначала удалите все индивиды.`,
+                    message: errorMessage,
                     items: individuals
                 });
             }
