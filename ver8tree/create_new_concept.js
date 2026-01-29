@@ -497,6 +497,12 @@ function buildConceptUri(id, prefix = 'vad') {
  * Вызывается по клику на кнопку "New Concept"
  */
 function openNewConceptModal() {
+    // Issue #223: Проверяем, что данные загружены и распарсены
+    if (typeof currentQuads === 'undefined' || currentQuads.length === 0) {
+        alert('Сначала загрузите и отобразите RDF данные (нажмите кнопку "Показать").\n\nFirst load and display RDF data (click "Показать" button).');
+        return;
+    }
+
     // Очищаем предыдущее состояние
     newConceptState = {
         isOpen: true,
