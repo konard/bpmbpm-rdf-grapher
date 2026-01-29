@@ -5,6 +5,10 @@
 SPARQL-driven Programming — это подход к программированию, при котором для работы с данными используется язык запросов SPARQL (SPARQL Protocol and RDF Query Language).
 SPARQL позволяет задавать вопросы к данным, находить семантические связи и извлекать нужную информацию из семантических баз данных, основанных на RDF.
 
+## near
+- https://ru.wikipedia.org/wiki/PL/SQL
+- [The language of graphs (2014)](https://www.bloorresearch.com/the-language-of-graphs/)
+- https://aidanhogan.com/docs/queralytics.pdf ; https://ceur-ws.org/Vol-1133/paper-36.pdf ; https://arxiv.org/pdf/2102.13027
 ## LD
 - https://habr.com/ru/articles/857652/ ; https://habr.com/ru/companies/otus/articles/755440/
 
