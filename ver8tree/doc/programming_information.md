@@ -3,7 +3,7 @@
 папка проекта: https://github.com/bpmbpm/rdf-grapher/tree/main/ver8tree
 #### programming concept
 - Максимальное использование в коде SPARQL-запросов, см. [SPARQL-driven Programming Guide](https://github.com/bpmbpm/rdf-grapher/blob/main/ver8tree/doc/sparql-driven-programming.md)
-- формирование наборов SPARQL-запросов в файлах
+- Формирование наборов SPARQL-запросов в файлах
   - [Модуль для создания новых Концептов (Concept) в системе RDF Grapher](https://github.com/bpmbpm/rdf-grapher/blob/main/ver8tree/create_new_concept.js)
   - [Модуль для удаления Концептов и Индивидов (процессов и исполнителей), а также удаления схем процессов в системе RDF Grapher](https://github.com/bpmbpm/rdf-grapher/blob/main/ver8tree/del_concept_individ.js)
   - [SPARQL_QUERIES - Коллекция SPARQL запросов для формирования справочников окна Smart Design](https://github.com/bpmbpm/rdf-grapher/blob/main/ver8tree/sparql-queries.js)
