@@ -7324,13 +7324,35 @@ WHERE {
                                 const subjectPrefixed = toPrefixed(subjectMatch[1]);
 
                                 // Удаляем все триплеты для данного subject в данном графе
-                                // Паттерн для shorthand записи (subject predicate object ; predicate2 object2 .)
-                                // Ищем subject и все его предикаты-объекты до точки
+                                // Issue #221 Fix #1: Улучшенный паттерн для удаления триплетов
+                                // Паттерн должен корректно обрабатывать:
+                                // - URI с точками (vad:p1.1.1)
+                                // - Строки в кавычках ("some text")
+                                // - Shorthand формат (subject pred1 obj1 ; pred2 obj2 .)
+                                // - Simple Triple формат (каждый триплет на отдельной строке)
+
+                                // Паттерн для одного токена (URI, литерал или другое значение)
+                                // Обрабатывает: <uri>, prefix:name (с точками), "строка", 'строка', числа
+                                const tokenPattern = '(?:<[^>]+>|"(?:[^"\\\\]|\\\\.)*"|\'(?:[^\'\\\\]|\\\\.)*\'|[a-zA-Z_][a-zA-Z0-9_]*:[a-zA-Z0-9_.\\u0400-\\u04FF-]+|[^\\s;.]+)';
+
+                                // Паттерн для одного предиката и объекта
+                                const predObjPattern = `${tokenPattern}\\s+${tokenPattern}`;
+
+                                // Полный паттерн для subject с его триплетами
+                                // Обрабатывает как shorthand (;) так и simple triple (.) формат
                                 const shorthandPattern = new RegExp(
-                                    `(\\n\\s*|^\\s*)${escapeRegex(subjectPrefixed)}\\s+[^;.]+(?:\\s*;\\s*[^;.]+)*\\s*\\.`,
+                                    `(\\n\\s*|^\\s*)${escapeRegex(subjectPrefixed)}\\s+${predObjPattern}(?:\\s*;\\s*${predObjPattern})*\\s*\\.`,
                                     'gm'
                                 );
-                                const newText = currentRdfText.replace(shorthandPattern, '$1');
+                                let newText = currentRdfText.replace(shorthandPattern, '$1');
+
+                                // Issue #221 Fix #1: Дополнительно удаляем все Simple Triple строки для этого subject
+                                // (на случай если subject имеет несколько отдельных строк триплетов)
+                                const simpleTriplePattern = new RegExp(
+                                    `\\n?\\s*${escapeRegex(subjectPrefixed)}\\s+${tokenPattern}\\s+${tokenPattern}\\s*\\.`,
+                                    'g'
+                                );
+                                newText = newText.replace(simpleTriplePattern, '');
 
                                 if (newText !== currentRdfText) {
                                     currentRdfText = newText;
@@ -7459,6 +7481,7 @@ WHERE {
         /**
          * Исправляет синтаксические ошибки после удаления триплетов
          * Issue #217: Если последний триплет subject заканчивается на ; вместо .
+         * Issue #221 Fix #1: Дополнительная очистка мусора после удаления
          * @param {string} rdfText - Текст RDF
          * @returns {string} - Исправленный текст
          */
@@ -7474,6 +7497,16 @@ WHERE {
 
             // Исправляем одинокие ; в конце строки перед пустой строкой
             result = result.replace(/;\s*\n\s*\n/g, ' .\n\n');
+
+            // Issue #221 Fix #1: Удаляем строки, состоящие только из пробелов и символов . ; }
+            // (мусор, оставшийся после неполного удаления триплетов)
+            result = result.replace(/^\s*[.;}\s]+\s*$/gm, '');
+
+            // Issue #221 Fix #1: Удаляем множественные пустые строки (оставляем максимум одну)
+            result = result.replace(/\n{3,}/g, '\n\n');
+
+            // Issue #221 Fix #1: Удаляем пустые строки перед закрывающей скобкой }
+            result = result.replace(/\n\s*\n(\s*\})/g, '\n$1');
 
             return result;
         }

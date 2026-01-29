@@ -252,7 +252,12 @@ SELECT ?trig ?label WHERE {
 }`,
 
     /**
-     * Получение всех индивидов процесса из всех TriG для указанного концепта
+     * Issue #221 Fix #2: Получение всех использований концепта процесса как индивида
+     * в схемах процессов (TriG типа VADProcessDia)
+     *
+     * Индивид процесса - это использование концепта в схеме процесса,
+     * идентифицируемое по предикату vad:isSubprocessTrig в TriG типа VADProcessDia.
+     *
      * @param {string} conceptUri - URI концепта процесса
      */
     GET_PROCESS_INDIVIDUALS_FOR_CONCEPT: (conceptUri) => `
@@ -260,16 +265,23 @@ PREFIX rdf: <http://www.w3.org/1999/02/22-rdf-syntax-ns#>
 PREFIX rdfs: <http://www.w3.org/2000/01/rdf-schema#>
 PREFIX vad: <http://example.org/vad#>
 
+# Issue #221 Fix #2: Ищем использования концепта как индивида во всех TriG типа VADProcessDia
 SELECT ?individ ?trig ?label WHERE {
-    GRAPH vad:ptree {
-        <${conceptUri}> vad:hasTrig ?trig .
-    }
+    # Находим TriG типа VADProcessDia
+    ?trig rdf:type vad:VADProcessDia .
+
+    # Ищем данный концепт как индивид (подпроцесс) в этих TriG
     GRAPH ?trig {
-        ?individ vad:isSubprocessTrig ?trig .
+        <${conceptUri}> vad:isSubprocessTrig ?trig .
     }
+
+    # Возвращаем URI концепта как индивид
+    BIND(<${conceptUri}> AS ?individ)
+
+    # Опционально получаем label из ptree
     OPTIONAL {
         GRAPH vad:ptree {
-            ?individ rdfs:label ?label .
+            <${conceptUri}> rdfs:label ?label .
         }
     }
 }`,
@@ -587,32 +599,66 @@ SELECT ?trig WHERE {
 }
 
 /**
- * Ручной поиск индивидов процесса, которые находятся В схеме данного концепта
- * (т.е. внутри TriG, на который ссылается концепт через hasTrig)
- * @param {string} conceptUri - URI концепта
- * @returns {Array} Найденные индивиды
+ * Issue #221 Fix #2: Ручной поиск индивидов процесса для операции "Удалить индивид процесса"
+ *
+ * Индивид процесса - это использование концепта процесса (из ptree) в схеме процесса (TriG типа VADProcessDia).
+ * Индивид идентифицируется по предикату vad:isSubprocessTrig в TriG типа VADProcessDia.
+ *
+ * При выборе концепта процесса (например vad:p2.2) эта функция ищет ВСЕ использования
+ * данного концепта как индивида (подпроцесса) во всех TriG типа VADProcessDia.
+ *
+ * @param {string} conceptUri - URI концепта процесса
+ * @returns {Array} Найденные индивиды (использования концепта в схемах)
  */
 function findProcessIndividualsManual(conceptUri) {
     const individuals = [];
     const isSubprocessTrigUri = 'http://example.org/vad#isSubprocessTrig';
-    const hasTrigUri = 'http://example.org/vad#hasTrig';
-    const ptreeUri = 'http://example.org/vad#ptree';
+    const rdfTypeUri = 'http://www.w3.org/1999/02/22-rdf-syntax-ns#type';
+    const vadProcessDiaUri = 'http://example.org/vad#VADProcessDia';
+
+    // Issue #221 Fix #2: Добавлена отладочная информация (отключена по умолчанию)
+    const DEBUG_INDIVID_SEARCH = false;
 
     if (typeof currentQuads !== 'undefined' && Array.isArray(currentQuads)) {
-        // Сначала находим TriG, связанные с концептом
-        const conceptTrigs = new Set();
+        if (DEBUG_INDIVID_SEARCH) {
+            console.log(`[findProcessIndividualsManual] Поиск индивидов для концепта: ${conceptUri}`);
+            console.log(`[findProcessIndividualsManual] Всего квадов: ${currentQuads.length}`);
+        }
+
+        // Issue #221 Fix #2: Находим все TriG типа VADProcessDia
+        const vadProcessDiaTrigs = new Set();
         currentQuads.forEach(quad => {
-            if (quad.subject.value === conceptUri &&
-                quad.predicate.value === hasTrigUri &&
-                quad.graph && quad.graph.value === ptreeUri) {
-                conceptTrigs.add(quad.object.value);
+            if (quad.predicate.value === rdfTypeUri &&
+                quad.object.value === vadProcessDiaUri) {
+                vadProcessDiaTrigs.add(quad.subject.value);
+                if (DEBUG_INDIVID_SEARCH) {
+                    console.log(`[findProcessIndividualsManual] Найден TriG типа VADProcessDia: ${quad.subject.value}`);
+                }
             }
         });
 
-        // Затем ищем индивиды в этих TriG
+        if (DEBUG_INDIVID_SEARCH) {
+            console.log(`[findProcessIndividualsManual] Всего TriG типа VADProcessDia: ${vadProcessDiaTrigs.size}`);
+        }
+
+        // Issue #221 Fix #2: Ищем использования данного концепта как индивида (vad:isSubprocessTrig)
+        // во ВСЕХ TriG типа VADProcessDia
         currentQuads.forEach(quad => {
-            if (quad.predicate.value === isSubprocessTrigUri &&
-                quad.graph && conceptTrigs.has(quad.graph.value)) {
+            // Проверяем предикат vad:isSubprocessTrig
+            const predicateMatches = quad.predicate.value === isSubprocessTrigUri ||
+                quad.predicate.value.endsWith('#isSubprocessTrig');
+
+            if (!predicateMatches) return;
+
+            // Проверяем, что subject совпадает с искомым концептом
+            const subjectMatches = quad.subject.value === conceptUri ||
+                (typeof getPrefixedName === 'function' &&
+                 getPrefixedName(quad.subject.value, currentPrefixes) === getPrefixedName(conceptUri, currentPrefixes));
+
+            if (!subjectMatches) return;
+
+            // Проверяем, что граф является TriG типа VADProcessDia
+            if (quad.graph && vadProcessDiaTrigs.has(quad.graph.value)) {
                 individuals.push({
                     uri: quad.subject.value,
                     trig: quad.graph.value,
@@ -620,8 +666,16 @@ function findProcessIndividualsManual(conceptUri) {
                         ? getPrefixedName(quad.subject.value, currentPrefixes)
                         : quad.subject.value
                 });
+
+                if (DEBUG_INDIVID_SEARCH) {
+                    console.log(`[findProcessIndividualsManual] Найден индивид: ${quad.subject.value} в TriG: ${quad.graph.value}`);
+                }
             }
         });
+
+        if (DEBUG_INDIVID_SEARCH) {
+            console.log(`[findProcessIndividualsManual] Итого найдено индивидов: ${individuals.length}`);
+        }
     }
 
     return individuals;
@@ -1411,6 +1465,7 @@ function updateDelButtonsState() {
 
 /**
  * Обработчик кнопки "Показать индивиды"
+ * Issue #221 Fix #2: Обновлена логика для корректного поиска индивидов процесса
  */
 function showIndividuals() {
     const operationType = delConceptState.selectedOperation;
@@ -1425,6 +1480,21 @@ function showIndividuals() {
     if (operationType === DEL_OPERATION_TYPES.INDIVID_PROCESS) {
         const individuals = findProcessIndividualsManual(conceptUri);
         delConceptState.foundIndividuals = individuals;
+
+        // Issue #221 Fix #2: Добавляем промежуточный SPARQL для отображения
+        const sparqlQuery = DEL_CONCEPT_SPARQL.GET_PROCESS_INDIVIDUALS_FOR_CONCEPT(conceptUri);
+        delIntermediateSparqlQueries.push({
+            description: 'Поиск использований концепта как индивида в схемах процессов (VADProcessDia)',
+            query: sparqlQuery,
+            result: individuals.length > 0
+                ? `Найдено ${individuals.length} использований: ${individuals.map(i => {
+                    const trigLabel = typeof getPrefixedName === 'function'
+                        ? getPrefixedName(i.trig, currentPrefixes)
+                        : i.trig;
+                    return `${i.label || i.uri} в ${trigLabel}`;
+                }).join(', ')}`
+                : 'Индивиды не найдены'
+        });
     } else if (operationType === DEL_OPERATION_TYPES.INDIVID_EXECUTOR) {
         const usages = checkExecutorUsage(conceptUri);
         delConceptState.foundIndividuals = usages.map(u => ({

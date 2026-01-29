@@ -1151,8 +1151,9 @@
             display: block;
         }
 
+        /* Issue #221 Fix #3: Уменьшена высота панели Smart Design и отступы */
         .smart-design-panel {
-            padding: 15px;
+            padding: 10px 15px;
             background-color: #e3f2fd;
             border: 1px solid #2196F3;
             border-radius: 8px;
@@ -1160,11 +1161,13 @@
         }
 
         /* Issue #217: Заголовок Smart Design с кнопками в правом верхнем углу */
+        /* Issue #221 Fix #3: Минимальный отступ между заголовком и верхней рамкой */
         .smart-design-header {
             display: flex;
             justify-content: space-between;
             align-items: center;
-            margin-bottom: 15px;
+            margin-bottom: 10px;
+            margin-top: 0;
         }
 
         .smart-design-panel h3 {
@@ -1178,10 +1181,11 @@
             gap: 8px;
         }
 
-        /* Issue #219 Fix #4: Увеличена высота кнопок до размера "Создать SPARQL" */
+        /* Issue #221 Fix #3: Кнопки New Concept, New TriG, Del Concept\Individ
+           теперь имеют такую же высоту как "Создать SPARQL" и "Создать SPARQL (prefix)" */
         .smart-design-header-buttons button {
-            padding: 12px 30px;
-            font-size: 16px;
+            padding: 8px 16px;
+            font-size: 13px;
             border: none;
             border-radius: 4px;
             cursor: pointer;
