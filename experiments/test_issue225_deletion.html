@@ -1,0 +1,206 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Issue #225 - Test Deletion Bug</title>
+    <style>
+        body { font-family: monospace; padding: 20px; }
+        .test { margin: 20px 0; border: 1px solid #ccc; padding: 10px; }
+        .pass { background-color: #dfd; }
+        .fail { background-color: #fdd; }
+        pre { background-color: #f5f5f5; padding: 10px; white-space: pre-wrap; }
+        h3 { margin-top: 0; }
+    </style>
+</head>
+<body>
+    <h1>Issue #225 - Test Deletion Bug</h1>
+    <p>Testing the bug where closing `}` is incorrectly deleted when removing a concept</p>
+
+    <div id="results"></div>
+
+    <script>
+        // Escape regex special characters
+        function escapeRegex(str) {
+            return str.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+        }
+
+        // ORIGINAL buggy version (from index.html)
+        function fixTrailingSemicolonsOriginal(rdfText) {
+            let result = rdfText.replace(/;\s*\n(\s*\n\s*)(vad:|<)/g, ' .\n$1$2');
+            result = result.replace(/;\s*\n(\s*)\}/g, ' .\n$1}');
+            result = result.replace(/;\s*\n\s*\n/g, ' .\n\n');
+
+            // THIS IS THE BUGGY LINE - it removes } along with . and ;
+            result = result.replace(/^\s*[.;}\s]+\s*$/gm, '');
+
+            result = result.replace(/\n{3,}/g, '\n\n');
+            result = result.replace(/\n\s*\n(\s*\})/g, '\n$1');
+
+            return result;
+        }
+
+        // FIXED version
+        function fixTrailingSemicolonsFixed(rdfText) {
+            let result = rdfText.replace(/;\s*\n(\s*\n\s*)(vad:|<)/g, ' .\n$1$2');
+            result = result.replace(/;\s*\n(\s*)\}/g, ' .\n$1}');
+            result = result.replace(/;\s*\n\s*\n/g, ' .\n\n');
+
+            // FIXED: Only remove lines with . and ; characters, NOT }
+            // The closing brace } is important syntax and should not be removed
+            result = result.replace(/^\s*[.;]+\s*$/gm, '');
+
+            result = result.replace(/\n{3,}/g, '\n\n');
+            result = result.replace(/\n\s*\n(\s*\})/g, '\n$1');
+
+            return result;
+        }
+
+        // Test cases
+        const testCases = [
+            {
+                name: "Test 1: Simple case - closing brace on its own line",
+                input: `vad:ptree {
+    vad:pDel rdf:type vad:TypeProcess ;
+        rdfs:label "Test" ;
+        vad:hasParentObj vad:ptree .
+
+}
+
+vad:rtree {`,
+                afterDeletion: `vad:ptree {
+        vad:hasParentObj vad:ptree .
+
+}
+
+vad:rtree {`,
+                expectBrace: true
+            },
+            {
+                name: "Test 2: Multiple empty lines with closing brace",
+                input: `    vad:hasParentObj vad:ptree .
+
+
+}
+
+# Comment`,
+                afterDeletion: `    vad:hasParentObj vad:ptree .
+
+
+}
+
+# Comment`,
+                expectBrace: true
+            },
+            {
+                name: "Test 3: Brace with trailing semicolons before",
+                input: `    vad:someProperty vad:someValue ;
+}`,
+                afterDeletion: `    vad:someProperty vad:someValue ;
+}`,
+                expectBrace: true
+            },
+            {
+                name: "Test 4: Lines with only . and ; should be removed",
+                input: `    vad:someProperty vad:someValue .
+    .
+    ;
+}`,
+                afterDeletion: `    vad:someProperty vad:someValue .
+    .
+    ;
+}`,
+                expectBrace: true,
+                expectCleanDotSemicolon: true
+            },
+            {
+                name: "Test 5: Real world scenario from issue",
+                input: `vad:ptree {
+    vad:ptree rdf:type vad:ObjectTree ;
+        rdfs:label "Дерево Процессов (TriG)" ;
+        vad:hasParentObj vad:root .
+
+    vad:pDel rdf:type vad:TypeProcess ;
+        rdfs:label "Процесс pDel на удаление" ;
+        dcterms:description "Какой-то процесс" ;
+        vad:hasParentObj vad:ptree .
+
+}
+
+# ============================================================================
+# Дерево Исполнителей (rtree) - общий граф с метаданными всех исполнителей
+# ============================================================================
+
+vad:rtree {`,
+                afterDeletion: `vad:ptree {
+    vad:ptree rdf:type vad:ObjectTree ;
+        rdfs:label "Дерево Процессов (TriG)" ;
+        vad:hasParentObj vad:root .
+
+
+
+}
+
+# ============================================================================
+# Дерево Исполнителей (rtree) - общий граф с метаданными всех исполнителей
+# ============================================================================
+
+vad:rtree {`,
+                expectBrace: true
+            }
+        ];
+
+        function runTests() {
+            const resultsDiv = document.getElementById('results');
+            let html = '';
+            let passCount = 0;
+            let failCount = 0;
+
+            for (const test of testCases) {
+                // Test original (buggy) version
+                const originalResult = fixTrailingSemicolonsOriginal(test.afterDeletion);
+                const originalHasBrace = originalResult.includes('}');
+
+                // Test fixed version
+                const fixedResult = fixTrailingSemicolonsFixed(test.afterDeletion);
+                const fixedHasBrace = fixedResult.includes('}');
+
+                // Check if fixed version passes
+                const fixedPasses = test.expectBrace === fixedHasBrace;
+                const originalPasses = test.expectBrace === originalHasBrace;
+
+                if (fixedPasses) passCount++;
+                else failCount++;
+
+                html += `<div class="test ${fixedPasses ? 'pass' : 'fail'}">
+                    <h3>${test.name}</h3>
+                    <p><strong>Original (buggy) version:</strong> ${originalPasses ? 'PASS' : 'FAIL - removes closing brace!'}</p>
+                    <p><strong>Fixed version:</strong> ${fixedPasses ? 'PASS' : 'FAIL'}</p>
+                    <p>Expected closing brace: ${test.expectBrace}</p>
+                    <details>
+                        <summary>Input after deletion (before fix)</summary>
+                        <pre>${escapeHtml(test.afterDeletion)}</pre>
+                    </details>
+                    <details>
+                        <summary>Original Result</summary>
+                        <pre>${escapeHtml(originalResult)}</pre>
+                    </details>
+                    <details>
+                        <summary>Fixed Result</summary>
+                        <pre>${escapeHtml(fixedResult)}</pre>
+                    </details>
+                </div>`;
+            }
+
+            html = `<h2>Summary: ${passCount} passed, ${failCount} failed</h2>` + html;
+            resultsDiv.innerHTML = html;
+        }
+
+        function escapeHtml(text) {
+            return text.replace(/&/g, '&amp;')
+                      .replace(/</g, '&lt;')
+                      .replace(/>/g, '&gt;');
+        }
+
+        runTests();
+    </script>
+</body>
+</html>
