@@ -1742,6 +1742,307 @@
         }
 
         /* ============================================================================= */
+        /* Стили для модального окна Del Concept\Individ */
+        /* ============================================================================= */
+
+        .del-concept-btn {
+            background-color: #f44336 !important;
+            color: white !important;
+        }
+
+        .del-concept-btn:hover {
+            background-color: #d32f2f !important;
+        }
+
+        .del-concept-modal {
+            display: none;
+            position: fixed;
+            z-index: 2000;
+            left: 0;
+            top: 0;
+            width: 100%;
+            height: 100%;
+            background-color: rgba(0,0,0,0.5);
+        }
+
+        .del-concept-modal-content {
+            background-color: white;
+            margin: 5% auto;
+            padding: 20px;
+            border-radius: 8px;
+            width: 95%;
+            max-width: 700px;
+            max-height: 85vh;
+            overflow-y: auto;
+            box-shadow: 0 4px 20px rgba(0,0,0,0.3);
+        }
+
+        .del-concept-modal-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 20px;
+            padding-bottom: 10px;
+            border-bottom: 2px solid #f44336;
+        }
+
+        .del-concept-modal-header h3 {
+            margin: 0;
+            color: #333;
+        }
+
+        .del-concept-modal-close {
+            background: none;
+            border: none;
+            font-size: 28px;
+            cursor: pointer;
+            color: #666;
+            padding: 0;
+            line-height: 1;
+        }
+
+        .del-concept-modal-close:hover {
+            color: #333;
+        }
+
+        .del-concept-modal-body {
+            display: flex;
+            flex-direction: column;
+            gap: 15px;
+        }
+
+        .del-concept-field {
+            display: flex;
+            flex-direction: column;
+            gap: 5px;
+        }
+
+        .del-concept-field label {
+            font-weight: 600;
+            color: #333;
+            font-size: 14px;
+        }
+
+        .del-concept-field select,
+        .del-concept-field input,
+        .del-concept-field textarea {
+            padding: 10px;
+            border: 1px solid #ddd;
+            border-radius: 4px;
+            font-size: 14px;
+            font-family: inherit;
+        }
+
+        .del-concept-field input:focus,
+        .del-concept-field select:focus,
+        .del-concept-field textarea:focus {
+            outline: none;
+            border-color: #f44336;
+            box-shadow: 0 0 5px rgba(244, 67, 54, 0.3);
+        }
+
+        .del-concept-hint {
+            color: #666;
+            font-style: italic;
+            padding: 20px;
+            text-align: center;
+            background-color: #f9f9f9;
+            border-radius: 4px;
+        }
+
+        /* Сообщения */
+        .del-concept-message {
+            padding: 10px 15px;
+            border-radius: 4px;
+            margin-top: 15px;
+            font-size: 14px;
+        }
+
+        .del-concept-message.success {
+            background-color: #e8f5e9;
+            color: #2e7d32;
+            border: 1px solid #a5d6a7;
+        }
+
+        .del-concept-message.error {
+            background-color: #ffebee;
+            color: #c62828;
+            border: 1px solid #ef9a9a;
+        }
+
+        .del-concept-message.warning {
+            background-color: #fff3e0;
+            color: #e65100;
+            border: 1px solid #ffcc80;
+        }
+
+        /* Результаты проверки */
+        .del-concept-errors {
+            background-color: #ffebee;
+            padding: 15px;
+            border-radius: 6px;
+            border: 1px solid #ef9a9a;
+        }
+
+        .del-concept-errors h4 {
+            margin: 0 0 10px 0;
+            color: #c62828;
+        }
+
+        .del-concept-error-item {
+            margin-bottom: 10px;
+            padding-bottom: 10px;
+            border-bottom: 1px dashed #ef9a9a;
+        }
+
+        .del-concept-error-item:last-child {
+            margin-bottom: 0;
+            padding-bottom: 0;
+            border-bottom: none;
+        }
+
+        .del-concept-error-item .error-message {
+            margin: 0 0 5px 0;
+            color: #c62828;
+            font-weight: 500;
+        }
+
+        .del-concept-error-item .error-items {
+            margin: 5px 0 0 20px;
+            padding: 0;
+            color: #666;
+        }
+
+        .del-concept-error-item .error-items li {
+            margin: 2px 0;
+        }
+
+        .del-concept-success {
+            background-color: #e8f5e9;
+            padding: 15px;
+            border-radius: 6px;
+            border: 1px solid #a5d6a7;
+            color: #2e7d32;
+            text-align: center;
+        }
+
+        /* Найденные индивиды */
+        .del-concept-individuals {
+            background-color: #f5f5f5;
+            padding: 15px;
+            border-radius: 6px;
+            border: 1px solid #e0e0e0;
+        }
+
+        .del-concept-individuals h4 {
+            margin: 0 0 10px 0;
+            color: #333;
+        }
+
+        .del-concept-individuals .no-individuals {
+            color: #666;
+            font-style: italic;
+            text-align: center;
+        }
+
+        .del-concept-individuals .individuals-list {
+            margin: 0;
+            padding: 0 0 0 20px;
+            max-height: 200px;
+            overflow-y: auto;
+        }
+
+        .del-concept-individuals .individuals-list li {
+            margin: 5px 0;
+            padding: 5px 0;
+            border-bottom: 1px dashed #ddd;
+        }
+
+        .del-concept-individuals .individuals-list li:last-child {
+            border-bottom: none;
+        }
+
+        .del-concept-individuals .individ-label {
+            font-weight: 500;
+            color: #333;
+        }
+
+        .del-concept-individuals .individ-trig {
+            color: #666;
+            font-size: 12px;
+        }
+
+        /* Кнопки модального окна */
+        .del-concept-modal-buttons {
+            display: flex;
+            gap: 10px;
+            justify-content: flex-end;
+            margin-top: 20px;
+            padding-top: 15px;
+            border-top: 1px solid #eee;
+            flex-wrap: wrap;
+        }
+
+        .del-concept-modal-buttons button {
+            padding: 10px 20px;
+            border: none;
+            border-radius: 4px;
+            cursor: pointer;
+            font-size: 14px;
+            margin-top: 0;
+        }
+
+        .del-concept-cancel-btn {
+            background-color: #9e9e9e;
+            color: white;
+        }
+
+        .del-concept-cancel-btn:hover {
+            background-color: #757575;
+        }
+
+        .del-concept-sparql-btn {
+            background-color: #607D8B;
+            color: white;
+        }
+
+        .del-concept-sparql-btn:hover {
+            background-color: #455A64;
+        }
+
+        .del-concept-show-btn {
+            background-color: #2196F3;
+            color: white;
+        }
+
+        .del-concept-show-btn:hover {
+            background-color: #1976D2;
+        }
+
+        .del-concept-delete-individs-btn {
+            background-color: #FF9800;
+            color: white;
+        }
+
+        .del-concept-delete-individs-btn:hover {
+            background-color: #F57C00;
+        }
+
+        .del-concept-create-btn {
+            background-color: #f44336;
+            color: white;
+        }
+
+        .del-concept-create-btn:hover {
+            background-color: #d32f2f;
+        }
+
+        .del-concept-create-btn:disabled {
+            background-color: #bdbdbd;
+            cursor: not-allowed;
+        }
+
+        /* ============================================================================= */
 
         /* Стили для кнопки "Показать в отдельном окне" */
         .show-in-window-btn {
