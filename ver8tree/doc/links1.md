@@ -1,4 +1,7 @@
 ## links
+## BEST-PRACTICES
+### CI/CD
+- https://github.com/link-assistant/hive-mind/blob/main/docs/BEST-PRACTICES.md критично файлы не более 1000-1500 строк.
 
 ## SPARQL-driven Programming
 - [Cardinality‐Driven SPARQL Query](https://github.com/AtomGraph/LinkedDataHub/wiki/Cardinality%E2%80%90Driven-SPARQL-Query-Generation-for-Semantic-Web-Applications)
