@@ -26,6 +26,6 @@ ver8tree/doc/id-validation-rules.md(новый файл)
 ### context
 loss of context
 https://github.com/bpmbpm/rdf-grapher/pull/229 в части "Задача 3: Выбор проверенной концепции в «Создание нового контейнера TriG»
-потеряла исходные требования:". Где были требования к созданию TriG - не помню. 
+потеряла исходные требования:". Где были требования к созданию TriG - не помню. Или не потеряла ... ?
 - Описание функций удаления: https://github.com/bpmbpm/rdf-grapher/issues/211
 - 1 Добавь кнопку New Concept в окно Smart Design. https://github.com/bpmbpm/rdf-grapher/issues/205
