@@ -22,3 +22,10 @@ ver8tree/doc/id-validation-rules.md(новый файл)
 
 ### Интересно
 - для p1 схема есть vad:t_p1, а индивидов - нет
+
+### context
+loss of context
+https://github.com/bpmbpm/rdf-grapher/pull/229 в части "Задача 3: Выбор проверенной концепции в «Создание нового контейнера TriG»
+потеряла исходные требования:". Где были требования к созданию TriG - не помню. 
+- Описание функций удаления: https://github.com/bpmbpm/rdf-grapher/issues/211
+- 1 Добавь кнопку New Concept в окно Smart Design. https://github.com/bpmbpm/rdf-grapher/issues/205
