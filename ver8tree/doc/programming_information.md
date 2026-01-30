@@ -4,9 +4,9 @@
 #### programming concept
 - Максимальное использование в коде SPARQL-запросов, см. [SPARQL-driven Programming Guide](https://github.com/bpmbpm/rdf-grapher/blob/main/ver8tree/doc/sparql-driven-programming.md)
 - Формирование наборов SPARQL-запросов в файлах
-  - [Модуль для создания новых Концептов (Concept) в системе RDF Grapher](https://github.com/bpmbpm/rdf-grapher/blob/main/ver8tree/create_new_concept.js)
-  - [Модуль для удаления Концептов и Индивидов (процессов и исполнителей), а также удаления схем процессов в системе RDF Grapher](https://github.com/bpmbpm/rdf-grapher/blob/main/ver8tree/del_concept_individ.js)
-  - [SPARQL_QUERIES - Коллекция SPARQL запросов для формирования справочников окна Smart Design](https://github.com/bpmbpm/rdf-grapher/blob/main/ver8tree/sparql-queries.js)
+  - create_new_concept.js [Модуль для создания новых Концептов (Concept) в системе RDF Grapher](https://github.com/bpmbpm/rdf-grapher/blob/main/ver8tree/create_new_concept.js)
+  - del_concept_individ.js [Модуль для удаления Концептов и Индивидов (процессов и исполнителей), а также удаления схем процессов в системе RDF Grapher](https://github.com/bpmbpm/rdf-grapher/blob/main/ver8tree/del_concept_individ.js)
+  - sparql-queries.js [SPARQL_QUERIES - Коллекция SPARQL запросов для формирования справочников окна Smart Design](https://github.com/bpmbpm/rdf-grapher/blob/main/ver8tree/sparql-queries.js)
  
 ### Ontology 
 - [Basic VAD Ontology - Базовая онтология верхнеуровневых процессов](https://github.com/bpmbpm/rdf-grapher/blob/main/ver8tree/vad-basic-ontology.ttl)
