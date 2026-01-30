@@ -35,5 +35,5 @@ https://github.com/bpmbpm/rdf-grapher/pull/229 в части "Задача 3: В
 - https://www.reddit.com/r/bioinformatics/comments/say1cc/very_confused_on_the_difference_between_database/
 - https://github.com/dotnetrdf/docs/blob/main/src/2.7.x/user_guide/Working-With-Triple-Stores.md/
 
-(UI - стили, масштабирование, панели свойств, клики по узлам и т.п.), так и по 
+UI - стили, масштабирование, панели свойств, клики по узлам и т.п.
 
