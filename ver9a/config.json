@@ -1,0 +1,38 @@
+{
+    "_comment": "Ссылка на issue: https://github.com/bpmbpm/rdf-grapher/issues/232",
+    "_description": "Конфигурация состояния окон при старте программы",
+    "windows": {
+        "1_example_data": {
+            "title": "Загрузить пример RDF данных",
+            "collapsed": false
+        },
+        "2_triplestore": {
+            "title": "RDF данные",
+            "collapsed": false
+        },
+        "3_sd": {
+            "title": "Smart Design",
+            "collapsed": false
+        },
+        "4_resSPARQL": {
+            "title": "Result in SPARQL",
+            "collapsed": false
+        },
+        "5_publisher": {
+            "title": "Publisher",
+            "collapsed": false
+        },
+        "6_legend": {
+            "title": "Легенда стилей",
+            "collapsed": false
+        },
+        "7_info": {
+            "title": "Prefixes",
+            "collapsed": false
+        },
+        "8_infoSPARQL": {
+            "title": "SPARQL запрос",
+            "collapsed": false
+        }
+    }
+}

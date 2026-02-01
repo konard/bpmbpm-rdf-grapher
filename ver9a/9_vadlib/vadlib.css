@@ -1,0 +1,50 @@
+/* Ссылка на issue: https://github.com/bpmbpm/rdf-grapher/issues/232 */
+/* vadlib.css - Стили для механизма свертывания/развертывания окон */
+
+.window-section {
+    margin-bottom: 10px;
+    border: 1px solid #ddd;
+    border-radius: 4px;
+    overflow: hidden;
+}
+
+.window-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 8px 12px;
+    background-color: #f5f5f5;
+    border-bottom: 1px solid #ddd;
+    cursor: pointer;
+    user-select: none;
+}
+
+.window-header:hover {
+    background-color: #e8e8e8;
+}
+
+.window-header h3 {
+    margin: 0;
+    font-size: 14px;
+    color: #333;
+}
+
+.window-toggle {
+    font-size: 12px;
+    color: #666;
+    transition: transform 0.2s;
+}
+
+.window-toggle.collapsed {
+    transform: rotate(-90deg);
+}
+
+.window-content {
+    padding: 0;
+    transition: max-height 0.3s ease;
+    overflow: hidden;
+}
+
+.window-content.collapsed {
+    display: none;
+}
