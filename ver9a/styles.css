@@ -2175,7 +2175,7 @@
             font-style: italic;
         }
 
-        /* issue #236: Стили для механизма свертывания/развертывания окон */
+        /* issue #236, issue #239: Стили для механизма свертывания/развертывания окон */
         .window-section {
             margin-bottom: 10px;
             border: 1px solid #ddd;
@@ -2202,12 +2202,24 @@
             margin: 0;
             font-size: 14px;
             color: #333;
+            flex: 1;
         }
 
+        /* issue #239: Переключатель в правом верхнем углу, на одном уровне с названием */
         .window-toggle {
-            font-size: 12px;
-            color: #666;
+            font-size: 14px;
+            color: #555;
             transition: transform 0.2s;
+            cursor: pointer;
+            padding: 2px 6px;
+            border-radius: 3px;
+            margin-left: 8px;
+            flex-shrink: 0;
+        }
+
+        .window-toggle:hover {
+            background-color: #ddd;
+            color: #333;
         }
 
         .window-toggle.collapsed {

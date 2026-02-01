@@ -185,13 +185,18 @@ function showChecksList() {
         '    предикат vad:hasParentObj.\n\n' +
         '═══════════════════════════════════════';
 
+    // issue #239: Убеждаемся, что модальное окно видимо при показе списка проверок
+    const modal = document.getElementById('test-result-modal');
     const textEl = document.getElementById('test-result-modal-text');
     const titleEl = document.getElementById('test-result-modal-title');
-    const headerEl = document.querySelector('.test-result-modal-header');
+    const headerEl = modal ? modal.querySelector('.test-result-modal-header') : null;
+
+    if (!modal || !textEl || !titleEl || !headerEl) return;
 
     titleEl.textContent = 'Список проверок';
     textEl.value = checksList;
     headerEl.classList.remove('error');
+    modal.style.display = 'block';
 }
 
 // Закрытие модального окна результатов тестирования при клике вне его

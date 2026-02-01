@@ -646,6 +646,48 @@ WHERE {
             }
             // issue #236: Загружаем конфигурацию окон и применяем состояние свернутости
             loadWindowConfig();
+
+            // issue #239: Восстановление обработчиков событий для выпадающих списков Smart Design
+            // (утеряны при реструктуризации в модульную архитектуру, issue #232)
+            const trigSelect = document.getElementById('smart-design-trig');
+            const subjectSelect = document.getElementById('smart-design-subject');
+            const subjectTypeSelect = document.getElementById('smart-design-subject-type');
+            const predicateSelect = document.getElementById('smart-design-predicate');
+            const objectSelect = document.getElementById('smart-design-object');
+
+            if (trigSelect) {
+                trigSelect.addEventListener('change', function() {
+                    updateSmartDesignFieldsState();
+                    populateSubjectTypeDropdown();
+                    updateSubjectPredicateDropdowns();
+                });
+            }
+
+            if (subjectSelect) {
+                subjectSelect.addEventListener('change', function() {
+                    handleSubjectSelectChange(this);
+                    autoDetectSubjectType();
+                });
+            }
+
+            if (subjectTypeSelect) {
+                subjectTypeSelect.addEventListener('change', function() {
+                    updateSubjectsBySubjectType();
+                    updatePredicateBySubjectType();
+                });
+            }
+
+            if (predicateSelect) {
+                predicateSelect.addEventListener('change', function() {
+                    updateObjectsByPredicate();
+                });
+            }
+
+            if (objectSelect) {
+                objectSelect.addEventListener('change', function() {
+                    handleSelectChange(this, 'Object', function() { return false; }, true);
+                });
+            }
         });
     </script>
 </body>
