@@ -1,3 +1,4 @@
+// issue #232: Модуль SPARQL запросов для Smart Design
 /**
  * SPARQL Queries for Smart Design
  *
