@@ -14,4 +14,4 @@
 - triple (requirements for the implementation of triplets)
   - Должны поддерживаться оба формата записи триплета - в Simple Triple (простая, полная) и в Shorthand Triple форме (сокращенная, составная).
 ### term
-- [Терминологический словарь (Terminology Dictionary)](https://github.com/bpmbpm/rdf-grapher/blob/main/ver9a/onto/doc/term.md), например,  ptree - это хранилище концептов процесса, а индивиды процесса хранятся в TriG типа VADProcessDia. 
+- [Терминологический словарь (Terminology Dictionary)](https://github.com/bpmbpm/rdf-grapher/blob/main/ver9a/ontology/doc/term.md), например,  ptree - это хранилище концептов процесса, а индивиды процесса хранятся в TriG типа VADProcessDia. 
