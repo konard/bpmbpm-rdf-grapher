@@ -3,8 +3,8 @@
 #### js
 - браузерный js
 #### programming concept
-- Максимальное использование в коде SPARQL-запросов, см. [SPARQL-driven Programming Guide](https://github.com/bpmbpm/rdf-grapher/blob/main/ver9a/onto/doc/sparql-driven-programming.md)
-- Формирование наборов SPARQL-запросов в файлах
+- Максимальное использование в коде SPARQL-запросов, см. [SPARQL-driven Programming Guide](https://github.com/bpmbpm/rdf-grapher/blob/main/ver9a/requirements/sparql-driven-programming_min1.md)
+- Формирование наборов SPARQL-запросов в отдельных файлах *sparql.js
   
 ### Ontology 
 - [Basic VAD Ontology - Базовая онтология верхнеуровневых процессов](https://github.com/bpmbpm/rdf-grapher/blob/main/ver9a/onto/vad-basic-ontology.ttl)
