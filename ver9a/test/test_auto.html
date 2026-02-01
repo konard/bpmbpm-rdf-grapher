@@ -30,8 +30,11 @@
     <!-- Подключение основной библиотеки -->
     <script src="../9_vadlib/vadlib.js"></script>
     <script src="../9_vadlib/vadlib_sparql.js"></script>
-    <script src="../vad-validation-rules.js"></script>
     <script src="../2_triplestore/2_triplestore_logic.js"></script>
+    <script src="../2_triplestore/2_triplestore_validation.js"></script>
+    <!-- issue #241: Smart Design модуль для тестирования новых функций -->
+    <script src="../3_sd/3_sd_sparql.js"></script>
+    <script src="../3_sd/3_sd_ui.js"></script>
 
     <script>
         // Ссылка на issue: https://github.com/bpmbpm/rdf-grapher/issues/232
@@ -185,6 +188,45 @@
                 }
             } catch (error) {
                 logTest('funSPARQLvalues', 'failed', `Ошибка: ${error.message}`);
+            }
+
+            // Тест 7: issue #241 - getProcessIndividualsInTriG
+            logTest('getProcessIndividualsInTriG', 'running', 'Поиск индивидов процессов в vad:t_p1...');
+            try {
+                if (typeof getProcessIndividualsInTriG === 'function') {
+                    const individuals = getProcessIndividualsInTriG('http://example.org/vad#t_p1');
+                    if (individuals.length > 0) {
+                        const names = individuals.map(i => i.label || getPrefixedName(i.uri, testPrefixes)).join(', ');
+                        logTest('getProcessIndividualsInTriG', 'passed',
+                            `Найдено ${individuals.length} индивидов в vad:t_p1: ${names}`);
+                    } else {
+                        logTest('getProcessIndividualsInTriG', 'failed',
+                            'Не найдены индивиды процессов в vad:t_p1 (ожидались p1.1, p1.2)');
+                    }
+                } else {
+                    logTest('getProcessIndividualsInTriG', 'failed', 'Функция не определена');
+                }
+            } catch (error) {
+                logTest('getProcessIndividualsInTriG', 'failed', `Ошибка: ${error.message}`);
+            }
+
+            // Тест 8: issue #241 - getExecutorGroupsInTriG
+            logTest('getExecutorGroupsInTriG', 'running', 'Поиск групп исполнителей в vad:t_p1...');
+            try {
+                if (typeof getExecutorGroupsInTriG === 'function') {
+                    const groups = getExecutorGroupsInTriG('http://example.org/vad#t_p1');
+                    if (groups.length > 0) {
+                        logTest('getExecutorGroupsInTriG', 'passed',
+                            `Найдено ${groups.length} групп исполнителей в vad:t_p1`);
+                    } else {
+                        logTest('getExecutorGroupsInTriG', 'failed',
+                            'Не найдены группы исполнителей в vad:t_p1');
+                    }
+                } else {
+                    logTest('getExecutorGroupsInTriG', 'failed', 'Функция не определена');
+                }
+            } catch (error) {
+                logTest('getExecutorGroupsInTriG', 'failed', `Ошибка: ${error.message}`);
             }
 
             showSummary();

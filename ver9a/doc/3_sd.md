@@ -37,10 +37,14 @@
 ### Основной модуль
 
 - **populateSmartDesignDropdowns()** -- заполнение всех выпадающих списков Smart Design через SPARQL запросы
-- **updateSubjectType()** -- обновление списка субъектов при смене типа субъекта
-- **generateInsertQuery()** -- формирование SPARQL INSERT запроса
-- **generateDeleteQuery()** -- формирование SPARQL DELETE запроса
-- **applySmartDesignChange()** -- применение изменения к текущим RDF данным
+- **updateSubjectsBySubjectType()** -- обновление списка субъектов при смене типа субъекта
+- **getProcessIndividualsInTriG(trigUri)** -- получение индивидов процессов в конкретном TriG графе (VADProcessDia)
+- **getExecutorGroupsInTriG(trigUri)** -- получение групп исполнителей в конкретном TriG графе
+- **smartDesignCreate()** -- формирование SPARQL INSERT запроса
+- **smartDesignDelete()** -- формирование SPARQL DELETE запроса
+- **smartDesignClear()** -- очистка полей Smart Design (текст сообщений очищается, но поля остаются видимыми)
+- **copyFieldValue(selectId)** -- копирование значения поля в буфер обмена (включая TriG)
+- **applyTripleToRdfInput()** -- применение изменения к текущим RDF данным
 
 ### Подмодуль создания концептов
 
@@ -66,6 +70,7 @@
 | `PROCESS_CONCEPTS_IN_PTREE` | Получение всех концептов процессов из `vad:ptree` |
 | `EXECUTOR_GROUPS_IN_TRIG(trigUri)` | Получение групп исполнителей в TriG |
 | `EXECUTORS_IN_RTREE` | Получение всех исполнителей из `vad:rtree` |
+| `EXECUTOR_CONCEPTS_IN_RTREE` | Получение всех концептов исполнителей (`vad:TypeExecutor`) из `vad:rtree` |
 | `TECH_OBJECT_PREDICATES(techObjectUri)` | Получение предикатов из технологического объекта |
 
 ## Зависимости от других модулей
