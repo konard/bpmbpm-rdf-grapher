@@ -30,26 +30,34 @@
 
     <!-- Стили для интерфейса -->
     <link rel="stylesheet" href="styles.css">
-    <!-- Стили для сворачиваемых окон (issue #232) -->
-    <link rel="stylesheet" href="9_vadlib/vadlib.css">
 </head>
 <body>
     <!-- Контейнер для панелей свойств узлов -->
     <div id="properties-panels-container"></div>
 
     <div class="description">
-        <p>
-            <strong>Загрузить пример RDF данных:</strong>
-            <span class="example-link" onclick="loadExampleTrigVADv5()">Trig_VADv5</span>
-            <span class="example-link" onclick="loadExampleTrigVADv6()">Trig_VADv6</span>
-        </p>
-        <div id="example-status" class="example-status" style="display: none;"></div>
+        <div class="panel-header" onclick="togglePanel('example-data')">
+            <span class="panel-toggle" id="example-data-toggle">&#9660;</span>
+            <p style="margin: 0;"><strong>Загрузить пример RDF данных:</strong></p>
+        </div>
+        <div class="panel-body" id="example-data-body">
+            <p>
+                <span class="example-link" onclick="loadExampleTrigVADv5()">Trig_VADv5</span>
+                <span class="example-link" onclick="loadExampleTrigVADv6()">Trig_VADv6</span>
+            </p>
+            <div id="example-status" class="example-status" style="display: none;"></div>
+        </div>
     </div>
 
     <!-- issue #232: Окно "triplestore" (переименовано из "RDF данные или URI:") -->
     <div class="container">
+        <div class="panel-header" onclick="togglePanel('triplestore')">
+            <span class="panel-toggle" id="triplestore-toggle">&#9660;</span>
+            <h3>RDF данные</h3>
+        </div>
+        <div class="panel-body" id="triplestore-body">
         <div class="rdf-input-header">
-            <label for="rdf-input">RDF данные</label>
+            <label for="rdf-input"></label>
             <button class="show-in-window-btn" onclick="showRdfInSeparateWindow()">Показать в окне</button>
             <button class="virtual-rdf-btn" onclick="showVirtualRDFdataWindow()" title="Показать виртуальные вычисляемые данные (vad:processSubtype)">virtualRDFdata</button>
             <button class="clear-btn" onclick="clearRdfInput()">Очистить</button>
@@ -125,15 +133,20 @@
         </div>
 
         <button id="visualize-btn" onclick="visualize()">Показать</button>
+        </div>
     </div>
 
     <!-- Smart Design Container - отображается только при выборе "SPARQL Smart Design" в режиме VAD TriG -->
     <div class="smart-design-container" id="smart-design-container">
+        <div class="panel-header" onclick="togglePanel('smart-design')">
+            <span class="panel-toggle" id="smart-design-toggle">&#9660;</span>
+            <h3>Smart Design</h3>
+        </div>
+        <div class="panel-body" id="smart-design-body">
         <!-- Панель Smart Design -->
         <div class="smart-design-panel">
-            <!-- Issue #217: Заголовок с кнопками в правом верхнем углу -->
+            <!-- Issue #217: Кнопки в правом верхнем углу -->
             <div class="smart-design-header">
-                <h3>Smart Design</h3>
                 <div class="smart-design-header-buttons">
                     <button class="new-concept-btn" onclick="openNewConceptModal()">New Concept</button>
                     <button class="new-trig-btn" onclick="openNewTrigModal()">New TriG (VADProcessDia)</button>
@@ -205,6 +218,7 @@
                 <button class="apply-btn" onclick="smartDesignApplyShorthand()" style="background-color: #8E24AA;">Применить как Shorthand Triple</button>
             </div>
             <div id="result-sparql-message" class="smart-design-message" style="display: none;"></div>
+        </div>
         </div>
     </div>
 
@@ -341,7 +355,11 @@
 
     <!-- issue #232: Окно "Publisher" (переименовано из "Результат:") -->
     <div class="result-container" id="result-container">
-        <h2>Publisher</h2>
+        <div class="panel-header" onclick="togglePanel('publisher')">
+            <span class="panel-toggle" id="publisher-toggle">&#9660;</span>
+            <h2 style="margin: 0;">Publisher</h2>
+        </div>
+        <div class="panel-body" id="publisher-body">
 
         <!-- VAD TriG режим: контейнер с диаграммой слева и панелями справа -->
         <div class="vad-trig-container" id="vad-trig-container" style="display: none;">
@@ -425,7 +443,11 @@
             </div>
         </div>
         <div class="sparql-panel" id="sparql-panel">
-            <h3>SPARQL запрос:</h3>
+            <div class="panel-header" onclick="togglePanel('sparql')">
+                <span class="panel-toggle" id="sparql-toggle">&#9660;</span>
+                <h3>SPARQL запрос:</h3>
+            </div>
+            <div class="panel-body" id="sparql-body">
             <textarea class="sparql-query-textarea" id="sparql-query" placeholder="Введите SPARQL запрос...">SELECT ?s ?p ?o
 WHERE {
     ?s ?p ?o .
@@ -438,6 +460,8 @@ WHERE {
                 <h4>Результаты запроса:</h4>
                 <div id="sparql-results-content"></div>
             </div>
+            </div>
+        </div>
         </div>
     </div>
 
@@ -462,6 +486,8 @@ WHERE {
     <script src="9_vadlib/vadlib.js"></script>
     <!-- issue #232: SPARQL движок (funSPARQLvalues) -->
     <script src="9_vadlib/vadlib_sparql.js"></script>
+    <!-- issue #236: Управление сворачиванием/развертыванием панелей -->
+    <script src="panel_config.js"></script>
 
     <!-- ========================================================================== -->
     <!-- МОДУЛИ 1-8: МОДУЛЬНАЯ СТРУКТУРА (issue #232, issue #234)                   -->
@@ -514,10 +540,16 @@ WHERE {
         // Вся логика вынесена во внешние модули
 
         // Загружаем технологическое приложение и инициализируем UI при старте
-        document.addEventListener('DOMContentLoaded', function() {
+        document.addEventListener('DOMContentLoaded', async function() {
             loadTechAppendix();
             // issue #236: Загружаем конфигурацию окон из config.json
-            loadWindowConfig();
+            await loadWindowConfig();
+            // issue #236: Применяем начальное состояние свернутости для всех панелей, видимых при старте
+            applyPanelCollapsedState('example-data', '1_example_data');
+            applyPanelCollapsedState('triplestore', '2_triplestore');
+            applyPanelCollapsedState('smart-design', '3_sd');
+            applyPanelCollapsedState('publisher', '5_publisher');
+            applyPanelCollapsedState('sparql', '8_infoSPARQL');
             // issue #234: Инициализация описания режима визуализации и видимости полей
             if (typeof updateModeDescription === 'function') {
                 updateModeDescription();
