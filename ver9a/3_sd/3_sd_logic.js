@@ -113,7 +113,17 @@ function smartDesignClear() {
         const el = document.getElementById(id);
         if (el) el.value = '';
     });
-    
+
+    // issue #239: Также очищаем Result in SPARQL и его статус
+    const resultTextarea = document.getElementById('result-sparql-query');
+    if (resultTextarea) {
+        resultTextarea.value = '';
+    }
+    const resultMessage = document.getElementById('result-sparql-message');
+    if (resultMessage) {
+        resultMessage.style.display = 'none';
+    }
+
     hideSmartDesignMessage();
 }
 
@@ -170,8 +180,77 @@ function applyTripleToRdfInput(sparqlQuery, mode) {
     const isDelete = sparqlQuery.includes('DELETE');
     
     if (isDelete) {
-        // Для DELETE: удаляем триплет из RDF данных
-        showResultSparqlMessage('Удаление триплетов через применение пока не поддержано. Используйте ручное редактирование.', 'warning');
+        // issue #239: Реализация удаления триплетов из RDF данных
+        const currentRdf = rdfInput.value;
+        const escapedGraph = graphName.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+
+        // Проверяем тип DELETE запроса
+        const isDeleteWhere = sparqlQuery.includes('DELETE WHERE');
+        const isDropGraph = sparqlQuery.includes('DROP GRAPH');
+
+        if (isDropGraph) {
+            // DROP GRAPH - удаляем весь граф из RDF данных
+            const graphBlockRegex = new RegExp(`\\n?${escapedGraph}\\s*\\{[\\s\\S]*?\\}\\s*`, 'g');
+            const newRdf = currentRdf.replace(graphBlockRegex, '');
+            rdfInput.value = newRdf.trim();
+            showResultSparqlMessage('Граф удалён из RDF данных', 'success');
+            return;
+        }
+
+        if (isDeleteWhere && tripleContent.includes('?p') && tripleContent.includes('?o')) {
+            // DELETE WHERE { GRAPH g { s ?p ?o } } - удаляем все триплеты субъекта в графе
+            const subjectMatch = tripleContent.match(/(\S+)\s+\?p\s+\?o/);
+            if (subjectMatch) {
+                const subjectName = subjectMatch[1].trim();
+                // Ищем граф и удаляем все строки с данным субъектом
+                const graphOpenRegex = new RegExp(`(${escapedGraph}\\s*\\{)`, 'g');
+                const openMatch = graphOpenRegex.exec(currentRdf);
+                if (openMatch) {
+                    const afterOpen = openMatch.index + openMatch[0].length;
+                    let braceCount = 1;
+                    let closingBracePos = -1;
+                    for (let i = afterOpen; i < currentRdf.length; i++) {
+                        if (currentRdf[i] === '{') braceCount++;
+                        if (currentRdf[i] === '}') braceCount--;
+                        if (braceCount === 0) { closingBracePos = i; break; }
+                    }
+                    if (closingBracePos !== -1) {
+                        const graphContent = currentRdf.substring(afterOpen, closingBracePos);
+                        const escapedSubject = subjectName.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+                        const lineRegex = new RegExp(`\\n?\\s*${escapedSubject}\\s+[^\\n]+`, 'g');
+                        const newGraphContent = graphContent.replace(lineRegex, '');
+                        rdfInput.value = currentRdf.substring(0, afterOpen) + newGraphContent + currentRdf.substring(closingBracePos);
+                        showResultSparqlMessage(`Триплеты субъекта ${subjectName} удалены из графа`, 'success');
+                        return;
+                    }
+                }
+            }
+        }
+
+        // DELETE DATA - удаляем конкретный триплет
+        const escapedTriple = tripleContent.replace(/[.*+?^${}()|[\]\\]/g, '\\$&').replace(/\s+/g, '\\s+');
+        const tripleLineRegex = new RegExp(`\\n?\\s*${escapedTriple}`, 'g');
+        const graphOpenRegex = new RegExp(`(${escapedGraph}\\s*\\{)`, 'g');
+        const openMatch = graphOpenRegex.exec(currentRdf);
+        if (openMatch) {
+            const afterOpen = openMatch.index + openMatch[0].length;
+            let braceCount = 1;
+            let closingBracePos = -1;
+            for (let i = afterOpen; i < currentRdf.length; i++) {
+                if (currentRdf[i] === '{') braceCount++;
+                if (currentRdf[i] === '}') braceCount--;
+                if (braceCount === 0) { closingBracePos = i; break; }
+            }
+            if (closingBracePos !== -1) {
+                const graphContent = currentRdf.substring(afterOpen, closingBracePos);
+                const newGraphContent = graphContent.replace(tripleLineRegex, '');
+                rdfInput.value = currentRdf.substring(0, afterOpen) + newGraphContent + currentRdf.substring(closingBracePos);
+                showResultSparqlMessage('Триплет удалён из RDF данных', 'success');
+                return;
+            }
+        }
+
+        showResultSparqlMessage('Не удалось найти граф или триплет для удаления. Используйте ручное редактирование.', 'warning');
         return;
     }
     
