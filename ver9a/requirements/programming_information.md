@@ -7,8 +7,8 @@
 - Формирование наборов SPARQL-запросов в отдельных файлах *sparql.js
   
 ### Ontology 
-- [Basic VAD Ontology - Базовая онтология верхнеуровневых процессов](https://github.com/bpmbpm/rdf-grapher/blob/main/ver9a/onto/vad-basic-ontology.ttl)
-- Технологическая часть онтологии [Tech Appendix - Технологические классы и объекты](https://github.com/bpmbpm/rdf-grapher/blob/main/ver9a/onto/vad-basic-ontology_tech_Appendix.ttl)
+- [Basic VAD Ontology - Базовая онтология верхнеуровневых процессов](https://github.com/bpmbpm/rdf-grapher/blob/main/ver9a/ontology/vad-basic-ontology.ttl)
+- Технологическая часть онтологии [Tech Appendix - Технологические классы и объекты](https://github.com/bpmbpm/rdf-grapher/blob/main/ver9a/ontology/vad-basic-ontology_tech_Appendix.ttl)
  
 ### requirements
 - triple (requirements for the implementation of triplets)
