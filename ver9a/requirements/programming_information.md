@@ -1,5 +1,8 @@
 ### programming information
-Это памятка к программированию по проекту rdf-grapher папка проекта: https://github.com/bpmbpm/rdf-grapher/tree/main/ver9a
+Это памятка к программированию по проекту rdf-grapher. Папка проекта: https://github.com/bpmbpm/rdf-grapher/tree/main/ver9a  
+Можно изменять только эту и вложенные в нее папку.  
+Комментарии в коде и файлы md создавай на русском языке.  
+
 #### js
 - браузерный js
 #### programming concept
