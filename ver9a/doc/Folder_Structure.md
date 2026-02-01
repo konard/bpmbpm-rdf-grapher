@@ -14,52 +14,60 @@
 
 ```
 ver9a/
-├── index.html                    - Минимальный HTML файл-оболочка
-├── styles.css                    - Основные стили приложения
-├── config.json                   - Конфигурация состояния окон
-├── Trig_VADv5.ttl               - Пример данных VAD v5
-├── Trig_VADv6.ttl               - Пример данных VAD v6
-├── 1_example_data/              - Модуль загрузки примеров RDF данных
-│   ├── 1_example_data_ui.js     - UI функции загрузки примеров
-│   └── 1_example_data_logic.js  - Встроенные данные примеров
-├── 2_triplestore/               - Модуль ввода и хранения RDF данных
-│   ├── 2_triplestore_ui.js      - UI функции ввода данных
-│   ├── 2_triplestore_logic.js   - Логика парсинга и валидации
-│   └── 2_triplestore_test/      - Подмодуль тестирования
-│       ├── 2_triplestore_test_logic.js   - Логика тестирования
-│       └── 2_triplestore_test_sparql.js  - SPARQL запросы для тестов
-├── 3_sd/                        - Модуль Smart Design
-│   ├── 3_sd_ui.js               - UI функции Smart Design
-│   ├── 3_sd_logic.js            - Бизнес-логика Smart Design
-│   ├── 3_sd_sparql.js           - SPARQL запросы Smart Design
-│   ├── 3_sd_create_new_concept/ - Подмодуль создания концептов
-│   │   └── 3_sd_create_new_concept_logic.js
+├── index.html                    (694 строк)  - Минимальный HTML файл-оболочка
+├── styles.css                    (2365 строк) - Основные стили приложения
+├── config.json                   (38 строк)   - Конфигурация состояния окон
+├── Trig_VADv5.ttl                (295 строк)  - Пример данных VAD v5
+├── Trig_VADv6.ttl                (302 строк)  - Пример данных VAD v6
+├── 1_example_data/               - Модуль загрузки примеров RDF данных
+│   ├── 1_example_data_ui.js      (106 строк)  - UI функции загрузки примеров
+│   ├── 1_example_data_logic.js   (624 строки)  - Встроенные данные примеров
+│   └── 1_example_data.css        (5 строк)    - Стили модуля
+├── 2_triplestore/                - Модуль ввода и хранения RDF данных
+│   ├── 2_triplestore_ui.js       (199 строк)  - UI функции ввода данных
+│   ├── 2_triplestore_logic.js    (726 строк)  - Логика парсинга и валидации
+│   ├── 2_triplestore_validation.js (619 строк) - Валидация VAD схемы
+│   ├── 2_triplestore.css         (15 строк)   - Стили модуля
+│   └── 2_triplestore_test/       - Подмодуль тестирования
+│       ├── 2_triplestore_test_logic.js   (208 строк) - Логика тестирования
+│       └── 2_triplestore_test_sparql.js  (4 строки)  - SPARQL запросы для тестов
+├── 3_sd/                         - Модуль Smart Design
+│   ├── 3_sd_ui.js                (1068 строк) - UI функции Smart Design
+│   ├── 3_sd_logic.js             (337 строк)  - Бизнес-логика Smart Design
+│   ├── 3_sd_sparql.js            (113 строк)  - SPARQL запросы Smart Design
+│   ├── 3_sd.css                  (5 строк)    - Стили модуля
+│   ├── 3_sd_create_new_concept/  - Подмодуль создания концептов
+│   │   └── 3_sd_create_new_concept_logic.js  (1158 строк)
 │   ├── 3_sd_del_concept_individ/ - Подмодуль удаления
-│   │   └── 3_sd_del_concept_individ_logic.js
-│   └── 3_sd_create_new_trig/    - Подмодуль создания TriG
-│       └── 3_sd_create_new_trig_logic.js
-├── 4_resSPARQL/                 - Модуль Result in SPARQL
-│   └── 4_resSPARQL_ui.js
-├── 5_publisher/                 - Модуль визуализации (Publisher)
-│   ├── 5_publisher_ui.js        - UI функции визуализации
-│   ├── 5_publisher_logic.js     - Логика генерации графов
-│   ├── 5_publisher_sparql.js    - SPARQL запросы Publisher
-│   └── 5_publisher_trig.js      - Работа с деревом TriG
-├── 6_legend/                    - Модуль легенды стилей
-│   └── 6_legend_ui.js
-├── 7_info/                      - Модуль Prefixes
-│   └── 7_info_ui.js
-├── 8_infoSPARQL/                - Модуль SPARQL запросов
-│   ├── 8_infoSPARQL_ui.js       - UI и выполнение SPARQL
-│   └── 8_infoSPARQL_sparql.js
-├── 9_vadlib/                    - Общая библиотека
-│   ├── vadlib.js                - Основные утилиты и конфигурация
-│   ├── vadlib_sparql.js         - SPARQL движок (funSPARQLvalues)
-│   └── vadlib.css               - Стили свертывания окон
-├── doc/                         - Документация
-├── ontology/                    - Файлы онтологии
-├── requirements/                - Требования к проекту
-└── test/                        - Автоматизированные тесты
+│   │   └── 3_sd_del_concept_individ_logic.js (1748 строк)
+│   └── 3_sd_create_new_trig/     - Подмодуль создания TriG
+│       └── 3_sd_create_new_trig_logic.js     (131 строка)
+├── 4_resSPARQL/                  - Модуль Result in SPARQL
+│   ├── 4_resSPARQL_ui.js         (4 строки)   - UI модуль
+│   └── 4_resSPARQL.css           (5 строк)    - Стили модуля
+├── 5_publisher/                  - Модуль визуализации (Publisher)
+│   ├── 5_publisher_ui.js         (799 строк)  - UI функции визуализации
+│   ├── 5_publisher_logic.js      (1460 строк) - Логика генерации графов
+│   ├── 5_publisher_sparql.js     (39 строк)   - SPARQL запросы Publisher
+│   ├── 5_publisher_trig.js       (638 строк)  - Работа с деревом TriG
+│   └── 5_publisher.css           (5 строк)    - Стили модуля
+├── 6_legend/                     - Модуль легенды стилей
+│   ├── 6_legend_ui.js            (337 строк)  - UI генерации легенды
+│   └── 6_legend.css              (5 строк)    - Стили модуля
+├── 7_info/                       - Модуль Prefixes
+│   ├── 7_info_ui.js              (26 строк)   - UI отображения префиксов
+│   └── 7_info.css                (5 строк)    - Стили модуля
+├── 8_infoSPARQL/                 - Модуль SPARQL запросов
+│   ├── 8_infoSPARQL_ui.js        (215 строк)  - UI и выполнение SPARQL
+│   ├── 8_infoSPARQL_sparql.js    (4 строки)   - Предустановленные запросы
+│   └── 8_infoSPARQL.css          (5 строк)    - Стили модуля
+├── 9_vadlib/                     - Общая библиотека
+│   ├── vadlib.js                 (619 строк)  - Основные утилиты и конфигурация
+│   └── vadlib_sparql.js          (274 строки)  - SPARQL движок (funSPARQLvalues)
+├── doc/                          - Документация
+├── ontology/                     - Файлы онтологии
+├── requirements/                 - Требования к проекту
+└── test/                         - Автоматизированные тесты
 ```
 
 ### 1_example_data/ -- Модуль загрузки примеров RDF данных
@@ -118,14 +126,14 @@ ver9a/
 
 ### 6_legend/ -- Модуль легенды стилей
 
-Отображает легенду используемых стилей узлов и ребер графа. По умолчанию окно развернуто.
+Отображает легенду используемых стилей узлов и ребер графа. По умолчанию окно свернуто.
 
 **Файлы:**
 - `6_legend_ui.js` -- UI: генерация таблицы стилей с примерами
 
 ### 7_info/ -- Модуль Prefixes
 
-Отображает список префиксов RDF пространств имен, извлеченных из загруженных данных. По умолчанию окно развернуто.
+Отображает список префиксов RDF пространств имен, извлеченных из загруженных данных. По умолчанию окно свернуто.
 
 **Файлы:**
 - `7_info_ui.js` -- UI: таблица префиксов с пространствами имен
@@ -143,9 +151,8 @@ ver9a/
 Общая библиотека, используемая всеми модулями. Содержит конфигурацию (фильтры, режимы, типы VAD), глобальные переменные, вспомогательные функции и SPARQL движок.
 
 **Файлы:**
-- `vadlib.js` -- Конфигурация: `Mode`, `Filter`, `VAD_ALLOWED_TYPES`, `PROCESS_SUBTYPES`; вспомогательные функции: `getPrefixedName()`, `getLocalName()`, `escapeDotString()`, `generateNodeId()` и другие
-- `vadlib_sparql.js` -- SPARQL движок: `funSPARQLvalues()`, `parseTriplePatterns()`, `executeSimpleSelect()`, `resolveValue()`, `matchQuadToPattern()`
-- `vadlib.css` -- CSS стили для механизма свертывания/развертывания окон (`.window-section`, `.window-header`, `.window-content`)
+- `vadlib.js` (619 строк) -- Конфигурация: `Mode`, `Filter`, `VAD_ALLOWED_TYPES`, `PROCESS_SUBTYPES`; вспомогательные функции: `getPrefixedName()`, `getLocalName()`, `escapeDotString()`, `generateNodeId()` и другие
+- `vadlib_sparql.js` (274 строки) -- SPARQL движок: `funSPARQLvalues()`, `parseTriplePatterns()`, `executeSimpleSelect()`, `resolveValue()`, `matchQuadToPattern()`
 
 ## 3. Описание подпапок
 
