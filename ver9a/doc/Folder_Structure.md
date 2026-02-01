@@ -14,7 +14,7 @@
 
 ```
 ver9a/
-├── index.html                    (694 строк)  - Минимальный HTML файл-оболочка
+├── index.html                    (697 строк)  - Минимальный HTML файл-оболочка
 ├── styles.css                    (2365 строк) - Основные стили приложения
 ├── config.json                   (38 строк)   - Конфигурация состояния окон
 ├── Trig_VADv5.ttl                (295 строк)  - Пример данных VAD v5
@@ -32,9 +32,9 @@ ver9a/
 │       ├── 2_triplestore_test_logic.js   (208 строк) - Логика тестирования
 │       └── 2_triplestore_test_sparql.js  (4 строки)  - SPARQL запросы для тестов
 ├── 3_sd/                         - Модуль Smart Design
-│   ├── 3_sd_ui.js                (1068 строк) - UI функции Smart Design
-│   ├── 3_sd_logic.js             (337 строк)  - Бизнес-логика Smart Design
-│   ├── 3_sd_sparql.js            (113 строк)  - SPARQL запросы Smart Design
+│   ├── 3_sd_ui.js                (1165 строк) - UI функции Smart Design
+│   ├── 3_sd_logic.js             (351 строк)  - Бизнес-логика Smart Design
+│   ├── 3_sd_sparql.js            (127 строк)  - SPARQL запросы Smart Design
 │   ├── 3_sd.css                  (5 строк)    - Стили модуля
 │   ├── 3_sd_create_new_concept/  - Подмодуль создания концептов
 │   │   └── 3_sd_create_new_concept_logic.js  (1158 строк)

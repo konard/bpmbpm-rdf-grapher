@@ -76,6 +76,20 @@ const SPARQL_QUERIES = {
     `,
 
     /**
+     * issue #241: Запрос для получения всех концептов исполнителей из rtree
+     * Используется: Smart Design -> Subject Type = TypeExecutor -> Subject dropdown
+     * Контекст: ExecutorTree (rtree)
+     */
+    EXECUTOR_CONCEPTS_IN_RTREE: `
+        SELECT ?executor ?label WHERE {
+            GRAPH vad:rtree {
+                ?executor rdf:type vad:TypeExecutor .
+                ?executor rdfs:label ?label .
+            }
+        }
+    `,
+
+    /**
      * Запрос для получения предикатов из технологического объекта
      * Используется: Загрузка предикатов из vad-basic-ontology_tech_Appendix.ttl
      * @param {string} techObjectUri - URI технологического объекта (например, vad:IndividProcessPredicate)
