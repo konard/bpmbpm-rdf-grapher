@@ -1,4 +1,5 @@
-// issue #232: Модуль создания новых концептов
+// Ссылка на issue: https://github.com/bpmbpm/rdf-grapher/issues/232
+
 /**
  * ==============================================================================
  * CREATE NEW CONCEPT MODULE
@@ -470,7 +471,7 @@ function generateIdFromLabel(label) {
     let id = label.replace(/\s+/g, '_');
 
     // Убираем специальные символы, кроме подчёркивания, точки, тире и цифр
-    id = id.replace(/[^a-zA-Zа-яА-ЯёЁ0-9_.\-]/g, '');
+    id = id.replace(/[^a-zA-Z\u0430-\u044F\u0410-\u042F\u0451\u04010-9_.\-]/g, '');
 
     return id;
 }

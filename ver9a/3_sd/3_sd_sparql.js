@@ -1,4 +1,5 @@
-// issue #232: Модуль SPARQL запросов для Smart Design
+// Ссылка на issue: https://github.com/bpmbpm/rdf-grapher/issues/232
+
 /**
  * SPARQL Queries for Smart Design
  *

@@ -1,4 +1,6 @@
-// issue #232: Модуль примеров данных
+// Ссылка на issue: https://github.com/bpmbpm/rdf-grapher/issues/232
+// 1_example_data_logic.js - Встроенные данные примеров RDF
+
 /**
  * ==============================================================================
  * EXAMPLE DATA MODULE

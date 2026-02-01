@@ -1,3 +1,4 @@
+// issue #232: Модуль правил валидации VAD схемы
 /**
  * VAD Schema Formalization and Validation Rules
  *
