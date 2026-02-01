@@ -332,6 +332,7 @@
                 <textarea id="test-result-modal-text" class="test-result-textarea" readonly></textarea>
             </div>
             <div class="test-result-modal-buttons">
+                <button class="test-result-checks-btn" onclick="showChecksList()">Список проверок</button>
                 <button class="test-result-copy-btn" onclick="copyTestResultToClipboard()">Копировать</button>
                 <button class="test-result-close-btn" onclick="closeTestResultModal()">Закрыть</button>
             </div>
@@ -406,12 +407,22 @@
             <button onclick="openInNewWindowGraphvizOnline()">Показать в окне GraphvizOnline</button>
         </div>
         <div class="legend-panel" id="legend-panel" style="display: none;">
-            <h3>Легенда стилей:</h3>
-            <div class="legend-content" id="legend-content"></div>
+            <div class="panel-header" onclick="togglePanel('legend')">
+                <span class="panel-toggle" id="legend-toggle">&#9660;</span>
+                <h3>Легенда стилей:</h3>
+            </div>
+            <div class="panel-body" id="legend-body">
+                <div class="legend-content" id="legend-content"></div>
+            </div>
         </div>
         <div class="prefixes-panel" id="prefixes-panel" style="display: none;">
-            <h3>Prefixes:</h3>
-            <div class="prefixes-content" id="prefixes-content"></div>
+            <div class="panel-header" onclick="togglePanel('prefixes')">
+                <span class="panel-toggle" id="prefixes-toggle">&#9660;</span>
+                <h3>Prefixes:</h3>
+            </div>
+            <div class="panel-body" id="prefixes-body">
+                <div class="prefixes-content" id="prefixes-content"></div>
+            </div>
         </div>
         <div class="sparql-panel" id="sparql-panel">
             <h3>SPARQL запрос:</h3>
@@ -505,6 +516,8 @@ WHERE {
         // Загружаем технологическое приложение и инициализируем UI при старте
         document.addEventListener('DOMContentLoaded', function() {
             loadTechAppendix();
+            // issue #236: Загружаем конфигурацию окон из config.json
+            loadWindowConfig();
             // issue #234: Инициализация описания режима визуализации и видимости полей
             if (typeof updateModeDescription === 'function') {
                 updateModeDescription();

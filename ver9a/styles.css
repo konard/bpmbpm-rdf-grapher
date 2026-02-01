@@ -2282,6 +2282,16 @@
             margin-top: 0;
         }
 
+        /* issue #236: Кнопка "Список проверок" */
+        .test-result-checks-btn {
+            background-color: #FF9800;
+            color: white;
+        }
+
+        .test-result-checks-btn:hover {
+            background-color: #F57C00;
+        }
+
         .test-result-copy-btn {
             background-color: #2196F3;
             color: white;

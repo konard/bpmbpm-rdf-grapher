@@ -23,4 +23,7 @@
 
             prefixesContent.innerHTML = html;
             prefixesPanel.style.display = 'block';
+
+            // issue #236: Применяем начальное состояние свернутости из config.json
+            applyPanelCollapsedState('prefixes', '7_info');
         }

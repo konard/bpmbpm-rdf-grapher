@@ -334,4 +334,7 @@
 
             legendContent.innerHTML = html;
             legendPanel.style.display = 'block';
+
+            // issue #236: Применяем начальное состояние свернутости из config.json
+            applyPanelCollapsedState('legend', '6_legend');
         }

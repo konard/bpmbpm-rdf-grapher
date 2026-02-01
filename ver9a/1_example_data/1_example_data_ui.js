@@ -20,6 +20,9 @@ async function loadExampleFromFile(filename, exampleName, inputFormat, visualiza
     statusEl.style.borderColor = '#ffc107';
     statusEl.style.color = '#856404';
 
+    // issue #236: Определяем полный путь к файлу для отображения в сообщениях об ошибках
+    const fullPath = new URL(filename, window.location.href).href;
+
     try {
         const response = await fetch(filename);
         if (!response.ok) {
@@ -46,13 +49,15 @@ async function loadExampleFromFile(filename, exampleName, inputFormat, visualiza
 
         if (isCorsError) {
             // Для локальных файлов показываем информационное сообщение и используем встроенные данные
-            statusEl.textContent = `Файл ${filename} недоступен (CORS). Используются встроенные данные.`;
+            // issue #236: Указываем полный путь к файлу
+            statusEl.textContent = `Файл ${filename} недоступен (CORS). Путь: ${fullPath}. Используются встроенные данные.`;
             statusEl.style.backgroundColor = '#fff3cd';
             statusEl.style.borderColor = '#ffc107';
             statusEl.style.color = '#856404';
         } else {
-            // Для серверных ошибок показываем ошибку, но всё равно используем fallback
-            statusEl.textContent = `Ошибка загрузки ${filename}: ${error.message}. Используются встроенные данные.`;
+            // Для серверных ошибок показываем ошибку с путём, но всё равно используем fallback
+            // issue #236: Указываем полный путь к файлу
+            statusEl.textContent = `Ошибка загрузки ${filename}: ${error.message}. Путь: ${fullPath}. Используются встроенные данные.`;
             statusEl.style.backgroundColor = '#fff3cd';
             statusEl.style.borderColor = '#ffc107';
             statusEl.style.color = '#856404';

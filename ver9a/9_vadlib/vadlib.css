@@ -48,3 +48,36 @@
 .window-content.collapsed {
     display: none;
 }
+
+/* issue #236: Стили для сворачиваемых панелей (Легенда стилей, Prefixes) */
+.panel-header {
+    display: flex;
+    align-items: center;
+    cursor: pointer;
+    user-select: none;
+    padding: 4px 0;
+}
+
+.panel-header:hover {
+    opacity: 0.8;
+}
+
+.panel-header h3 {
+    margin: 0;
+}
+
+.panel-toggle {
+    display: inline-block;
+    font-size: 10px;
+    color: #666;
+    margin-right: 6px;
+    transition: transform 0.2s;
+}
+
+.panel-toggle.collapsed {
+    transform: rotate(-90deg);
+}
+
+.panel-body.collapsed {
+    display: none;
+}

@@ -415,6 +415,66 @@ function copyObjectId(id, button) {
 }
 
 // ============================================================================
+// СВОРАЧИВАНИЕ/РАЗВЕРТЫВАНИЕ ПАНЕЛЕЙ (issue #236)
+// ============================================================================
+
+/**
+ * Конфигурация окон, загруженная из config.json
+ */
+let windowConfig = null;
+
+/**
+ * Переключает состояние свернутости панели (Легенда стилей, Prefixes)
+ * @param {string} panelName - Имя панели ('legend' или 'prefixes')
+ */
+function togglePanel(panelName) {
+    const body = document.getElementById(panelName + '-body');
+    const toggle = document.getElementById(panelName + '-toggle');
+    if (!body || !toggle) return;
+
+    const isCollapsed = body.classList.toggle('collapsed');
+    if (isCollapsed) {
+        toggle.classList.add('collapsed');
+    } else {
+        toggle.classList.remove('collapsed');
+    }
+}
+
+/**
+ * Применяет начальное состояние свернутости для панели из config.json
+ * @param {string} panelName - Имя панели ('legend' или 'prefixes')
+ * @param {string} configKey - Ключ в config.json ('6_legend' или '7_info')
+ */
+function applyPanelCollapsedState(panelName, configKey) {
+    if (!windowConfig || !windowConfig.windows || !windowConfig.windows[configKey]) return;
+
+    const collapsed = windowConfig.windows[configKey].collapsed;
+    if (collapsed) {
+        const body = document.getElementById(panelName + '-body');
+        const toggle = document.getElementById(panelName + '-toggle');
+        if (body) body.classList.add('collapsed');
+        if (toggle) toggle.classList.add('collapsed');
+    }
+}
+
+/**
+ * Загружает config.json и применяет состояния окон
+ */
+async function loadWindowConfig() {
+    try {
+        const response = await fetch('config.json');
+        if (!response.ok) {
+            console.warn('config.json not found, using default window states');
+            return;
+        }
+        windowConfig = await response.json();
+        // Состояния применяются позже, когда панели становятся видимыми
+    } catch (error) {
+        console.warn('Error loading config.json:', error.message);
+    }
+}
+
+// ============================================================================
 // ЗАГРУЗКА ТЕХНОЛОГИЧЕСКОГО ПРИЛОЖЕНИЯ (issue #234: перенесено из ver8tree)
 // ============================================================================
 

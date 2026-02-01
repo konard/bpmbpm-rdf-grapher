@@ -142,6 +142,69 @@ function copyTestResultToClipboard() {
     });
 }
 
+/**
+ * issue #236: Отображает список всех проверок с кратким описанием
+ * Вызывается при нажатии кнопки "Список проверок" в модальном окне результатов тестирования
+ */
+function showChecksList() {
+    let message = 'СПИСОК ПРОВЕРОК\n';
+    message += '═══════════════════════════════════════\n\n';
+
+    message += '1. ПРОВЕРКА СИНТАКСИСА RDF\n';
+    message += '   Парсинг RDF данных через N3.js.\n';
+    message += '   Проверяет корректность синтаксиса TriG/Turtle.\n\n';
+
+    message += '2. ВАЛИДАЦИЯ VAD ОНТОЛОГИИ\n';
+    message += '   Проверяет соответствие предикатов и типов\n';
+    message += '   разрешённым значениям VAD онтологии:\n';
+    message += '   - Допустимые предикаты (VAD_ALLOWED_PREDICATES)\n';
+    message += '   - Допустимые типы (VAD_ALLOWED_TYPES)\n\n';
+
+    message += '3. ВАЛИДАЦИЯ ПРАВИЛ VAD СХЕМЫ\n';
+    message += '   Проверяет структурную корректность VAD данных:\n\n';
+
+    message += '   3.1 processesHaveIsSubprocessTrig\n';
+    message += '       Каждый индивид процесса в VADProcessDia\n';
+    message += '       должен иметь vad:isSubprocessTrig.\n\n';
+
+    message += '   3.2 processesHaveExecutor\n';
+    message += '       Каждый индивид процесса должен иметь\n';
+    message += '       vad:hasExecutor (группу исполнителей).\n\n';
+
+    message += '   3.3 executorGroupsInCorrectGraph\n';
+    message += '       ExecutorGroup должен находиться в\n';
+    message += '       VADProcessDia графах (не в ptree/rtree).\n\n';
+
+    message += '   3.4 processMetadataInPtree\n';
+    message += '       Метаданные процессов (rdf:type, rdfs:label,\n';
+    message += '       dcterms:description, vad:hasTrig, vad:hasParentObj)\n';
+    message += '       должны быть в графе vad:ptree.\n\n';
+
+    message += '   3.5 executorMetadataInRtree\n';
+    message += '       Метаданные исполнителей (rdf:type, rdfs:label,\n';
+    message += '       vad:hasParentObj) должны быть в графе vad:rtree.\n\n';
+
+    message += '   3.6 vadProcessDiaHasParentObj\n';
+    message += '       Каждый VADProcessDia должен иметь\n';
+    message += '       vad:hasParentObj на концепт процесса.\n\n';
+
+    message += '   3.7 objectTreeHasParentObj\n';
+    message += '       ObjectTree должен иметь\n';
+    message += '       vad:hasParentObj = vad:root.\n\n';
+
+    message += '   3.8 processConceptsHaveParentObj\n';
+    message += '       Концепты процессов в ptree должны иметь\n';
+    message += '       vad:hasParentObj.\n\n';
+
+    message += '   3.9 executorConceptsHaveParentObj\n';
+    message += '       Концепты исполнителей в rtree должны иметь\n';
+    message += '       vad:hasParentObj.\n\n';
+
+    message += '═══════════════════════════════════════\n';
+
+    showTestResultModal('Список проверок', message, false);
+}
+
 // Закрытие модального окна результатов тестирования при клике вне его
 window.addEventListener('click', function(event) {
     const modal = document.getElementById('test-result-modal');
