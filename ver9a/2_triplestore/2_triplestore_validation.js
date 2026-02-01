@@ -1,11 +1,14 @@
-// issue #232: Модуль правил валидации VAD схемы
+// Ссылка на issue: https://github.com/bpmbpm/rdf-grapher/issues/234
+// 2_triplestore_validation.js - Правила валидации VAD схемы
+// Перемещено из vad-validation-rules.js в модульную структуру (issue #234)
+
 /**
  * VAD Schema Formalization and Validation Rules
  *
  * This module implements automatic validation rules for VAD ontology
  * as described in comment8a.md section 4 (Формализация VAD-схем)
  *
- * @file vad-validation-rules.js
+ * @file 2_triplestore_validation.js
  * @version 8d
  * @date 2026-01-27
  *
