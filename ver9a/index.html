@@ -453,29 +453,7 @@ WHERE {
     <script src="9_vadlib/vadlib_sparql.js"></script>
 
     <!-- ========================================================================== -->
-    <!-- СУЩЕСТВУЮЩИЕ АВТОНОМНЫЕ МОДУЛИ                                             -->
-    <!-- ========================================================================== -->
-
-    <!-- Подключение SPARQL запросов для Smart Design -->
-    <script src="sparql-queries.js"></script>
-
-    <!-- Подключение правил валидации VAD схемы -->
-    <script src="vad-validation-rules.js"></script>
-
-    <!-- Подключение модуля создания новых концептов (New Concept) -->
-    <script src="create_new_concept.js"></script>
-
-    <!-- Подключение модуля удаления концептов/индивидов (Del Concept\Individ) -->
-    <script src="del_concept_individ.js"></script>
-
-    <!-- Подключение примеров данных (EXAMPLE_DATA) -->
-    <script src="example-data.js"></script>
-
-    <!-- Подключение утилит UI (стили, масштабирование, панели свойств, клики по узлам) -->
-    <script src="ui-utils.js"></script>
-
-    <!-- ========================================================================== -->
-    <!-- МОДУЛИ 1-8: НОВАЯ МОДУЛЬНАЯ СТРУКТУРА (issue #232)                         -->
+    <!-- МОДУЛИ 1-8: МОДУЛЬНАЯ СТРУКТУРА (issue #232, issue #234)                   -->
     <!-- ========================================================================== -->
 
     <!-- Модуль 1: Примеры данных -->
@@ -485,6 +463,7 @@ WHERE {
     <!-- Модуль 2: Хранилище триплетов -->
     <script src="2_triplestore/2_triplestore_logic.js"></script>
     <script src="2_triplestore/2_triplestore_ui.js"></script>
+    <script src="2_triplestore/2_triplestore_validation.js"></script>
     <script src="2_triplestore/2_triplestore_test/2_triplestore_test_logic.js"></script>
     <script src="2_triplestore/2_triplestore_test/2_triplestore_test_sparql.js"></script>
 
@@ -523,9 +502,13 @@ WHERE {
         // issue #232: Минимальный код инициализации
         // Вся логика вынесена во внешние модули
 
-        // Загружаем технологическое приложение при старте
+        // Загружаем технологическое приложение и инициализируем UI при старте
         document.addEventListener('DOMContentLoaded', function() {
             loadTechAppendix();
+            // issue #234: Инициализация описания режима визуализации и видимости полей
+            if (typeof updateModeDescription === 'function') {
+                updateModeDescription();
+            }
         });
     </script>
 </body>
