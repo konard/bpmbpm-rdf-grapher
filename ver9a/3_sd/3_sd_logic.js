@@ -119,12 +119,15 @@ function smartDesignClear() {
     if (resultTextarea) {
         resultTextarea.value = '';
     }
+    // issue #241: Очищаем текст сообщения, но не скрываем поле
     const resultMessage = document.getElementById('result-sparql-message');
     if (resultMessage) {
-        resultMessage.style.display = 'none';
+        resultMessage.textContent = '';
+        resultMessage.className = 'smart-design-message';
     }
 
-    hideSmartDesignMessage();
+    // issue #241: Очищаем текст сообщения Smart Design, но не скрываем поле
+    clearSmartDesignMessage();
 }
 
 /**
@@ -319,6 +322,17 @@ function hideSmartDesignMessage() {
     const messageDiv = document.getElementById('smart-design-message');
     if (messageDiv) {
         messageDiv.style.display = 'none';
+    }
+}
+
+/**
+ * issue #241: Очищает текст сообщения Smart Design, но не скрывает поле
+ */
+function clearSmartDesignMessage() {
+    const messageDiv = document.getElementById('smart-design-message');
+    if (messageDiv) {
+        messageDiv.textContent = '';
+        messageDiv.className = 'smart-design-message';
     }
 }
 

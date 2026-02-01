@@ -174,9 +174,12 @@
                     <div class="smart-design-trig-row">
                         <div class="smart-design-field smart-design-field-trig">
                             <label for="smart-design-trig">TriG:</label>
-                            <select id="smart-design-trig">
-                                <option value="">-- Выберите TriG --</option>
-                            </select>
+                            <div class="smart-design-field-wrapper">
+                                <select id="smart-design-trig">
+                                    <option value="">-- Выберите TriG --</option>
+                                </select>
+                                <button class="copy-to-clipboard-btn" onclick="copyFieldValue('smart-design-trig')" title="Копировать значение">📋</button>
+                            </div>
                         </div>
                     </div>
                     <!-- Нижний ряд: Subject Type, Subject, Predicate, Object -->

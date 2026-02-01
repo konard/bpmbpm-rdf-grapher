@@ -1029,6 +1029,103 @@ function updatePredicateBySubjectTypeWithAutoGen() {
 }
 
 /**
+ * issue #241: Получает индивиды процессов в конкретном TriG графе (VADProcessDia)
+ * Ищет субъекты с предикатом vad:isSubprocessTrig, указывающим на данный TriG
+ * @param {string} trigUri - URI TriG графа
+ * @returns {Array} - Массив объектов {uri, label}
+ */
+function getProcessIndividualsInTriG(trigUri) {
+    // Используем SPARQL запрос для получения индивидов
+    const query = SPARQL_QUERIES.PROCESS_INDIVIDUALS_IN_TRIG(trigUri);
+    const results = funSPARQLvalues(query, 'process');
+
+    // Если SPARQL не вернул результатов, пробуем прямой поиск по квадам
+    if (results.length === 0) {
+        const individuals = [];
+        const seen = new Set();
+        const normalizedTrigUri = normalizeUri(trigUri);
+
+        currentQuads.forEach(quad => {
+            const predUri = quad.predicate.value;
+            const isSubprocessTrig = predUri === 'http://example.org/vad#isSubprocessTrig' ||
+                                     predUri.endsWith('#isSubprocessTrig');
+            const graphMatch = quad.graph && (quad.graph.value === trigUri || quad.graph.value === normalizedTrigUri);
+            const objectMatch = quad.object.value === trigUri || quad.object.value === normalizedTrigUri;
+
+            if (isSubprocessTrig && (graphMatch || objectMatch)) {
+                const subjectUri = quad.subject.value;
+                if (!seen.has(subjectUri)) {
+                    seen.add(subjectUri);
+                    // Пытаемся найти label из ptree
+                    let label = getPrefixedName(subjectUri, currentPrefixes);
+                    currentQuads.forEach(q => {
+                        if (q.subject.value === subjectUri &&
+                            (q.predicate.value === 'http://www.w3.org/2000/01/rdf-schema#label' ||
+                             q.predicate.value.endsWith('#label')) &&
+                            q.graph && (q.graph.value === PTREE_GRAPH_URI || q.graph.value.endsWith('#ptree'))) {
+                            label = q.object.value;
+                        }
+                    });
+                    individuals.push({ uri: subjectUri, label: label });
+                }
+            }
+        });
+
+        return individuals.sort((a, b) => a.label.localeCompare(b.label));
+    }
+
+    return results;
+}
+
+/**
+ * issue #241: Получает группы исполнителей в конкретном TriG графе
+ * @param {string} trigUri - URI TriG графа
+ * @returns {Array} - Массив объектов {uri, label}
+ */
+function getExecutorGroupsInTriG(trigUri) {
+    // Используем SPARQL запрос
+    const query = SPARQL_QUERIES.EXECUTOR_GROUPS_IN_TRIG(trigUri);
+    const results = funSPARQLvalues(query, 'group');
+
+    // Если SPARQL не вернул результатов, пробуем прямой поиск по квадам
+    if (results.length === 0) {
+        const groups = [];
+        const seen = new Set();
+        const normalizedTrigUri = normalizeUri(trigUri);
+
+        currentQuads.forEach(quad => {
+            // Ищем субъекты с rdf:type vad:ExecutorGroup в данном графе
+            const isTypeTriple = quad.predicate.value === 'http://www.w3.org/1999/02/22-rdf-syntax-ns#type' ||
+                                 quad.predicate.value.endsWith('#type');
+            const isExecutorGroup = quad.object.value === 'http://example.org/vad#ExecutorGroup' ||
+                                    quad.object.value.endsWith('#ExecutorGroup');
+            const graphMatch = quad.graph && (quad.graph.value === trigUri || quad.graph.value === normalizedTrigUri);
+
+            if (isTypeTriple && isExecutorGroup && graphMatch) {
+                const subjectUri = quad.subject.value;
+                if (!seen.has(subjectUri)) {
+                    seen.add(subjectUri);
+                    // Ищем label
+                    let label = getPrefixedName(subjectUri, currentPrefixes);
+                    currentQuads.forEach(q => {
+                        if (q.subject.value === subjectUri &&
+                            (q.predicate.value === 'http://www.w3.org/2000/01/rdf-schema#label' ||
+                             q.predicate.value.endsWith('#label'))) {
+                            label = q.object.value;
+                        }
+                    });
+                    groups.push({ uri: subjectUri, label: label });
+                }
+            }
+        });
+
+        return groups.sort((a, b) => a.label.localeCompare(b.label));
+    }
+
+    return results;
+}
+
+/**
  * Копирует значение выбранного поля в буфер обмена
  * @param {string} selectId - ID элемента select
  */
