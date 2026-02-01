@@ -178,31 +178,40 @@ function applyTripleToRdfInput(sparqlQuery, mode) {
     // Для INSERT: добавляем триплет в соответствующий граф
     const currentRdf = rdfInput.value;
     
-    if (mode === 'simple') {
-        // Simple Triple: добавляем полный триплет
-        const insertLine = `\n    ${tripleContent}`;
-        
-        // Ищем граф в текущих данных
-        const graphRegex = new RegExp(`(${graphName.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')}\\s*\\{)`, 'g');
-        const match = graphRegex.exec(currentRdf);
-        
-        if (match) {
-            // Граф найден - вставляем триплет после открывающей скобки
-            const insertPos = match.index + match[0].length;
-            rdfInput.value = currentRdf.substring(0, insertPos) + insertLine + currentRdf.substring(insertPos);
+    // issue #239: Вставляем триплет в конец графа (перед закрывающей }) вместо начала
+    // Также добавляем пустую строку перед новым триплетом
+    const escapedGraphName = graphName.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+
+    if (mode === 'simple' || mode === 'shorthand') {
+        // Ищем граф и его закрывающую скобку
+        const graphOpenRegex = new RegExp(`${escapedGraphName}\\s*\\{`, 'g');
+        const openMatch = graphOpenRegex.exec(currentRdf);
+
+        if (openMatch) {
+            // Граф найден - ищем закрывающую } для этого графа
+            const afterOpen = openMatch.index + openMatch[0].length;
+            let braceCount = 1;
+            let closingBracePos = -1;
+            for (let i = afterOpen; i < currentRdf.length; i++) {
+                if (currentRdf[i] === '{') braceCount++;
+                if (currentRdf[i] === '}') braceCount--;
+                if (braceCount === 0) {
+                    closingBracePos = i;
+                    break;
+                }
+            }
+
+            if (closingBracePos !== -1) {
+                // Вставляем триплет перед закрывающей скобкой с пустой строкой
+                const beforeClosing = currentRdf.substring(0, closingBracePos);
+                const afterClosing = currentRdf.substring(closingBracePos);
+                rdfInput.value = beforeClosing + `\n    ${tripleContent}\n` + afterClosing;
+            } else {
+                // Fallback: вставляем после открывающей скобки
+                rdfInput.value = currentRdf.substring(0, afterOpen) + `\n    ${tripleContent}` + currentRdf.substring(afterOpen);
+            }
         } else {
-            // Граф не найден - добавляем в конец
-            rdfInput.value = currentRdf + `\n\n${graphName} {\n    ${tripleContent}\n}`;
-        }
-    } else {
-        // Shorthand Triple: аналогичная логика
-        const graphRegex = new RegExp(`(${graphName.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')}\\s*\\{)`, 'g');
-        const match = graphRegex.exec(currentRdf);
-        
-        if (match) {
-            const insertPos = match.index + match[0].length;
-            rdfInput.value = currentRdf.substring(0, insertPos) + `\n    ${tripleContent}` + currentRdf.substring(insertPos);
-        } else {
+            // Граф не найден - добавляем в конец с пустой строкой
             rdfInput.value = currentRdf + `\n\n${graphName} {\n    ${tripleContent}\n}`;
         }
     }
