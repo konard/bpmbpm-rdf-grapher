@@ -24,11 +24,11 @@
         },
         "6_legend": {
             "title": "Легенда стилей",
-            "collapsed": false
+            "collapsed": true
         },
         "7_info": {
             "title": "Prefixes",
-            "collapsed": false
+            "collapsed": true
         },
         "8_infoSPARQL": {
             "title": "SPARQL запрос",
