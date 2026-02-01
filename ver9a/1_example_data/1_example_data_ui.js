@@ -20,6 +20,9 @@ async function loadExampleFromFile(filename, exampleName, inputFormat, visualiza
     statusEl.style.borderColor = '#ffc107';
     statusEl.style.color = '#856404';
 
+    // issue #236: Вычисляем полный путь к файлу для информативных сообщений об ошибках
+    const fullPath = new URL(filename, window.location.href).href;
+
     try {
         const response = await fetch(filename);
         if (!response.ok) {
@@ -32,12 +35,12 @@ async function loadExampleFromFile(filename, exampleName, inputFormat, visualiza
         document.getElementById('visualization-mode').value = visualizationMode;
         updateModeDescription();
 
-        statusEl.textContent = `Пример ${exampleName} успешно загружен из файла ${filename}`;
+        statusEl.textContent = `Пример ${exampleName} успешно загружен из файла ${fullPath}`;
         statusEl.style.backgroundColor = '#d4edda';
         statusEl.style.borderColor = '#c3e6cb';
         statusEl.style.color = '#155724';
     } catch (error) {
-        console.warn(`Не удалось загрузить файл ${filename}:`, error.message);
+        console.warn(`Не удалось загрузить файл ${fullPath}:`, error.message);
 
         // Проверяем, это ошибка CORS (локальный файл) или сетевая ошибка
         const isCorsError = error.message.includes('Failed to fetch') ||
@@ -46,13 +49,13 @@ async function loadExampleFromFile(filename, exampleName, inputFormat, visualiza
 
         if (isCorsError) {
             // Для локальных файлов показываем информационное сообщение и используем встроенные данные
-            statusEl.textContent = `Файл ${filename} недоступен (CORS). Используются встроенные данные.`;
+            statusEl.textContent = `Файл ${fullPath} недоступен (CORS). Используются встроенные данные.`;
             statusEl.style.backgroundColor = '#fff3cd';
             statusEl.style.borderColor = '#ffc107';
             statusEl.style.color = '#856404';
         } else {
             // Для серверных ошибок показываем ошибку, но всё равно используем fallback
-            statusEl.textContent = `Ошибка загрузки ${filename}: ${error.message}. Используются встроенные данные.`;
+            statusEl.textContent = `Ошибка загрузки ${fullPath}: ${error.message}. Используются встроенные данные.`;
             statusEl.style.backgroundColor = '#fff3cd';
             statusEl.style.borderColor = '#ffc107';
             statusEl.style.color = '#856404';
