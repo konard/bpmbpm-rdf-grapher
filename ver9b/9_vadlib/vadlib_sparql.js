@@ -269,6 +269,128 @@
         /**
          * Сопоставляет квад с паттерном
          */
+        // ==============================================================================
+        // funSPARQLvaluesComunica — полная поддержка SPARQL через Comunica
+        // Ссылка на issue: https://github.com/bpmbpm/rdf-grapher/issues/250
+        // ==============================================================================
+
+        /**
+         * Выполняет SPARQL SELECT запрос с полной поддержкой SPARQL через Comunica.
+         * Поддерживает UNION, OPTIONAL, FILTER, BIND и другие конструкции SPARQL,
+         * которые не поддерживаются в funSPARQLvalues.
+         *
+         * @param {string} sparqlQuery - SPARQL SELECT запрос
+         * @param {string} variableName - Имя переменной для извлечения (без '?')
+         * @returns {Promise<Array<{uri: string, label: string}>>} Массив результатов
+         */
+        async function funSPARQLvaluesComunica(sparqlQuery, variableName = 'value') {
+            const results = [];
+
+            // Если нет текущего store, возвращаем пустой массив
+            if (!currentStore || currentQuads.length === 0) {
+                console.log('funSPARQLvaluesComunica: No data in store');
+                return results;
+            }
+
+            try {
+                // Инициализируем Comunica engine если нужно
+                if (!comunicaEngine) {
+                    if (typeof Comunica !== 'undefined' && Comunica.QueryEngine) {
+                        comunicaEngine = new Comunica.QueryEngine();
+                    } else {
+                        console.error('funSPARQLvaluesComunica: Comunica не загружена, fallback на funSPARQLvalues');
+                        return funSPARQLvalues(sparqlQuery, variableName);
+                    }
+                }
+
+                // Инициализируем store если нужно
+                if (!currentStore) {
+                    currentStore = new N3.Store();
+                    currentQuads.forEach(quad => currentStore.addQuad(quad));
+                }
+
+                // Выполняем запрос через Comunica
+                const bindingsStream = await comunicaEngine.queryBindings(sparqlQuery, {
+                    sources: [currentStore]
+                });
+
+                const bindings = await bindingsStream.toArray();
+
+                const seen = new Set();
+                bindings.forEach(binding => {
+                    // Получаем значение основной переменной
+                    const mainTerm = binding.get(variableName);
+                    if (!mainTerm) return;
+
+                    const value = mainTerm.value;
+                    if (seen.has(value)) return;
+                    seen.add(value);
+
+                    // Получаем label если есть
+                    const labelTerm = binding.get('label');
+                    const label = labelTerm
+                        ? labelTerm.value
+                        : getPrefixedName(value, currentPrefixes);
+
+                    results.push({ uri: value, label: label });
+                });
+
+            } catch (error) {
+                console.error('funSPARQLvaluesComunica error:', error);
+                // Fallback на простую реализацию при ошибке Comunica
+                console.log('funSPARQLvaluesComunica: Fallback на funSPARQLvalues');
+                return funSPARQLvalues(sparqlQuery, variableName);
+            }
+
+            return results;
+        }
+
+        /**
+         * Выполняет SPARQL UPDATE запрос (INSERT/DELETE) через Comunica.
+         * Предназначена для будущего использования при автоматическом выполнении
+         * UPDATE-запросов (в текущей архитектуре запросы генерируются, но не выполняются).
+         *
+         * @param {string} sparqlUpdateQuery - SPARQL UPDATE запрос (INSERT DATA / DELETE WHERE и т.д.)
+         * @returns {Promise<boolean>} true если запрос выполнен успешно
+         */
+        async function funSPARQLvaluesComunicaUpdate(sparqlUpdateQuery) {
+            if (!currentStore || currentQuads.length === 0) {
+                console.log('funSPARQLvaluesComunicaUpdate: No data in store');
+                return false;
+            }
+
+            try {
+                // Инициализируем Comunica engine если нужно
+                if (!comunicaEngine) {
+                    if (typeof Comunica !== 'undefined' && Comunica.QueryEngine) {
+                        comunicaEngine = new Comunica.QueryEngine();
+                    } else {
+                        console.error('funSPARQLvaluesComunicaUpdate: Comunica не загружена');
+                        return false;
+                    }
+                }
+
+                // Инициализируем store если нужно
+                if (!currentStore) {
+                    currentStore = new N3.Store();
+                    currentQuads.forEach(quad => currentStore.addQuad(quad));
+                }
+
+                // Выполняем UPDATE запрос через Comunica
+                await comunicaEngine.queryVoid(sparqlUpdateQuery, {
+                    sources: [currentStore]
+                });
+
+                // Обновляем currentQuads после изменения store
+                currentQuads = currentStore.getQuads(null, null, null, null);
+
+                return true;
+            } catch (error) {
+                console.error('funSPARQLvaluesComunicaUpdate error:', error);
+                return false;
+            }
+        }
+
         function matchQuadToPattern(quad, pattern, currentBinding) {
             const newBinding = {};
 
