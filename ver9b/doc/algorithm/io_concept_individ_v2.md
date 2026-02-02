@@ -1,4 +1,4 @@
-<!-- Ссылка на issue: https://github.com/bpmbpm/rdf-grapher/issues/250 -->
+<!-- Ссылка на issue: https://github.com/bpmbpm/rdf-grapher/issues/252 -->
 
 # Алгоритмы создания и удаления концептов и индивидов (v2)
 
@@ -555,8 +555,12 @@ async function funSPARQLvaluesComunicaUpdate(sparqlUpdateQuery) {
 |---|------|---------------|----------|
 | 1 | `ver9b/doc/algorithm/io_concept_individ_v2.md` | **Новый** | Данный документ — обновлённые алгоритмы с комментариями |
 | 2 | `ver9b/9_vadlib/vadlib_sparql.js` | **Изменён** | Добавлена функция `funSPARQLvaluesComunica` |
-| 3 | `ver9b/3_sd/3_sd_create_new_concept/3_sd_create_new_concept_logic.js` | **Изменён** | Замена `checkIdExists` на `checkIdExistsSparql` через funSPARQLvalues, замена `getObjectsForParentSelector` на использование `funSPARQLvaluesComunica` |
-| 4 | `ver9b/3_sd/3_sd_del_concept_individ/3_sd_del_concept_individ_logic.js` | **Не изменён** | Предложения по корректировке описаны в разделе 4 данного документа |
+| 3 | `ver9b/3_sd/3_sd_create_new_concept/3_sd_create_new_concept_sparql.js` | **Новый** | SPARQL запросы вынесены из _logic.js (issue #252) |
+| 4 | `ver9b/3_sd/3_sd_create_new_concept/3_sd_create_new_concept_logic.js` | **Изменён** | Замена `checkIdExists` на `checkIdExistsSparql`, SPARQL запросы вынесены в _sparql.js |
+| 5 | `ver9b/3_sd/3_sd_del_concept_individ/3_sd_del_concept_individ_sparql.js` | **Новый** | SPARQL запросы вынесены из _logic.js (issue #252) |
+| 6 | `ver9b/3_sd/3_sd_del_concept_individ/3_sd_del_concept_individ_logic.js` | **Изменён** | Замена manual fallback на funSPARQLvalues (issue #252), SPARQL запросы вынесены в _sparql.js |
+| 7 | `ver9b/doc/Folder_Structure.md` | **Изменён** | Обновлена структура папок с учётом новых _sparql.js файлов |
+| 8 | `ver9b/index.html` | **Изменён** | Подключены новые _sparql.js файлы |
 
 ---
 

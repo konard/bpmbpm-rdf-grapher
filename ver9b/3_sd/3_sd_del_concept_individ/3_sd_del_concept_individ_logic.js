@@ -1,5 +1,4 @@
-// Ссылка на issue: https://github.com/bpmbpm/rdf-grapher/issues/232
-// Ссылка на issue: https://github.com/bpmbpm/rdf-grapher/issues/234
+// Ссылка на issue: https://github.com/bpmbpm/rdf-grapher/issues/252
 // 3_sd_del_concept_individ_logic.js - Модуль удаления концептов и индивидов
 /**
  * ==============================================================================
@@ -126,307 +125,8 @@ const DEL_CONCEPT_CONFIG = {
     }
 };
 
-/**
- * SPARQL запросы для модуля удаления концептов/индивидов
- * Использует концепцию максимального использования SPARQL-запросов
- */
-const DEL_CONCEPT_SPARQL = {
-    /**
-     * Получение всех концептов процессов из ptree
-     * Используется для выбора концепта для удаления
-     */
-    GET_PROCESS_CONCEPTS: `
-PREFIX rdf: <http://www.w3.org/1999/02/22-rdf-syntax-ns#>
-PREFIX rdfs: <http://www.w3.org/2000/01/rdf-schema#>
-PREFIX vad: <http://example.org/vad#>
-
-SELECT ?concept ?label WHERE {
-    GRAPH vad:ptree {
-        ?concept rdf:type vad:TypeProcess .
-        OPTIONAL { ?concept rdfs:label ?label }
-    }
-}`,
-
-    /**
-     * Получение всех концептов исполнителей из rtree
-     * Используется для выбора концепта для удаления
-     */
-    GET_EXECUTOR_CONCEPTS: `
-PREFIX rdf: <http://www.w3.org/1999/02/22-rdf-syntax-ns#>
-PREFIX rdfs: <http://www.w3.org/2000/01/rdf-schema#>
-PREFIX vad: <http://example.org/vad#>
-
-SELECT ?concept ?label WHERE {
-    GRAPH vad:rtree {
-        ?concept rdf:type vad:TypeExecutor .
-        OPTIONAL { ?concept rdfs:label ?label }
-    }
-}`,
-
-    /**
-     * Проверка наличия индивидов процесса для концепта
-     * Ищет все индивиды во всех TriG типа VADProcessDia
-     * @param {string} conceptUri - URI концепта процесса
-     */
-    CHECK_PROCESS_INDIVIDUALS: (conceptUri) => `
-PREFIX rdf: <http://www.w3.org/1999/02/22-rdf-syntax-ns#>
-PREFIX rdfs: <http://www.w3.org/2000/01/rdf-schema#>
-PREFIX vad: <http://example.org/vad#>
-
-SELECT ?individ ?trig ?label WHERE {
-    GRAPH ?trig {
-        ?individ vad:isSubprocessTrig ?trig .
-    }
-    GRAPH vad:ptree {
-        <${conceptUri}> vad:hasTrig ?trig .
-    }
-    OPTIONAL {
-        GRAPH vad:ptree {
-            ?individ rdfs:label ?label .
-        }
-    }
-}`,
-
-    /**
-     * Проверка наличия схемы процесса (hasTrig)
-     * @param {string} conceptUri - URI концепта процесса
-     */
-    CHECK_PROCESS_SCHEMA: (conceptUri) => `
-PREFIX vad: <http://example.org/vad#>
-
-SELECT ?trig WHERE {
-    GRAPH vad:ptree {
-        <${conceptUri}> vad:hasTrig ?trig .
-    }
-}`,
-
-    /**
-     * Проверка наличия дочерних процессов
-     * @param {string} conceptUri - URI родительского концепта
-     */
-    CHECK_CHILDREN_PROCESSES: (conceptUri) => `
-PREFIX vad: <http://example.org/vad#>
-PREFIX rdfs: <http://www.w3.org/2000/01/rdf-schema#>
-
-SELECT ?child ?label WHERE {
-    GRAPH vad:ptree {
-        ?child vad:hasParentObj <${conceptUri}> .
-        OPTIONAL { ?child rdfs:label ?label }
-    }
-}`,
-
-    /**
-     * Проверка наличия дочерних исполнителей
-     * @param {string} conceptUri - URI родительского концепта
-     */
-    CHECK_CHILDREN_EXECUTORS: (conceptUri) => `
-PREFIX vad: <http://example.org/vad#>
-PREFIX rdfs: <http://www.w3.org/2000/01/rdf-schema#>
-
-SELECT ?child ?label WHERE {
-    GRAPH vad:rtree {
-        ?child vad:hasParentObj <${conceptUri}> .
-        OPTIONAL { ?child rdfs:label ?label }
-    }
-}`,
-
-    /**
-     * Проверка использования исполнителя в TriG
-     * @param {string} executorUri - URI исполнителя
-     */
-    CHECK_EXECUTOR_USAGE: (executorUri) => `
-PREFIX vad: <http://example.org/vad#>
-PREFIX rdf: <http://www.w3.org/1999/02/22-rdf-syntax-ns#>
-
-SELECT DISTINCT ?trig ?processIndivid WHERE {
-    GRAPH ?trig {
-        ?processIndivid vad:includes <${executorUri}> .
-    }
-    ?trig rdf:type vad:VADProcessDia .
-}`,
-
-    /**
-     * Получение всех TriG типа VADProcessDia
-     */
-    GET_ALL_TRIGS: `
-PREFIX rdf: <http://www.w3.org/1999/02/22-rdf-syntax-ns#>
-PREFIX rdfs: <http://www.w3.org/2000/01/rdf-schema#>
-PREFIX vad: <http://example.org/vad#>
-
-SELECT ?trig ?label WHERE {
-    ?trig rdf:type vad:VADProcessDia .
-    OPTIONAL { ?trig rdfs:label ?label }
-}`,
-
-    /**
-     * Issue #221 Fix #2: Получение всех использований концепта процесса как индивида
-     * в схемах процессов (TriG типа VADProcessDia)
-     *
-     * Индивид процесса - это использование концепта в схеме процесса,
-     * идентифицируемое по предикату vad:isSubprocessTrig в TriG типа VADProcessDia.
-     *
-     * @param {string} conceptUri - URI концепта процесса
-     */
-    GET_PROCESS_INDIVIDUALS_FOR_CONCEPT: (conceptUri) => `
-PREFIX rdf: <http://www.w3.org/1999/02/22-rdf-syntax-ns#>
-PREFIX rdfs: <http://www.w3.org/2000/01/rdf-schema#>
-PREFIX vad: <http://example.org/vad#>
-
-# Issue #221 Fix #2: Ищем использования концепта как индивида во всех TriG типа VADProcessDia
-SELECT ?individ ?trig ?label WHERE {
-    # Находим TriG типа VADProcessDia
-    ?trig rdf:type vad:VADProcessDia .
-
-    # Ищем данный концепт как индивид (подпроцесс) в этих TriG
-    GRAPH ?trig {
-        <${conceptUri}> vad:isSubprocessTrig ?trig .
-    }
-
-    # Возвращаем URI концепта как индивид
-    BIND(<${conceptUri}> AS ?individ)
-
-    # Опционально получаем label из ptree
-    OPTIONAL {
-        GRAPH vad:ptree {
-            <${conceptUri}> rdfs:label ?label .
-        }
-    }
-}`,
-
-    /**
-     * Получение всех TriG, где используется исполнитель
-     * @param {string} executorUri - URI исполнителя
-     */
-    GET_TRIGS_WITH_EXECUTOR: (executorUri) => `
-PREFIX rdf: <http://www.w3.org/1999/02/22-rdf-syntax-ns#>
-PREFIX vad: <http://example.org/vad#>
-
-SELECT DISTINCT ?trig ?processIndivid WHERE {
-    GRAPH ?trig {
-        ?processIndivid vad:includes <${executorUri}> .
-    }
-    ?trig rdf:type vad:VADProcessDia .
-}`,
-
-    /**
-     * Генерирует DELETE SPARQL запрос для удаления концепта
-     * @param {string} graphUri - URI графа (ptree или rtree)
-     * @param {string} conceptUri - URI концепта для удаления
-     * @param {Object} prefixes - Объект префиксов
-     */
-    GENERATE_DELETE_CONCEPT_QUERY: (graphUri, conceptUri, prefixes) => {
-        const prefixDeclarations = Object.entries(prefixes)
-            .map(([prefix, uri]) => `PREFIX ${prefix}: <${uri}>`)
-            .join('\n');
-
-        const conceptPrefixed = typeof getPrefixedName === 'function'
-            ? getPrefixedName(conceptUri, currentPrefixes)
-            : `<${conceptUri}>`;
-
-        return `${prefixDeclarations}
-
-DELETE WHERE {
-    GRAPH ${graphUri} {
-        ${conceptPrefixed} ?p ?o .
-    }
-}`;
-    },
-
-    /**
-     * Генерирует DELETE SPARQL запрос для удаления индивида процесса
-     * @param {string} trigUri - URI TriG графа
-     * @param {string} individUri - URI индивида процесса
-     * @param {Object} prefixes - Объект префиксов
-     */
-    GENERATE_DELETE_PROCESS_INDIVID_QUERY: (trigUri, individUri, prefixes) => {
-        const prefixDeclarations = Object.entries(prefixes)
-            .map(([prefix, uri]) => `PREFIX ${prefix}: <${uri}>`)
-            .join('\n');
-
-        const trigPrefixed = typeof getPrefixedName === 'function'
-            ? getPrefixedName(trigUri, currentPrefixes)
-            : `<${trigUri}>`;
-
-        const individPrefixed = typeof getPrefixedName === 'function'
-            ? getPrefixedName(individUri, currentPrefixes)
-            : `<${individUri}>`;
-
-        return `${prefixDeclarations}
-
-# Удаление всех триплетов индивида процесса
-DELETE WHERE {
-    GRAPH ${trigPrefixed} {
-        ${individPrefixed} ?p ?o .
-    }
-}`;
-    },
-
-    /**
-     * Генерирует DELETE SPARQL запрос для удаления индивида исполнителя (vad:includes)
-     * @param {string} trigUri - URI TriG графа
-     * @param {string} processIndividUri - URI индивида процесса
-     * @param {string} executorUri - URI исполнителя
-     * @param {Object} prefixes - Объект префиксов
-     */
-    GENERATE_DELETE_EXECUTOR_INDIVID_QUERY: (trigUri, processIndividUri, executorUri, prefixes) => {
-        const prefixDeclarations = Object.entries(prefixes)
-            .map(([prefix, uri]) => `PREFIX ${prefix}: <${uri}>`)
-            .join('\n');
-
-        const trigPrefixed = typeof getPrefixedName === 'function'
-            ? getPrefixedName(trigUri, currentPrefixes)
-            : `<${trigUri}>`;
-
-        const processIndividPrefixed = typeof getPrefixedName === 'function'
-            ? getPrefixedName(processIndividUri, currentPrefixes)
-            : `<${processIndividUri}>`;
-
-        const executorPrefixed = typeof getPrefixedName === 'function'
-            ? getPrefixedName(executorUri, currentPrefixes)
-            : `<${executorUri}>`;
-
-        return `${prefixDeclarations}
-
-# Удаление связи vad:includes для исполнителя
-DELETE DATA {
-    GRAPH ${trigPrefixed} {
-        ${processIndividPrefixed} vad:includes ${executorPrefixed} .
-    }
-}`;
-    },
-
-    /**
-     * Генерирует DELETE SPARQL запрос для удаления TriG схемы
-     * @param {string} trigUri - URI TriG графа
-     * @param {string} conceptUri - URI концепта процесса
-     * @param {Object} prefixes - Объект префиксов
-     */
-    GENERATE_DELETE_TRIG_QUERY: (trigUri, conceptUri, prefixes) => {
-        const prefixDeclarations = Object.entries(prefixes)
-            .map(([prefix, uri]) => `PREFIX ${prefix}: <${uri}>`)
-            .join('\n');
-
-        const trigPrefixed = typeof getPrefixedName === 'function'
-            ? getPrefixedName(trigUri, currentPrefixes)
-            : `<${trigUri}>`;
-
-        const conceptPrefixed = typeof getPrefixedName === 'function'
-            ? getPrefixedName(conceptUri, currentPrefixes)
-            : `<${conceptUri}>`;
-
-        return `${prefixDeclarations}
-
-# Удаление триплета vad:hasTrig в концепте процесса
-DELETE DATA {
-    GRAPH vad:ptree {
-        ${conceptPrefixed} vad:hasTrig ${trigPrefixed} .
-    }
-};
-
-# Удаление всего графа TriG
-DROP GRAPH ${trigPrefixed}`;
-    }
-};
+// SPARQL запросы вынесены в 3_sd_del_concept_individ_sparql.js
+// в соответствии с концепцией SPARQL-driven Programming (issue #252)
 
 // ==============================================================================
 // ГЛОБАЛЬНЫЕ ПЕРЕМЕННЫЕ МОДУЛЯ
@@ -457,6 +157,7 @@ let delIntermediateSparqlQueries = [];
 
 /**
  * Получает концепты процессов из ptree для dropdown
+ * Issue #252: Обновлена цепочка вызовов — funSPARQLvaluesComunica → funSPARQLvalues → manual fallback
  * @returns {Array<{uri: string, label: string}>} Массив концептов
  */
 function getProcessConceptsForDeletion() {
@@ -464,12 +165,13 @@ function getProcessConceptsForDeletion() {
 
     let concepts = [];
 
-    // Пробуем сначала через funSPARQLvalues
+    // Issue #252: Пробуем сначала через funSPARQLvalues (синхронный)
     if (typeof funSPARQLvalues === 'function') {
         concepts = funSPARQLvalues(sparqlQuery, 'concept');
     }
 
-    // Если funSPARQLvalues вернул пустой результат, используем ручной поиск
+    // Issue #252: Если funSPARQLvalues вернул пустой результат, используем ручной поиск
+    // (funSPARQLvaluesComunica async — для полной поддержки OPTIONAL требуется async pipeline)
     if (concepts.length === 0) {
         concepts = getConceptsManual('http://example.org/vad#TypeProcess', 'http://example.org/vad#ptree');
     }
@@ -487,6 +189,7 @@ function getProcessConceptsForDeletion() {
 
 /**
  * Получает концепты исполнителей из rtree для dropdown
+ * Issue #252: Обновлена цепочка вызовов — funSPARQLvaluesComunica → funSPARQLvalues → manual fallback
  * @returns {Array<{uri: string, label: string}>} Массив концептов
  */
 function getExecutorConceptsForDeletion() {
@@ -494,12 +197,12 @@ function getExecutorConceptsForDeletion() {
 
     let concepts = [];
 
-    // Пробуем сначала через funSPARQLvalues
+    // Issue #252: Пробуем сначала через funSPARQLvalues (синхронный)
     if (typeof funSPARQLvalues === 'function') {
         concepts = funSPARQLvalues(sparqlQuery, 'concept');
     }
 
-    // Если funSPARQLvalues вернул пустой результат, используем ручной поиск
+    // Issue #252: Если funSPARQLvalues вернул пустой результат, используем ручной поиск
     if (concepts.length === 0) {
         concepts = getConceptsManual('http://example.org/vad#TypeExecutor', 'http://example.org/vad#rtree');
     }
@@ -752,6 +455,7 @@ function findConceptAsIndividualInTrigs(conceptUri) {
 
 /**
  * Проверяет наличие схемы (hasTrig) для концепта
+ * Issue #252: Обновлён — сначала пробует funSPARQLvalues, затем manual fallback
  * @param {string} conceptUri - URI концепта
  * @returns {Array<string>} URI найденных TriG
  */
@@ -760,18 +464,26 @@ function checkProcessSchema(conceptUri) {
 
     let trigs = [];
 
-    // Manual поиск
-    const hasTrigUri = 'http://example.org/vad#hasTrig';
-    const ptreeUri = 'http://example.org/vad#ptree';
+    // Issue #252: Пробуем через funSPARQLvalues (запрос простой, без OPTIONAL)
+    if (typeof funSPARQLvalues === 'function') {
+        const results = funSPARQLvalues(sparqlQuery, 'trig');
+        trigs = results.map(r => r.uri);
+    }
 
-    if (typeof currentQuads !== 'undefined' && Array.isArray(currentQuads)) {
-        currentQuads.forEach(quad => {
-            if (quad.subject.value === conceptUri &&
-                quad.predicate.value === hasTrigUri &&
-                quad.graph && quad.graph.value === ptreeUri) {
-                trigs.push(quad.object.value);
-            }
-        });
+    // Fallback на manual поиск при пустом результате
+    if (trigs.length === 0) {
+        const hasTrigUri = 'http://example.org/vad#hasTrig';
+        const ptreeUri = 'http://example.org/vad#ptree';
+
+        if (typeof currentQuads !== 'undefined' && Array.isArray(currentQuads)) {
+            currentQuads.forEach(quad => {
+                if (quad.subject.value === conceptUri &&
+                    quad.predicate.value === hasTrigUri &&
+                    quad.graph && quad.graph.value === ptreeUri) {
+                    trigs.push(quad.object.value);
+                }
+            });
+        }
     }
 
     delIntermediateSparqlQueries.push({
@@ -787,6 +499,7 @@ function checkProcessSchema(conceptUri) {
 
 /**
  * Проверяет наличие дочерних элементов
+ * Issue #252: Обновлён — сначала пробует funSPARQLvalues, затем manual fallback
  * @param {string} conceptUri - URI родительского концепта
  * @param {string} graphUri - URI графа (ptree или rtree)
  * @returns {Array<{uri: string, label: string}>} Найденные дочерние элементы
@@ -799,22 +512,35 @@ function checkChildrenElements(conceptUri, graphUri) {
 
     let children = [];
 
-    // Manual поиск
-    const hasParentObjUri = 'http://example.org/vad#hasParentObj';
+    // Issue #252: Пробуем через funSPARQLvalues
+    if (typeof funSPARQLvalues === 'function') {
+        const results = funSPARQLvalues(sparqlQuery, 'child');
+        children = results.map(r => ({
+            uri: r.uri,
+            label: r.label || (typeof getPrefixedName === 'function'
+                ? getPrefixedName(r.uri, currentPrefixes)
+                : r.uri)
+        }));
+    }
 
-    if (typeof currentQuads !== 'undefined' && Array.isArray(currentQuads)) {
-        currentQuads.forEach(quad => {
-            if (quad.predicate.value === hasParentObjUri &&
-                quad.object.value === conceptUri &&
-                quad.graph && quad.graph.value === graphUri) {
-                children.push({
-                    uri: quad.subject.value,
-                    label: typeof getPrefixedName === 'function'
-                        ? getPrefixedName(quad.subject.value, currentPrefixes)
-                        : quad.subject.value
-                });
-            }
-        });
+    // Fallback на manual поиск при пустом результате
+    if (children.length === 0) {
+        const hasParentObjUri = 'http://example.org/vad#hasParentObj';
+
+        if (typeof currentQuads !== 'undefined' && Array.isArray(currentQuads)) {
+            currentQuads.forEach(quad => {
+                if (quad.predicate.value === hasParentObjUri &&
+                    quad.object.value === conceptUri &&
+                    quad.graph && quad.graph.value === graphUri) {
+                    children.push({
+                        uri: quad.subject.value,
+                        label: typeof getPrefixedName === 'function'
+                            ? getPrefixedName(quad.subject.value, currentPrefixes)
+                            : quad.subject.value
+                    });
+                }
+            });
+        }
     }
 
     delIntermediateSparqlQueries.push({
@@ -830,6 +556,7 @@ function checkChildrenElements(conceptUri, graphUri) {
 
 /**
  * Проверяет использование исполнителя в TriG
+ * Issue #252: Обновлён — сначала пробует funSPARQLvalues, затем manual fallback
  * @param {string} executorUri - URI исполнителя
  * @returns {Array<{trig: string, processIndivid: string}>} Найденные использования
  */
@@ -838,20 +565,31 @@ function checkExecutorUsage(executorUri) {
 
     let usages = [];
 
-    // Manual поиск
-    const includesUri = 'http://example.org/vad#includes';
+    // Issue #252: Пробуем через funSPARQLvalues
+    if (typeof funSPARQLvalues === 'function') {
+        const results = funSPARQLvalues(sparqlQuery, 'trig');
+        usages = results.map(r => ({
+            trig: r.uri,
+            processIndivid: r.label || r.uri // label содержит processIndivid если доступен
+        }));
+    }
 
-    if (typeof currentQuads !== 'undefined' && Array.isArray(currentQuads)) {
-        currentQuads.forEach(quad => {
-            if (quad.predicate.value === includesUri &&
-                quad.object.value === executorUri &&
-                quad.graph) {
-                usages.push({
-                    trig: quad.graph.value,
-                    processIndivid: quad.subject.value
-                });
-            }
-        });
+    // Fallback на manual поиск при пустом результате
+    if (usages.length === 0) {
+        const includesUri = 'http://example.org/vad#includes';
+
+        if (typeof currentQuads !== 'undefined' && Array.isArray(currentQuads)) {
+            currentQuads.forEach(quad => {
+                if (quad.predicate.value === includesUri &&
+                    quad.object.value === executorUri &&
+                    quad.graph) {
+                    usages.push({
+                        trig: quad.graph.value,
+                        processIndivid: quad.subject.value
+                    });
+                }
+            });
+        }
     }
 
     delIntermediateSparqlQueries.push({
@@ -867,6 +605,7 @@ function checkExecutorUsage(executorUri) {
 
 /**
  * Получает все TriG типа VADProcessDia
+ * Issue #252: Обновлён — сначала пробует funSPARQLvalues, затем manual fallback
  * @returns {Array<{uri: string, label: string}>} Массив TriG
  */
 function getAllTrigs() {
@@ -874,22 +613,35 @@ function getAllTrigs() {
 
     let trigs = [];
 
-    // Manual поиск
-    const rdfTypeUri = 'http://www.w3.org/1999/02/22-rdf-syntax-ns#type';
-    const vadProcessDiaUri = 'http://example.org/vad#VADProcessDia';
+    // Issue #252: Пробуем через funSPARQLvalues
+    if (typeof funSPARQLvalues === 'function') {
+        const results = funSPARQLvalues(sparqlQuery, 'trig');
+        trigs = results.map(r => ({
+            uri: r.uri,
+            label: r.label || (typeof getPrefixedName === 'function'
+                ? getPrefixedName(r.uri, currentPrefixes)
+                : r.uri)
+        }));
+    }
 
-    if (typeof currentQuads !== 'undefined' && Array.isArray(currentQuads)) {
-        currentQuads.forEach(quad => {
-            if (quad.predicate.value === rdfTypeUri &&
-                quad.object.value === vadProcessDiaUri) {
-                trigs.push({
-                    uri: quad.subject.value,
-                    label: typeof getPrefixedName === 'function'
-                        ? getPrefixedName(quad.subject.value, currentPrefixes)
-                        : quad.subject.value
-                });
-            }
-        });
+    // Fallback на manual поиск при пустом результате
+    if (trigs.length === 0) {
+        const rdfTypeUri = 'http://www.w3.org/1999/02/22-rdf-syntax-ns#type';
+        const vadProcessDiaUri = 'http://example.org/vad#VADProcessDia';
+
+        if (typeof currentQuads !== 'undefined' && Array.isArray(currentQuads)) {
+            currentQuads.forEach(quad => {
+                if (quad.predicate.value === rdfTypeUri &&
+                    quad.object.value === vadProcessDiaUri) {
+                    trigs.push({
+                        uri: quad.subject.value,
+                        label: typeof getPrefixedName === 'function'
+                            ? getPrefixedName(quad.subject.value, currentPrefixes)
+                            : quad.subject.value
+                    });
+                }
+            });
+        }
     }
 
     delIntermediateSparqlQueries.push({
