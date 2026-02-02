@@ -1,4 +1,4 @@
-<!-- Ссылка на issue: https://github.com/bpmbpm/rdf-grapher/issues/232 -->
+<!-- Ссылка на issue: https://github.com/bpmbpm/rdf-grapher/issues/252 -->
 
 # Структура папок проекта RDF Grapher ver9b
 
@@ -37,9 +37,11 @@ ver9b/
 │   ├── 3_sd_sparql.js            (127 строк)  - SPARQL запросы Smart Design
 │   ├── 3_sd.css                  (5 строк)    - Стили модуля
 │   ├── 3_sd_create_new_concept/  - Подмодуль создания концептов
-│   │   └── 3_sd_create_new_concept_logic.js  (1158 строк)
+│   │   ├── 3_sd_create_new_concept_sparql.js - SPARQL запросы для создания концептов
+│   │   └── 3_sd_create_new_concept_logic.js  - Логика создания концептов
 │   ├── 3_sd_del_concept_individ/ - Подмодуль удаления
-│   │   └── 3_sd_del_concept_individ_logic.js (1748 строк)
+│   │   ├── 3_sd_del_concept_individ_sparql.js - SPARQL запросы для удаления
+│   │   └── 3_sd_del_concept_individ_logic.js  - Логика удаления с проверкой зависимостей
 │   └── 3_sd_create_new_trig/     - Подмодуль создания TriG
 │       └── 3_sd_create_new_trig_logic.js     (131 строка)
 ├── 4_resSPARQL/                  - Модуль Result in SPARQL
@@ -152,7 +154,7 @@ ver9b/
 
 **Файлы:**
 - `vadlib.js` (619 строк) -- Конфигурация: `Mode`, `Filter`, `VAD_ALLOWED_TYPES`, `PROCESS_SUBTYPES`; вспомогательные функции: `getPrefixedName()`, `getLocalName()`, `escapeDotString()`, `generateNodeId()` и другие
-- `vadlib_sparql.js` (274 строки) -- SPARQL движок: `funSPARQLvalues()`, `parseTriplePatterns()`, `executeSimpleSelect()`, `resolveValue()`, `matchQuadToPattern()`
+- `vadlib_sparql.js` -- SPARQL движок: `funSPARQLvalues()`, `funSPARQLvaluesComunica()`, `parseTriplePatterns()`, `executeSimpleSelect()`, `resolveValue()`, `matchQuadToPattern()`
 
 ## 3. Описание подпапок
 
@@ -170,6 +172,10 @@ ver9b/
 
 Алгоритм: запрос к `vad:techtree` для получения предикатов типа -> отображение формы -> генерация SPARQL INSERT.
 
+**Файлы:**
+- `3_sd_create_new_concept_sparql.js` -- SPARQL запросы: `NEW_CONCEPT_SPARQL` (GET_PREDICATES_FROM_TECH_OBJECT, GET_AUTO_GENERATED_PREDICATES, GET_OBJECTS_BY_TYPE_IN_GRAPH, CHECK_ID_EXISTS, GENERATE_INSERT_QUERY)
+- `3_sd_create_new_concept_logic.js` -- Логика создания концептов на основе технологических объектов
+
 ### 3_sd_del_concept_individ/ -- Подмодуль удаления
 
 Реализует функциональность кнопки "Del Concept\Individ". Поддерживает удаление:
@@ -178,6 +184,10 @@ ver9b/
 - Схем процессов (TriG типа `vad:VADProcessDia`)
 
 Перед удалением выполняются проверочные SPARQL запросы для обнаружения зависимых объектов.
+
+**Файлы:**
+- `3_sd_del_concept_individ_sparql.js` -- SPARQL запросы: `DEL_CONCEPT_SPARQL` (GET_PROCESS_CONCEPTS, GET_EXECUTOR_CONCEPTS, CHECK_PROCESS_INDIVIDUALS, CHECK_PROCESS_SCHEMA, CHECK_CHILDREN_PROCESSES, CHECK_EXECUTOR_USAGE, GET_ALL_TRIGS, GENERATE_DELETE_*_QUERY и др.)
+- `3_sd_del_concept_individ_logic.js` -- Логика удаления с проверкой зависимостей
 
 ### 3_sd_create_new_trig/ -- Подмодуль создания TriG
 

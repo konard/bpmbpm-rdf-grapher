@@ -4,7 +4,7 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>RDF Grapher ver9b - Quadstore Сценарий 2: Удаление концепта процесса</title>
-    <!-- Ссылка на issue: https://github.com/bpmbpm/rdf-grapher/issues/245 -->
+    <!-- Ссылка на issue: https://github.com/bpmbpm/rdf-grapher/issues/252 -->
     <style>
         body { font-family: Consolas, Monaco, monospace; padding: 20px; background-color: #f5f5f5; }
         h1 { color: #333; border-bottom: 2px solid #1976D2; padding-bottom: 10px; }
@@ -40,12 +40,14 @@
     <script src="../../9_vadlib/vadlib_sparql.js"></script>
     <!-- Подключение логики триплстора (parseTriGHierarchy, validateVAD) -->
     <script src="../../2_triplestore/2_triplestore_logic.js"></script>
+    <!-- Issue #252: Подключение SPARQL запросов модуля удаления -->
+    <script src="../../3_sd/3_sd_del_concept_individ/3_sd_del_concept_individ_sparql.js"></script>
 
     <script>
         // ============================================================================
         // Сценарий 2: Удаление концепта процесса из quadstore через SPARQL DELETE
         // Предварительно добавляется vad:prosess_test (из сценария 1), затем удаляется
-        // Ссылка на issue: https://github.com/bpmbpm/rdf-grapher/issues/245
+        // Ссылка на issue: https://github.com/bpmbpm/rdf-grapher/issues/252
         // ============================================================================
 
         const testLog = document.getElementById('test-log');
@@ -396,6 +398,46 @@ DELETE DATA {
 
             } catch (error) {
                 logStep('Шаг 2.5 — Вывод ptree', 'failed', `Ошибка: ${error.message}`);
+            }
+
+            // ================================================================
+            // Шаг 2.6: Проверка SPARQL-запросов из DEL_CONCEPT_SPARQL
+            // Issue #252: Тестируем, что SPARQL запросы из отдельного файла доступны
+            // ================================================================
+            logStep('Шаг 2.6 — DEL_CONCEPT_SPARQL', 'running', 'Проверка доступности SPARQL запросов...');
+            try {
+                if (typeof DEL_CONCEPT_SPARQL === 'undefined') {
+                    throw new Error('DEL_CONCEPT_SPARQL не определён');
+                }
+
+                // Проверяем наличие основных свойств и методов
+                const staticQueries = ['GET_PROCESS_CONCEPTS', 'GET_EXECUTOR_CONCEPTS', 'GET_ALL_TRIGS'];
+                const paramQueries = ['CHECK_PROCESS_INDIVIDUALS', 'CHECK_PROCESS_SCHEMA',
+                    'CHECK_CHILDREN_PROCESSES', 'CHECK_EXECUTOR_USAGE',
+                    'GENERATE_DELETE_CONCEPT_QUERY'];
+
+                const missingStatic = staticQueries.filter(q => typeof DEL_CONCEPT_SPARQL[q] === 'undefined');
+                const missingParam = paramQueries.filter(q => typeof DEL_CONCEPT_SPARQL[q] === 'undefined');
+
+                if (missingStatic.length > 0 || missingParam.length > 0) {
+                    throw new Error(`Отсутствуют: ${[...missingStatic, ...missingParam].join(', ')}`);
+                }
+
+                // Тестируем генерацию DELETE запроса
+                const testDeleteQuery = DEL_CONCEPT_SPARQL.GENERATE_DELETE_CONCEPT_QUERY(
+                    'vad:ptree',
+                    'http://example.org/vad#prosess_test',
+                    { 'rdf': 'http://www.w3.org/1999/02/22-rdf-syntax-ns#', 'vad': 'http://example.org/vad#' }
+                );
+
+                if (!testDeleteQuery.includes('DELETE WHERE') || !testDeleteQuery.includes('vad:ptree')) {
+                    throw new Error('GENERATE_DELETE_CONCEPT_QUERY не генерирует корректный запрос');
+                }
+
+                logStep('Шаг 2.6 — DEL_CONCEPT_SPARQL', 'passed',
+                    `Все ${staticQueries.length + paramQueries.length} запросов DEL_CONCEPT_SPARQL доступны и работают`);
+            } catch (error) {
+                logStep('Шаг 2.6 — DEL_CONCEPT_SPARQL', 'failed', `Ошибка: ${error.message}`);
             }
 
             showSummary();

@@ -4,7 +4,7 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>RDF Grapher ver9b - Quadstore Сценарий 1: Добавление концепта процесса</title>
-    <!-- Ссылка на issue: https://github.com/bpmbpm/rdf-grapher/issues/245 -->
+    <!-- Ссылка на issue: https://github.com/bpmbpm/rdf-grapher/issues/252 -->
     <style>
         body { font-family: Consolas, Monaco, monospace; padding: 20px; background-color: #f5f5f5; }
         h1 { color: #333; border-bottom: 2px solid #1976D2; padding-bottom: 10px; }
@@ -39,11 +39,13 @@
     <script src="../../9_vadlib/vadlib_sparql.js"></script>
     <!-- Подключение логики триплстора (parseTriGHierarchy, validateVAD) -->
     <script src="../../2_triplestore/2_triplestore_logic.js"></script>
+    <!-- Issue #252: Подключение SPARQL запросов модуля создания концептов -->
+    <script src="../../3_sd/3_sd_create_new_concept/3_sd_create_new_concept_sparql.js"></script>
 
     <script>
         // ============================================================================
         // Сценарий 1: Добавление нового концепта процесса через SPARQL INSERT
-        // Ссылка на issue: https://github.com/bpmbpm/rdf-grapher/issues/245
+        // Ссылка на issue: https://github.com/bpmbpm/rdf-grapher/issues/252
         // ============================================================================
 
         const testLog = document.getElementById('test-log');
@@ -360,6 +362,49 @@ INSERT DATA {
 
             } catch (error) {
                 logStep('Шаг 1.5 — Вывод ptree', 'failed', `Ошибка: ${error.message}`);
+            }
+
+            // ================================================================
+            // Шаг 1.6: Проверка SPARQL-запросов из NEW_CONCEPT_SPARQL
+            // Issue #252: Тестируем, что SPARQL запросы из отдельного файла доступны
+            // ================================================================
+            logStep('Шаг 1.6 — NEW_CONCEPT_SPARQL', 'running', 'Проверка доступности SPARQL запросов...');
+            try {
+                // Проверяем, что NEW_CONCEPT_SPARQL определён (из 3_sd_create_new_concept_sparql.js)
+                if (typeof NEW_CONCEPT_SPARQL === 'undefined') {
+                    throw new Error('NEW_CONCEPT_SPARQL не определён');
+                }
+
+                // Проверяем наличие основных методов
+                const methods = [
+                    'GET_PREDICATES_FROM_TECH_OBJECT',
+                    'GET_AUTO_GENERATED_PREDICATES',
+                    'GET_OBJECTS_BY_TYPE_IN_GRAPH',
+                    'CHECK_ID_EXISTS',
+                    'GENERATE_INSERT_QUERY'
+                ];
+
+                const missingMethods = methods.filter(m => typeof NEW_CONCEPT_SPARQL[m] === 'undefined');
+                if (missingMethods.length > 0) {
+                    throw new Error(`Отсутствуют методы: ${missingMethods.join(', ')}`);
+                }
+
+                // Тестируем GENERATE_INSERT_QUERY
+                const testQuery = NEW_CONCEPT_SPARQL.GENERATE_INSERT_QUERY(
+                    'vad:ptree',
+                    [{ predicate: 'rdf:type', object: 'vad:TypeProcess', isLiteral: false }],
+                    'vad:test',
+                    { 'rdf': 'http://www.w3.org/1999/02/22-rdf-syntax-ns#', 'vad': 'http://example.org/vad#' }
+                );
+
+                if (!testQuery.includes('INSERT DATA') || !testQuery.includes('vad:ptree')) {
+                    throw new Error('GENERATE_INSERT_QUERY не генерирует корректный запрос');
+                }
+
+                logStep('Шаг 1.6 — NEW_CONCEPT_SPARQL', 'passed',
+                    `Все ${methods.length} методов NEW_CONCEPT_SPARQL доступны и работают`);
+            } catch (error) {
+                logStep('Шаг 1.6 — NEW_CONCEPT_SPARQL', 'failed', `Ошибка: ${error.message}`);
             }
 
             showSummary();

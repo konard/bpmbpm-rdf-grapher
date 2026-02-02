@@ -1,4 +1,4 @@
-// Ссылка на issue: https://github.com/bpmbpm/rdf-grapher/issues/232
+// Ссылка на issue: https://github.com/bpmbpm/rdf-grapher/issues/252
 // vadlib_sparql.js - SPARQL query engine functions for RDF Grapher
 
         function funSPARQLvalues(sparqlQuery, variableName = 'value') {
