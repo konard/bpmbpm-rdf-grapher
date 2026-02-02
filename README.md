@@ -55,5 +55,6 @@ ver1-ver3 это про классический RDF grapher
 Продолжение (развитие) серии ver1-ver2-ver3 (классический RDF grapher \ viewer) через представление схем бизнес-процессов в формате RDF - данных (одна схема процесса = TriG) и их визуализация через графические нотации BPM (для начала в VAD): 
 - https://fox-manager.com/notacii-dlja-modelirovanija-biznes-processov/
 
-## alternative
+## alternative ver1
 - [Визуализация схемы RDF с помощью Neo4J, Tinkerpop, Sail и Gephi](https://coderlessons.com/articles/bazy-dannykh-articles/vizualizatsiia-skhemy-rdf-s-pomoshchiu-neo4j-tinkerpop-sail-i-gephi)
+- search RDF grapher; Visualizing RDF; RDF Graph Visualizer
