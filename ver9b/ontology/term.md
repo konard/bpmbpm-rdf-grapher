@@ -352,6 +352,7 @@ vad:t_another {
 
 - [VAD Ontology](vad-basic-ontology.ttl) — основной файл онтологии
 - [VAD Ontology Tech Appendix](vad-basic-ontology_tech_Appendix.ttl) — технологическое приложение к онтологии
-- [RDF Grapher ver8tree](index.html) — основное приложение
-- [Appendix to Ontology](appendix-to-ontology.md) — приложение к онтологии с матрицами предикатов
+- [RDF Grapher ver9b](index.html) — основное приложение
 - [UI Documentation](ui-documentation.md) — документация по интерфейсу пользователя
+## 9. Архив
+- [Appendix to Ontology](appendix-to-ontology.md) — приложение к онтологии с матрицами предикатов
