@@ -3,10 +3,10 @@
 # ==============================================================================
 #
 # Автор: RDF Grapher Project
-# Версия: 1.2 (ver8tree)
+# Версия: 1.2 (ver9b)
 # Дата создания: 2026-01-21
 # Дата обновления: 2026-01-27
-# Проект: https://github.com/bpmbpm/rdf-grapher/tree/main/ver8tree/index.html
+# Проект: https://github.com/bpmbpm/rdf-grapher/tree/main/ver9b/index.html
 #
 # Описание:
 # Данная онтология формализует модель верхнеуровневых бизнес-процессов в нотации
