@@ -196,6 +196,8 @@ function applyTripleToRdfInput(sparqlQuery, mode) {
             const graphBlockRegex = new RegExp(`\\n?${escapedGraph}\\s*\\{[\\s\\S]*?\\}\\s*`, 'g');
             const newRdf = currentRdf.replace(graphBlockRegex, '');
             rdfInput.value = newRdf.trim();
+            // issue #254: Обновляем quadstore после изменения RDF данных
+            refreshQuadstoreFromRdfInput();
             showResultSparqlMessage('Граф удалён из RDF данных', 'success');
             return;
         }
@@ -219,10 +221,56 @@ function applyTripleToRdfInput(sparqlQuery, mode) {
                     }
                     if (closingBracePos !== -1) {
                         const graphContent = currentRdf.substring(afterOpen, closingBracePos);
+                        // issue #254: Удаляем субъект и все строки продолжения (Turtle shorthand с ;)
+                        // В Turtle/TriG, блок субъекта: "subject pred obj ;" с продолжением на следующих строках
+                        // Продолжение строки начинается с пробелов и содержит предикат-объект, заканчивается ; или .
                         const escapedSubject = subjectName.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
-                        const lineRegex = new RegExp(`\\n?\\s*${escapedSubject}\\s+[^\\n]+`, 'g');
-                        const newGraphContent = graphContent.replace(lineRegex, '');
+                        const subjectRegex = new RegExp(`^\\s*${escapedSubject}\\s`);
+                        const lines = graphContent.split('\n');
+                        const newLines = [];
+                        let skipContinuation = false;
+                        for (let i = 0; i < lines.length; i++) {
+                            const line = lines[i];
+                            const trimmedLine = line.trim();
+                            // Проверяем, начинается ли строка с субъекта
+                            if (subjectRegex.test(line)) {
+                                // Это строка субъекта — проверяем, заканчивается ли она на ; (продолжение)
+                                skipContinuation = trimmedLine.endsWith(';');
+                                // Пропускаем также комментарий перед субъектом (предыдущая строка)
+                                if (newLines.length > 0) {
+                                    const prevLine = newLines[newLines.length - 1].trim();
+                                    if (prevLine.startsWith('#') && prevLine.length > 0) {
+                                        newLines.pop();
+                                    }
+                                }
+                                continue; // Пропускаем строку субъекта
+                            }
+                            if (skipContinuation) {
+                                // Проверяем, является ли строка продолжением (начинается с пробелов, содержит предикат)
+                                if (trimmedLine === '' || trimmedLine.startsWith('#')) {
+                                    // Пустая строка или комментарий — пропускаем если внутри блока
+                                    continue;
+                                }
+                                // Строка продолжения: начинается с пробелов и НЕ начинается с идентификатора субъекта
+                                if (/^\s+\S/.test(line) && !subjectRegex.test(line)) {
+                                    // Это строка продолжения — проверяем, последняя ли она (заканчивается на .)
+                                    if (trimmedLine.endsWith('.')) {
+                                        skipContinuation = false;
+                                    }
+                                    continue; // Пропускаем строку продолжения
+                                } else {
+                                    // Не строка продолжения — конец блока субъекта
+                                    skipContinuation = false;
+                                    newLines.push(line);
+                                }
+                            } else {
+                                newLines.push(line);
+                            }
+                        }
+                        const newGraphContent = newLines.join('\n');
                         rdfInput.value = currentRdf.substring(0, afterOpen) + newGraphContent + currentRdf.substring(closingBracePos);
+                        // issue #254: Обновляем quadstore после изменения RDF данных
+                        refreshQuadstoreFromRdfInput();
                         showResultSparqlMessage(`Триплеты субъекта ${subjectName} удалены из графа`, 'success');
                         return;
                     }
@@ -248,6 +296,8 @@ function applyTripleToRdfInput(sparqlQuery, mode) {
                 const graphContent = currentRdf.substring(afterOpen, closingBracePos);
                 const newGraphContent = graphContent.replace(tripleLineRegex, '');
                 rdfInput.value = currentRdf.substring(0, afterOpen) + newGraphContent + currentRdf.substring(closingBracePos);
+                // issue #254: Обновляем quadstore после изменения RDF данных
+                refreshQuadstoreFromRdfInput();
                 showResultSparqlMessage('Триплет удалён из RDF данных', 'success');
                 return;
             }
@@ -298,7 +348,54 @@ function applyTripleToRdfInput(sparqlQuery, mode) {
         }
     }
     
+    // issue #254: Обновляем quadstore после изменения RDF данных
+    refreshQuadstoreFromRdfInput();
     showResultSparqlMessage(`Триплет применён в формате ${mode === 'simple' ? 'Simple Triple' : 'Shorthand Triple'}`, 'success');
+}
+
+/**
+ * issue #254: Обновляет quadstore (currentQuads, currentPrefixes, currentStore) из содержимого textarea RDF данных
+ * Вызывается после каждого изменения RDF данных через кнопки "Применить как Simple Triple" / "Применить как Shorthand Triple"
+ */
+function refreshQuadstoreFromRdfInput() {
+    const rdfInput = document.getElementById('rdf-input');
+    if (!rdfInput) return;
+
+    const rdfText = rdfInput.value.trim();
+    if (!rdfText) return;
+
+    const inputFormat = document.getElementById('input-format');
+    const format = inputFormat ? inputFormat.value : 'trig';
+
+    try {
+        const parser = new N3.Parser({ format: format });
+        const quads = [];
+        let prefixes = {};
+
+        parser.parse(rdfText, (error, quad, parsedPrefixes) => {
+            if (error) {
+                console.warn('issue #254: Ошибка при обновлении quadstore:', error.message);
+                return;
+            }
+            if (quad) {
+                quads.push(quad);
+            } else {
+                if (parsedPrefixes) {
+                    prefixes = parsedPrefixes;
+                }
+            }
+        });
+
+        // Обновляем глобальные переменные
+        if (quads.length > 0) {
+            currentQuads = quads;
+            currentPrefixes = prefixes;
+            currentStore = null;
+            console.log(`issue #254: Quadstore обновлён, ${quads.length} триплетов`);
+        }
+    } catch (e) {
+        console.warn('issue #254: Не удалось обновить quadstore:', e.message);
+    }
 }
 
 /**
