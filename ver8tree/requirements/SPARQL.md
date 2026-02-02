@@ -593,3 +593,8 @@ if (result.error) {
 - [Oxigraph](https://github.com/oxigraph/oxigraph)
 - [SPARQL 1.1 Update](https://www.w3.org/TR/sparql11-update/)
 - [SPIN - SPARQL Inferencing Notation](https://www.w3.org/Submission/spin-overview/)
+
+---
+
+## 8. Info
+- https://github.com/bpmbpm/doc/blob/main/LD2/faq1.md
