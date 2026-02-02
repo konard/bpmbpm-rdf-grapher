@@ -17,5 +17,5 @@
 ### requirements
 - triple (requirements for the implementation of triplets)
   - Должны поддерживаться оба формата записи триплета - в Simple Triple (простая, полная) и в Shorthand Triple форме (сокращенная, составная).
-
+- должно быть организовано quadstore для хранения TriG с использованием стандартной js-библиотеки
 
