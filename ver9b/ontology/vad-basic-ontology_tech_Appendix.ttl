@@ -6,7 +6,7 @@
 # Версия: 1.1
 # Дата создания: 2026-01-24
 # Дата обновления: 2026-01-27
-# Проект: https://github.com/bpmbpm/rdf-grapher/tree/main/ver8tree/index.html
+# Проект: https://github.com/bpmbpm/rdf-grapher/tree/main/ver9b/index.html
 #
 # Описание:
 # Данный файл содержит технологические классы и объекты, используемые для:
