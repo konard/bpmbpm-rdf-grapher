@@ -74,6 +74,55 @@
         }
 
         /**
+         * Разбивает строку SPARQL triple patterns по символу '.' (конец триплета),
+         * игнорируя точки внутри URI в угловых скобках (<...>) и строковых литералов ("...").
+         * @param {string} content - Строка с triple patterns
+         * @returns {Array<string>} - Массив строк-триплетов
+         */
+        function splitSparqlStatements(content) {
+            const statements = [];
+            let current = '';
+            let inAngleBrackets = 0;
+            let inDoubleQuotes = false;
+            let inSingleQuotes = false;
+
+            for (let i = 0; i < content.length; i++) {
+                const ch = content[i];
+
+                if (ch === '"' && !inSingleQuotes && inAngleBrackets === 0) {
+                    inDoubleQuotes = !inDoubleQuotes;
+                    current += ch;
+                } else if (ch === "'" && !inDoubleQuotes && inAngleBrackets === 0) {
+                    inSingleQuotes = !inSingleQuotes;
+                    current += ch;
+                } else if (ch === '<' && !inDoubleQuotes && !inSingleQuotes) {
+                    inAngleBrackets++;
+                    current += ch;
+                } else if (ch === '>' && !inDoubleQuotes && !inSingleQuotes && inAngleBrackets > 0) {
+                    inAngleBrackets--;
+                    current += ch;
+                } else if (ch === '.' && inAngleBrackets === 0 && !inDoubleQuotes && !inSingleQuotes) {
+                    // Это разделитель триплета
+                    const trimmed = current.trim();
+                    if (trimmed) {
+                        statements.push(trimmed);
+                    }
+                    current = '';
+                } else {
+                    current += ch;
+                }
+            }
+
+            // Добавляем последний фрагмент (без завершающей точки)
+            const trimmed = current.trim();
+            if (trimmed) {
+                statements.push(trimmed);
+            }
+
+            return statements;
+        }
+
+        /**
          * Парсит простые triple patterns из WHERE клаузы
          * @param {string} whereClause - Строка с triple patterns
          * @returns {Array} - Массив паттернов {subject, predicate, object, graph}
@@ -105,8 +154,8 @@
                 // Удаляем OPTIONAL блоки из содержимого графа (они пока не поддерживаются)
                 const cleanedContent = graphContent.replace(/OPTIONAL\s*\{[^}]*\}/gi, '');
 
-                // Парсим триплеты внутри графа
-                const innerStatements = cleanedContent.split(/\s*\.\s*/).filter(s => s.trim());
+                // Парсим триплеты внутри графа (splitSparqlStatements учитывает точки внутри URI)
+                const innerStatements = splitSparqlStatements(cleanedContent);
                 innerStatements.forEach(inner => {
                     // Пропускаем пустые строки и комментарии
                     const trimmed = inner.trim();
@@ -134,7 +183,7 @@
             // Удаляем OPTIONAL блоки
             remainingClause = remainingClause.replace(/OPTIONAL\s*\{[^}]*\}/gi, '');
 
-            const statements = remainingClause.split(/\s*\.\s*/).filter(s => s.trim());
+            const statements = splitSparqlStatements(remainingClause);
             statements.forEach(statement => {
                 const trimmed = statement.trim();
                 if (!trimmed || trimmed.startsWith('#')) return;
