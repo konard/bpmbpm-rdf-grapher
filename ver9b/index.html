@@ -71,8 +71,10 @@
         <div class="window-content" id="content-2_triplestore">
             <div class="container">
                 <div class="rdf-input-header">
-                    <label for="rdf-input">RDF данные</label>
-                    <button class="show-in-window-btn" onclick="showRdfInSeparateWindow()">Показать в окне</button>
+                    <!-- issue #258: Переименовано "RDF данные" в "quadstore", textarea только для просмотра -->
+                    <label for="rdf-input">quadstore</label>
+                    <!-- issue #258: Переименовано "Показать в окне" в "Edit" для открытия редактора -->
+                    <button class="show-in-window-btn" onclick="showRdfEditWindow()">Edit</button>
                     <button class="virtual-rdf-btn" onclick="showVirtualRDFdataWindow()" title="Показать виртуальные вычисляемые данные (vad:processSubtype)">virtualRDFdata</button>
                     <button class="clear-btn" onclick="clearRdfInput()">Очистить</button>
                     <button class="save-as-btn" onclick="saveAsFile()">Сохранить как</button>
@@ -80,7 +82,8 @@
                     <button class="test-btn" onclick="testRdfValidation()">Тест</button>
                     <input type="file" id="file-input" style="display: none;" accept=".ttl,.rdf,.nt,.nq,.trig" onchange="loadFile(event)">
                 </div>
-                <textarea id="rdf-input" placeholder="Введите RDF данные в формате TriG..."></textarea>
+                <!-- issue #258: textarea теперь readonly (только просмотр quadstore) -->
+                <textarea id="rdf-input" placeholder="Данные quadstore (только просмотр)..." readonly></textarea>
 
                 <div class="format-selectors">
                     <div class="form-group">
