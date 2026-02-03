@@ -1,5 +1,6 @@
 // issue #232: Модуль бизнес-логики Smart Design
 // Содержит функции создания, удаления триплетов и применения SPARQL запросов
+// issue #254: Рефакторинг - использование Comunica для выполнения SPARQL UPDATE и N3.Writer для сериализации
 
 /**
  * Создаёт SPARQL INSERT запрос на основе выбранных полей Smart Design
@@ -158,204 +159,110 @@ function smartDesignApplyShorthand() {
 }
 
 /**
- * Применяет триплет к текстовому полю RDF данных
- * @param {string} sparqlQuery - SPARQL запрос
- * @param {string} mode - Режим: 'simple' или 'shorthand'
+ * issue #254: Применяет SPARQL запрос к quadstore через Comunica и обновляет RDF данные
+ * Делегирует выполнение SPARQL запроса внешней библиотеке Comunica вместо использования regex
+ * @param {string} sparqlQuery - SPARQL запрос (INSERT DATA, DELETE DATA, DELETE WHERE)
+ * @param {string} mode - Режим: 'simple' или 'shorthand' (влияет только на сообщение)
  */
-function applyTripleToRdfInput(sparqlQuery, mode) {
+async function applyTripleToRdfInput(sparqlQuery, mode) {
     const rdfInput = document.getElementById('rdf-input');
     if (!rdfInput) {
         showResultSparqlMessage('Текстовое поле RDF не найдено', 'error');
         return;
     }
-    
-    // Извлекаем триплет из SPARQL запроса
-    const tripleMatch = sparqlQuery.match(/GRAPH\s+(\S+)\s*\{([^}]+)\}/);
-    if (!tripleMatch) {
-        showResultSparqlMessage('Не удалось извлечь триплет из SPARQL запроса', 'error');
-        return;
-    }
-    
-    const graphName = tripleMatch[1];
-    const tripleContent = tripleMatch[2].trim();
-    
-    // Определяем является ли это INSERT или DELETE
+
+    // Определяем тип запроса для сообщения
     const isDelete = sparqlQuery.includes('DELETE');
-    
-    if (isDelete) {
-        // issue #239: Реализация удаления триплетов из RDF данных
-        const currentRdf = rdfInput.value;
-        const escapedGraph = graphName.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+    const isInsert = sparqlQuery.includes('INSERT');
+    const isDrop = sparqlQuery.includes('DROP');
 
-        // Проверяем тип DELETE запроса
-        const isDeleteWhere = sparqlQuery.includes('DELETE WHERE');
-        const isDropGraph = sparqlQuery.includes('DROP GRAPH');
-
-        if (isDropGraph) {
-            // DROP GRAPH - удаляем весь граф из RDF данных
-            const graphBlockRegex = new RegExp(`\\n?${escapedGraph}\\s*\\{[\\s\\S]*?\\}\\s*`, 'g');
-            const newRdf = currentRdf.replace(graphBlockRegex, '');
-            rdfInput.value = newRdf.trim();
-            // issue #254: Обновляем quadstore после изменения RDF данных
-            refreshQuadstoreFromRdfInput();
-            showResultSparqlMessage('Граф удалён из RDF данных', 'success');
-            return;
+    try {
+        // issue #254: Инициализируем N3.Store если нужно
+        if (!currentStore) {
+            currentStore = new N3.Store();
+            currentQuads.forEach(q => currentStore.addQuad(q));
         }
 
-        if (isDeleteWhere && tripleContent.includes('?p') && tripleContent.includes('?o')) {
-            // DELETE WHERE { GRAPH g { s ?p ?o } } - удаляем все триплеты субъекта в графе
-            const subjectMatch = tripleContent.match(/(\S+)\s+\?p\s+\?o/);
-            if (subjectMatch) {
-                const subjectName = subjectMatch[1].trim();
-                // Ищем граф и удаляем все строки с данным субъектом
-                const graphOpenRegex = new RegExp(`(${escapedGraph}\\s*\\{)`, 'g');
-                const openMatch = graphOpenRegex.exec(currentRdf);
-                if (openMatch) {
-                    const afterOpen = openMatch.index + openMatch[0].length;
-                    let braceCount = 1;
-                    let closingBracePos = -1;
-                    for (let i = afterOpen; i < currentRdf.length; i++) {
-                        if (currentRdf[i] === '{') braceCount++;
-                        if (currentRdf[i] === '}') braceCount--;
-                        if (braceCount === 0) { closingBracePos = i; break; }
-                    }
-                    if (closingBracePos !== -1) {
-                        const graphContent = currentRdf.substring(afterOpen, closingBracePos);
-                        // issue #254: Удаляем субъект и все строки продолжения (Turtle shorthand с ;)
-                        // В Turtle/TriG, блок субъекта: "subject pred obj ;" с продолжением на следующих строках
-                        // Продолжение строки начинается с пробелов и содержит предикат-объект, заканчивается ; или .
-                        const escapedSubject = subjectName.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
-                        const subjectRegex = new RegExp(`^\\s*${escapedSubject}\\s`);
-                        const lines = graphContent.split('\n');
-                        const newLines = [];
-                        let skipContinuation = false;
-                        for (let i = 0; i < lines.length; i++) {
-                            const line = lines[i];
-                            const trimmedLine = line.trim();
-                            // Проверяем, начинается ли строка с субъекта
-                            if (subjectRegex.test(line)) {
-                                // Это строка субъекта — проверяем, заканчивается ли она на ; (продолжение)
-                                skipContinuation = trimmedLine.endsWith(';');
-                                // Пропускаем также комментарий перед субъектом (предыдущая строка)
-                                if (newLines.length > 0) {
-                                    const prevLine = newLines[newLines.length - 1].trim();
-                                    if (prevLine.startsWith('#') && prevLine.length > 0) {
-                                        newLines.pop();
-                                    }
-                                }
-                                continue; // Пропускаем строку субъекта
-                            }
-                            if (skipContinuation) {
-                                // Проверяем, является ли строка продолжением (начинается с пробелов, содержит предикат)
-                                if (trimmedLine === '' || trimmedLine.startsWith('#')) {
-                                    // Пустая строка или комментарий — пропускаем если внутри блока
-                                    continue;
-                                }
-                                // Строка продолжения: начинается с пробелов и НЕ начинается с идентификатора субъекта
-                                if (/^\s+\S/.test(line) && !subjectRegex.test(line)) {
-                                    // Это строка продолжения — проверяем, последняя ли она (заканчивается на .)
-                                    if (trimmedLine.endsWith('.')) {
-                                        skipContinuation = false;
-                                    }
-                                    continue; // Пропускаем строку продолжения
-                                } else {
-                                    // Не строка продолжения — конец блока субъекта
-                                    skipContinuation = false;
-                                    newLines.push(line);
-                                }
-                            } else {
-                                newLines.push(line);
-                            }
-                        }
-                        const newGraphContent = newLines.join('\n');
-                        rdfInput.value = currentRdf.substring(0, afterOpen) + newGraphContent + currentRdf.substring(closingBracePos);
-                        // issue #254: Обновляем quadstore после изменения RDF данных
-                        refreshQuadstoreFromRdfInput();
-                        showResultSparqlMessage(`Триплеты субъекта ${subjectName} удалены из графа`, 'success');
-                        return;
-                    }
-                }
-            }
-        }
-
-        // DELETE DATA - удаляем конкретный триплет
-        const escapedTriple = tripleContent.replace(/[.*+?^${}()|[\]\\]/g, '\\$&').replace(/\s+/g, '\\s+');
-        const tripleLineRegex = new RegExp(`\\n?\\s*${escapedTriple}`, 'g');
-        const graphOpenRegex = new RegExp(`(${escapedGraph}\\s*\\{)`, 'g');
-        const openMatch = graphOpenRegex.exec(currentRdf);
-        if (openMatch) {
-            const afterOpen = openMatch.index + openMatch[0].length;
-            let braceCount = 1;
-            let closingBracePos = -1;
-            for (let i = afterOpen; i < currentRdf.length; i++) {
-                if (currentRdf[i] === '{') braceCount++;
-                if (currentRdf[i] === '}') braceCount--;
-                if (braceCount === 0) { closingBracePos = i; break; }
-            }
-            if (closingBracePos !== -1) {
-                const graphContent = currentRdf.substring(afterOpen, closingBracePos);
-                const newGraphContent = graphContent.replace(tripleLineRegex, '');
-                rdfInput.value = currentRdf.substring(0, afterOpen) + newGraphContent + currentRdf.substring(closingBracePos);
-                // issue #254: Обновляем quadstore после изменения RDF данных
-                refreshQuadstoreFromRdfInput();
-                showResultSparqlMessage('Триплет удалён из RDF данных', 'success');
-                return;
-            }
-        }
-
-        showResultSparqlMessage('Не удалось найти граф или триплет для удаления. Используйте ручное редактирование.', 'warning');
-        return;
-    }
-    
-    // Для INSERT: добавляем триплет в соответствующий граф
-    const currentRdf = rdfInput.value;
-    
-    // issue #239: Вставляем триплет в конец графа (перед закрывающей }) вместо начала
-    // Также добавляем пустую строку перед новым триплетом
-    const escapedGraphName = graphName.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
-
-    if (mode === 'simple' || mode === 'shorthand') {
-        // Ищем граф и его закрывающую скобку
-        const graphOpenRegex = new RegExp(`${escapedGraphName}\\s*\\{`, 'g');
-        const openMatch = graphOpenRegex.exec(currentRdf);
-
-        if (openMatch) {
-            // Граф найден - ищем закрывающую } для этого графа
-            const afterOpen = openMatch.index + openMatch[0].length;
-            let braceCount = 1;
-            let closingBracePos = -1;
-            for (let i = afterOpen; i < currentRdf.length; i++) {
-                if (currentRdf[i] === '{') braceCount++;
-                if (currentRdf[i] === '}') braceCount--;
-                if (braceCount === 0) {
-                    closingBracePos = i;
-                    break;
-                }
-            }
-
-            if (closingBracePos !== -1) {
-                // Вставляем триплет перед закрывающей скобкой с пустой строкой
-                const beforeClosing = currentRdf.substring(0, closingBracePos);
-                const afterClosing = currentRdf.substring(closingBracePos);
-                rdfInput.value = beforeClosing + `\n    ${tripleContent}\n` + afterClosing;
+        // issue #254: Инициализируем Comunica engine если нужно
+        if (!comunicaEngine) {
+            if (typeof Comunica !== 'undefined' && Comunica.QueryEngine) {
+                comunicaEngine = new Comunica.QueryEngine();
             } else {
-                // Fallback: вставляем после открывающей скобки
-                rdfInput.value = currentRdf.substring(0, afterOpen) + `\n    ${tripleContent}` + currentRdf.substring(afterOpen);
+                throw new Error('Comunica не загружена. Проверьте подключение библиотеки.');
             }
-        } else {
-            // Граф не найден - добавляем в конец с пустой строкой
-            rdfInput.value = currentRdf + `\n\n${graphName} {\n    ${tripleContent}\n}`;
         }
+
+        // issue #254: Выполняем SPARQL UPDATE запрос через Comunica
+        // queryVoid используется для SPARQL UPDATE (INSERT/DELETE/DROP)
+        await comunicaEngine.queryVoid(sparqlQuery, {
+            sources: [currentStore]
+        });
+
+        // issue #254: Обновляем currentQuads из store после изменения
+        currentQuads = currentStore.getQuads(null, null, null, null);
+
+        // issue #254: Сериализуем обновлённые данные обратно в TriG через N3.Writer
+        const trigText = await serializeStoreToTriG(currentStore, currentPrefixes);
+
+        // issue #254: Обновляем текстовое поле RDF данных
+        rdfInput.value = trigText;
+
+        // Формируем сообщение об успехе
+        let message = '';
+        if (isDrop) {
+            message = 'Граф удалён из RDF данных';
+        } else if (isDelete) {
+            message = 'Триплеты удалены из RDF данных';
+        } else if (isInsert) {
+            message = `Триплет применён в формате ${mode === 'simple' ? 'Simple Triple' : 'Shorthand Triple'}`;
+        } else {
+            message = 'SPARQL запрос выполнен';
+        }
+
+        console.log(`issue #254: SPARQL UPDATE выполнен через Comunica, ${currentQuads.length} триплетов в store`);
+        showResultSparqlMessage(message, 'success');
+
+    } catch (error) {
+        console.error('issue #254: Ошибка выполнения SPARQL UPDATE:', error);
+        showResultSparqlMessage(`Ошибка выполнения SPARQL: ${error.message}`, 'error');
     }
-    
-    // issue #254: Обновляем quadstore после изменения RDF данных
-    refreshQuadstoreFromRdfInput();
-    showResultSparqlMessage(`Триплет применён в формате ${mode === 'simple' ? 'Simple Triple' : 'Shorthand Triple'}`, 'success');
+}
+
+/**
+ * issue #254: Сериализует N3.Store в формат TriG через N3.Writer
+ * @param {N3.Store} store - N3.Store с квадами
+ * @param {Object} prefixes - Словарь префиксов {prefix: namespace}
+ * @returns {Promise<string>} - Текст в формате TriG
+ */
+function serializeStoreToTriG(store, prefixes) {
+    return new Promise((resolve, reject) => {
+        // N3.Writer с format 'application/trig' сериализует квады с именованными графами
+        const writer = new N3.Writer({
+            prefixes: prefixes || {},
+            format: 'application/trig'
+        });
+
+        // Получаем все квады из store
+        const quads = store.getQuads(null, null, null, null);
+
+        // Добавляем квады в writer
+        quads.forEach(quad => writer.addQuad(quad));
+
+        // Завершаем сериализацию
+        writer.end((error, result) => {
+            if (error) {
+                reject(error);
+            } else {
+                resolve(result);
+            }
+        });
+    });
 }
 
 /**
  * issue #254: Обновляет quadstore (currentQuads, currentPrefixes, currentStore) из содержимого textarea RDF данных
- * Вызывается после каждого изменения RDF данных через кнопки "Применить как Simple Triple" / "Применить как Shorthand Triple"
+ * Используется при ручном редактировании textarea или при нажатии кнопки "Показать"
+ * Примечание: функция applyTripleToRdfInput теперь использует Comunica напрямую и не вызывает эту функцию
  */
 function refreshQuadstoreFromRdfInput() {
     const rdfInput = document.getElementById('rdf-input');
@@ -390,8 +297,10 @@ function refreshQuadstoreFromRdfInput() {
         if (quads.length > 0) {
             currentQuads = quads;
             currentPrefixes = prefixes;
-            currentStore = null;
-            console.log(`issue #254: Quadstore обновлён, ${quads.length} триплетов`);
+            // issue #254: Также обновляем currentStore для синхронизации
+            currentStore = new N3.Store();
+            quads.forEach(q => currentStore.addQuad(q));
+            console.log(`issue #254: Quadstore обновлён из textarea, ${quads.length} триплетов`);
         }
     } catch (e) {
         console.warn('issue #254: Не удалось обновить quadstore:', e.message);
