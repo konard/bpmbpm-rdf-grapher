@@ -296,9 +296,10 @@ vad:TechnoTree
         TechnoTree - класс для технологических деревьев.
 
         Экземпляры данного класса:
-        - vad:techroot - корень технологического дерева (hasParentObj = vad:root)
+        - vad:techroot - корень технологического дерева (hasParentObj = null, issue #266)
         - vad:techtree - дерево технологических данных из ontology (hasParentObj = vad:techroot)
-        - vad:vtree - дерево виртуальных вычисляемых данных (hasParentObj = vad:techroot)
+
+        issue #264: vad:vtree удалён, используются TriG типа vad:Virtual (vt_*)
 
         Деревья типа vad:TechnoTree НЕ отображаются в treeview окна Publisher.
         Они служат для хранения служебных данных (онтология, вычисляемые подтипы).
