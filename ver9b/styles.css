@@ -46,12 +46,18 @@
             align-items: center;
             gap: 10px;
             margin-bottom: 10px;
-            flex-wrap: wrap;
+            flex-wrap: nowrap;
         }
 
         .rdf-input-header label {
             margin-bottom: 0;
+            flex-shrink: 0;
+        }
+
+        /* issue #266: Dropdown should expand to fill available space */
+        .rdf-input-header select#trig-filter {
             flex: 1;
+            min-width: 200px;
         }
 
         .rdf-input-header button {
@@ -2097,15 +2103,7 @@
             background-color: #7B1FA2;
         }
 
-        .rdf-input-header {
-            display: flex;
-            align-items: center;
-            margin-bottom: 5px;
-        }
-
-        .rdf-input-header label {
-            margin-bottom: 0;
-        }
+        /* issue #266: Removed duplicate rdf-input-header styles - see main definition above */
 
         @media (max-width: 800px) {
             .smart-design-fields {

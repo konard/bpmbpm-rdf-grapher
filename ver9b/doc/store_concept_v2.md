@@ -208,7 +208,7 @@ currentQuads содержит:
 ├── vad:root (TechTree) - корень дерева, hasParentObj = null
 ├── vad:ptree (ObjectTree) - дерево процессов, hasParentObj = vad:root
 ├── vad:rtree (ObjectTree) - дерево исполнителей, hasParentObj = vad:root
-├── vad:techroot (TechnoTree) - корень техно-дерева, hasParentObj = vad:root
+├── vad:techroot (TechnoTree) - корень техно-дерева, hasParentObj = null (issue #266)
 ├── vad:techtree (TechnoTree) - данные из tech_Appendix.ttl, hasParentObj = vad:techroot
 ├── vad:t_p1 (VADProcessDia) - схема процесса p1, hasParentObj = vad:p1
 ├── vad:vt_p1 (Virtual) - виртуальные данные для t_p1, hasParentObj = vad:t_p1
@@ -221,11 +221,11 @@ currentQuads содержит:
 
 Только два TriG могут иметь `vad:hasParentObj = null`:
 1. `vad:root` — корень всего дерева объектов
-2. (опционально) `vad:techroot` может иметь `hasParentObj = vad:root`
+2. `vad:techroot` — корень технологического дерева (issue #266: всегда hasParentObj = null)
 
 Все остальные TriG должны иметь `vad:hasParentObj`:
 - `ObjectTree` → `vad:root`
-- `TechnoTree` → `vad:techroot` или `vad:root`
+- `TechnoTree` (кроме techroot) → `vad:techroot`
 - `VADProcessDia` → концепт процесса (TypeProcess)
 - `Virtual` → родительский `VADProcessDia`
 
