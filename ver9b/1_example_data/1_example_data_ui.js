@@ -1,17 +1,21 @@
 // Ссылка на issue: https://github.com/bpmbpm/rdf-grapher/issues/232
+// Ссылка на issue: https://github.com/bpmbpm/rdf-grapher/issues/260
 // 1_example_data_ui.js - UI функции загрузки примеров
+//
+// issue #260: Убраны встроенные данные (fallback). Примеры загружаются только из файлов.
+// При ошибке загрузки показывается диалог с предложением указать расположение файла.
 
 /**
  * Универсальная функция загрузки примера из файла.
- * Пытается загрузить файл через fetch. При ошибке CORS (локальный файл)
- * показывает информационное сообщение и использует встроенные данные как fallback.
+ * issue #260: Встроенные данные (fallback) не используются.
+ * При ошибке загрузки показывается диалог с предложением выбрать файл.
+ *
  * @param {string} filename - Имя файла для загрузки
  * @param {string} exampleName - Человекочитаемое имя примера
  * @param {string} inputFormat - Формат ввода (turtle, n-triples, n-quads, trig)
  * @param {string} visualizationMode - Режим визуализации (notation, vad, vad-trig)
- * @param {string} fallbackDataKey - Ключ для доступа к встроенным данным EXAMPLE_DATA
  */
-async function loadExampleFromFile(filename, exampleName, inputFormat, visualizationMode, fallbackDataKey) {
+async function loadExampleFromFile(filename, exampleName, inputFormat, visualizationMode) {
     const statusEl = document.getElementById('example-status');
 
     statusEl.textContent = `Загрузка примера ${exampleName}...`;
@@ -42,43 +46,54 @@ async function loadExampleFromFile(filename, exampleName, inputFormat, visualiza
     } catch (error) {
         console.warn(`Не удалось загрузить файл ${fullPath}:`, error.message);
 
-        // Проверяем, это ошибка CORS (локальный файл) или сетевая ошибка
-        const isCorsError = error.message.includes('Failed to fetch') ||
-                            error.message.includes('NetworkError') ||
-                            error.message.includes('CORS');
+        // issue #260: Показываем диалог с предложением выбрать файл (без fallback на встроенные данные)
+        statusEl.textContent = `Ошибка загрузки ${fullPath}: ${error.message}`;
+        statusEl.style.backgroundColor = '#f8d7da';
+        statusEl.style.borderColor = '#f5c6cb';
+        statusEl.style.color = '#721c24';
 
-        if (isCorsError) {
-            // Для локальных файлов показываем информационное сообщение и используем встроенные данные
-            statusEl.textContent = `Файл ${fullPath} недоступен (CORS). Используются встроенные данные.`;
-            statusEl.style.backgroundColor = '#fff3cd';
-            statusEl.style.borderColor = '#ffc107';
-            statusEl.style.color = '#856404';
-        } else {
-            // Для серверных ошибок показываем ошибку, но всё равно используем fallback
-            statusEl.textContent = `Ошибка загрузки ${fullPath}: ${error.message}. Используются встроенные данные.`;
-            statusEl.style.backgroundColor = '#fff3cd';
-            statusEl.style.borderColor = '#ffc107';
-            statusEl.style.color = '#856404';
-        }
+        // Показываем диалог выбора файла
+        if (typeof showFileNotFoundDialog === 'function') {
+            showFileNotFoundDialog({
+                title: `Ошибка загрузки примера ${exampleName}`,
+                message: `Файл не найден по пути: ${fullPath}`,
+                fileType: '.ttl,.trig',
+                onFileSelected: async (file) => {
+                    try {
+                        const content = await file.text();
+                        document.getElementById('rdf-input').value = content;
+                        document.getElementById('input-format').value = inputFormat;
+                        document.getElementById('visualization-mode').value = visualizationMode;
+                        updateModeDescription();
 
-        // Используем встроенные данные как fallback
-        try {
-            document.getElementById('rdf-input').value = EXAMPLE_DATA[fallbackDataKey];
-            document.getElementById('input-format').value = inputFormat;
-            document.getElementById('visualization-mode').value = visualizationMode;
-            updateModeDescription();
-        } catch (fallbackError) {
-            console.error(`Ошибка при использовании встроенных данных:`, fallbackError);
-            statusEl.textContent = `Ошибка загрузки примера ${exampleName}: ${fallbackError.message}`;
-            statusEl.style.backgroundColor = '#f8d7da';
-            statusEl.style.borderColor = '#f5c6cb';
-            statusEl.style.color = '#721c24';
+                        statusEl.textContent = `Пример загружен из файла: ${file.name}`;
+                        statusEl.style.backgroundColor = '#d4edda';
+                        statusEl.style.borderColor = '#c3e6cb';
+                        statusEl.style.color = '#155724';
+
+                        if (typeof showSuccessNotification === 'function') {
+                            showSuccessNotification(`Пример ${exampleName} загружен из файла: ${file.name}`);
+                        }
+                    } catch (parseError) {
+                        statusEl.textContent = `Ошибка парсинга файла: ${parseError.message}`;
+                        statusEl.style.backgroundColor = '#f8d7da';
+                        statusEl.style.borderColor = '#f5c6cb';
+                        statusEl.style.color = '#721c24';
+
+                        if (typeof showErrorNotification === 'function') {
+                            showErrorNotification(`Ошибка парсинга: ${parseError.message}`);
+                        }
+                    }
+                }
+            });
         }
     }
 }
 
 /**
  * Загружает пример TriG VADv5 с иерархией объектов через hasParentObj
+ * issue #260: Загрузка только из файла, без встроенных данных
+ *
  * Содержит:
  * - vad:root: корень дерева (TechTree)
  * - vad:ptree: дерево процессов (ObjectTree)
@@ -86,16 +101,18 @@ async function loadExampleFromFile(filename, exampleName, inputFormat, visualiza
  * - t_pGA, t_p1: схемы процессов (VADProcessDia)
  */
 function loadExampleTrigVADv5() {
-    loadExampleFromFile('Trig_VADv5.ttl', 'Trig_VADv5', 'trig', 'vad-trig', 'trig-vad-v5');
+    loadExampleFromFile('Trig_VADv5.ttl', 'Trig_VADv5', 'trig', 'vad-trig');
 }
 
 /**
  * Issue #219 Fix #5: Загружает пример TriG VADv6 с добавленным vad:pDel для тестирования удаления
+ * issue #260: Загрузка только из файла, без встроенных данных
+ *
  * Содержит все то же, что и Trig_VADv5, плюс:
  * - vad:pDel: концепт процесса для тестирования удаления
  */
 function loadExampleTrigVADv6() {
-    loadExampleFromFile('Trig_VADv6.ttl', 'Trig_VADv6', 'trig', 'vad-trig', 'trig-vad-v6');
+    loadExampleFromFile('Trig_VADv6.ttl', 'Trig_VADv6', 'trig', 'vad-trig');
 }
 
 /**
