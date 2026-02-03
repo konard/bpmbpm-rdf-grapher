@@ -1,3 +1,5 @@
 ## test
-- https://bpmbpm.github.io/rdf-grapher/ver9b/test/quad/test_quad_scenario1.html
-- https://bpmbpm.github.io/rdf-grapher/ver9b/test/quad/test_quad_scenario2.html
+### Create & Deleta Concept
+- https://bpmbpm.github.io/rdf-grapher/ver9b/test/quad/test_simple_triple.html
+- https://bpmbpm.github.io/rdf-grapher/ver9b/test/quad/test_shorthand_triple.html
+- https://bpmbpm.github.io/rdf-grapher/ver9b/test/quad/test_mixed_triple.html
