@@ -70,29 +70,61 @@ function clearRdfInput() {
 
 /**
  * Сохраняет содержимое RDF поля как файл
+ * issue #262: "Save as" НЕ записывает TechnoTree TriG в файл
  */
 function saveAsFile() {
-    const content = document.getElementById('rdf-input').value;
-    if (!content.trim()) {
+    // issue #262: Получаем квады БЕЗ TechnoTree типов (режим noTech)
+    // независимо от текущего фильтра отображения
+    const filteredQuads = typeof getFilteredQuads === 'function'
+        ? getFilteredQuads(TRIG_FILTER_MODES.NO_TECH)
+        : currentQuads;
+
+    if (!filteredQuads || filteredQuads.length === 0) {
         alert('Нет данных для сохранения');
         return;
     }
 
-    const format = document.getElementById('input-format').value;
-    let extension = 'ttl';
-    if (format === 'n-triples') extension = 'nt';
-    else if (format === 'n-quads') extension = 'nq';
-    else if (format === 'trig') extension = 'trig';
+    // Сериализуем квады в TriG формат
+    try {
+        const writer = new N3.Writer({
+            format: 'application/trig',
+            prefixes: currentPrefixes
+        });
 
-    const blob = new Blob([content], { type: 'text/plain' });
-    const url = URL.createObjectURL(blob);
-    const a = document.createElement('a');
-    a.href = url;
-    a.download = `rdf-data.${extension}`;
-    document.body.appendChild(a);
-    a.click();
-    document.body.removeChild(a);
-    URL.revokeObjectURL(url);
+        filteredQuads.forEach(quad => writer.addQuad(quad));
+
+        writer.end((error, result) => {
+            if (error) {
+                console.error('Error serializing quads for save:', error);
+                alert('Ошибка при сериализации данных');
+                return;
+            }
+
+            if (!result || !result.trim()) {
+                alert('Нет данных для сохранения');
+                return;
+            }
+
+            const format = document.getElementById('input-format').value;
+            let extension = 'ttl';
+            if (format === 'n-triples') extension = 'nt';
+            else if (format === 'n-quads') extension = 'nq';
+            else if (format === 'trig') extension = 'trig';
+
+            const blob = new Blob([result], { type: 'text/plain' });
+            const url = URL.createObjectURL(blob);
+            const a = document.createElement('a');
+            a.href = url;
+            a.download = `rdf-data.${extension}`;
+            document.body.appendChild(a);
+            a.click();
+            document.body.removeChild(a);
+            URL.revokeObjectURL(url);
+        });
+    } catch (error) {
+        console.error('Error in saveAsFile:', error);
+        alert('Ошибка при сохранении файла');
+    }
 }
 
 /**
