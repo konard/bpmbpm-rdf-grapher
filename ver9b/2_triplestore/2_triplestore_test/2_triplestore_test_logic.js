@@ -143,7 +143,8 @@ function copyTestResultToClipboard() {
 }
 
 /**
- * issue #236: Отображает список всех проверок с кратким описанием
+ * issue #236, #264: Отображает список всех проверок с кратким описанием
+ * issue #264: Добавлена информация о модуле (файле) с SPARQL-запросами
  * Вызывается при нажатии кнопки "Список проверок" в модальном окне тестирования
  */
 function showChecksList() {
@@ -152,37 +153,48 @@ function showChecksList() {
         '═══════════════════════════════════════\n\n' +
         '1. Проверка синтаксиса (N3.js парсинг)\n' +
         '   Проверяет корректность синтаксиса RDF данных через парсер N3.js.\n' +
-        '   Обнаруживает синтаксические ошибки в формате TriG.\n\n' +
+        '   Обнаруживает синтаксические ошибки в формате TriG.\n' +
+        '   📁 Модуль: 2_triplestore/2_triplestore_test/2_triplestore_test_logic.js\n\n' +
         '2. Валидация VAD онтологии\n' +
         '   Проверяет допустимость предикатов и типов в соответствии\n' +
-        '   с VAD онтологией (VAD_ALLOWED_TYPES, VAD_ALLOWED_PREDICATES).\n\n' +
+        '   с VAD онтологией (VAD_ALLOWED_TYPES, VAD_ALLOWED_PREDICATES).\n' +
+        '   📁 Модуль: 2_triplestore/2_triplestore_logic.js (validateVAD)\n\n' +
         '3. Правило: processesHaveIsSubprocessTrig\n' +
         '   Каждый индивид процесса (vad:TypeProcess) в VADProcessDia\n' +
-        '   должен иметь предикат vad:isSubprocessTrig.\n\n' +
+        '   должен иметь предикат vad:isSubprocessTrig.\n' +
+        '   📁 Модуль: 2_triplestore/2_triplestore_validation.js\n\n' +
         '4. Правило: processesHaveExecutor\n' +
         '   Каждый индивид процесса в VADProcessDia должен иметь\n' +
-        '   предикат vad:hasExecutor (связь с группой исполнителей).\n\n' +
+        '   предикат vad:hasExecutor (связь с группой исполнителей).\n' +
+        '   📁 Модуль: 2_triplestore/2_triplestore_validation.js\n\n' +
         '5. Правило: executorGroupsInCorrectGraph\n' +
         '   ExecutorGroup (vad:ExecutorGroup) должен находиться\n' +
-        '   в VADProcessDia графах, а не в ptree или rtree.\n\n' +
+        '   в VADProcessDia графах, а не в ptree или rtree.\n' +
+        '   📁 Модуль: 2_triplestore/2_triplestore_validation.js\n\n' +
         '6. Правило: processMetadataInPtree\n' +
         '   Метаданные процессов (rdf:type, rdfs:label, dcterms:description,\n' +
-        '   vad:hasTrig, vad:hasParentObj) должны быть в графе vad:ptree.\n\n' +
+        '   vad:hasTrig, vad:hasParentObj) должны быть в графе vad:ptree.\n' +
+        '   📁 Модуль: 2_triplestore/2_triplestore_validation.js\n\n' +
         '7. Правило: executorMetadataInRtree\n' +
         '   Метаданные исполнителей (rdf:type, rdfs:label, vad:hasParentObj)\n' +
-        '   должны быть в графе vad:rtree.\n\n' +
+        '   должны быть в графе vad:rtree.\n' +
+        '   📁 Модуль: 2_triplestore/2_triplestore_validation.js\n\n' +
         '8. Правило: vadProcessDiaHasParentObj\n' +
         '   Все схемы процессов (vad:VADProcessDia) должны иметь\n' +
-        '   предикат vad:hasParentObj (указывает на концепт процесса).\n\n' +
+        '   предикат vad:hasParentObj (указывает на концепт процесса).\n' +
+        '   📁 Модуль: 2_triplestore/2_triplestore_validation.js\n\n' +
         '9. Правило: objectTreeHasParentObj\n' +
         '   Деревья объектов (vad:ObjectTree, ProcessTree, ExecutorTree)\n' +
-        '   должны иметь vad:hasParentObj = vad:root.\n\n' +
+        '   должны иметь vad:hasParentObj = vad:root.\n' +
+        '   📁 Модуль: 2_triplestore/2_triplestore_validation.js\n\n' +
         '10. Правило: processConceptsHaveParentObj\n' +
         '    Все концепты процессов в ptree должны иметь\n' +
-        '    предикат vad:hasParentObj.\n\n' +
+        '    предикат vad:hasParentObj.\n' +
+        '    📁 Модуль: 2_triplestore/2_triplestore_validation.js\n\n' +
         '11. Правило: executorConceptsHaveParentObj\n' +
         '    Все концепты исполнителей в rtree должны иметь\n' +
-        '    предикат vad:hasParentObj.\n\n' +
+        '    предикат vad:hasParentObj.\n' +
+        '    📁 Модуль: 2_triplestore/2_triplestore_validation.js\n\n' +
         '═══════════════════════════════════════';
 
     // issue #239: Убеждаемся, что модальное окно видимо при показе списка проверок

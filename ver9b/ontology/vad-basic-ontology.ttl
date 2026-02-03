@@ -493,6 +493,8 @@ vad:ExecutorTree
 vad:root
     rdf:type vad:TechTree ;
     rdfs:label "Корень Дерева" ;
+    # issue #264: vad:root не имеет hasParentObj (корень дерева)
+    # ПРАВИЛО: только vad:root и vad:techroot могут иметь hasParentObj = null
     rdfs:comment """
         Корневой технический узел (root) - образует корень дерева всех объектов
         при формировании иерархии в Окне «Дерево TriG».
@@ -500,39 +502,22 @@ vad:root
         Узел root в дереве не отображается - он служит только для
         определения верхнего уровня иерархии.
 
+        issue #264: ПРАВИЛО ВАЛИДАЦИИ:
         vad:root НЕ имеет свойства vad:hasParentObj (он сам является корнем).
+        Только vad:root и vad:techroot могут иметь vad:hasParentObj = null.
+        Это правило может использоваться при валидации quadstore.
 
         Использование:
         vad:ptree vad:hasParentObj vad:root .
         vad:rtree vad:hasParentObj vad:root .
-        vad:techroot vad:hasParentObj vad:root .
     """ ;
     dcterms:description "Технический корневой узел дерева объектов" .
 
 # ------------------------------------------------------------------------------
-# vad:techroot - Корневой узел технологического дерева
+# vad:techroot - ПЕРЕНЕСЁН в vad-basic-ontology_tech_Appendix.ttl (issue #264)
 # ------------------------------------------------------------------------------
-# Корень для технологических деревьев (techtree, vtree)
+# См. vad-basic-ontology_tech_Appendix.ttl для описания vad:techroot
 # ------------------------------------------------------------------------------
-
-vad:techroot
-    rdf:type vad:TechnoTree ;
-    rdfs:label "Корень Технологического Дерева" ;
-    vad:hasParentObj vad:root ;
-    rdfs:comment """
-        Корневой узел технологического дерева (techroot).
-
-        Является родителем для:
-        - vad:techtree - дерево технологических данных из ontology
-        - vad:vtree - дерево виртуальных вычисляемых данных
-
-        Деревья типа vad:TechnoTree не отображаются в treeview окна Publisher.
-
-        Использование:
-        vad:techtree vad:hasParentObj vad:techroot .
-        vad:vtree vad:hasParentObj vad:techroot .
-    """ ;
-    dcterms:description "Корневой узел технологического дерева" .
 
 # ------------------------------------------------------------------------------
 # vad:ptree - Дерево процессов
