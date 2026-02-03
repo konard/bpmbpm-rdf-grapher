@@ -107,28 +107,28 @@ DELETE DATA {
 
 /**
  * Очищает поля Smart Design
+ * issue #256: Очищает только содержимое полей (dropdowns), но не удаляет и не скрывает
+ * поля статусов (result-sparql-message, smart-design-message)
  */
 function smartDesignClear() {
+    // issue #256: Очищаем только значения выпадающих списков Smart Design
     const fields = ['smart-design-subject-type', 'smart-design-subject', 'smart-design-predicate', 'smart-design-object'];
     fields.forEach(id => {
         const el = document.getElementById(id);
         if (el) el.value = '';
     });
 
-    // issue #239: Также очищаем Result in SPARQL и его статус
+    // issue #256: Очищаем Result in SPARQL textarea, но НЕ трогаем поля статуса
     const resultTextarea = document.getElementById('result-sparql-query');
     if (resultTextarea) {
         resultTextarea.value = '';
     }
-    // issue #241: Очищаем текст сообщения, но не скрываем поле
-    const resultMessage = document.getElementById('result-sparql-message');
-    if (resultMessage) {
-        resultMessage.textContent = '';
-        resultMessage.className = 'smart-design-message';
-    }
 
-    // issue #241: Очищаем текст сообщения Smart Design, но не скрываем поле
-    clearSmartDesignMessage();
+    // issue #256: НЕ очищаем result-sparql-message - оставляем как есть
+    // (ранее очищался текст и класс, что приводило к "удалению" поля со статусом)
+
+    // issue #256: НЕ вызываем clearSmartDesignMessage() - оставляем статус как есть
+    // (ранее это приводило к очистке поля smart-design-message)
 }
 
 /**
