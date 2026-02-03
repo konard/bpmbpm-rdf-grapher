@@ -11,3 +11,6 @@
 - https://github.com/bpmbpm/rdf-grapher/blob/main/ver8tree/doc/links1.md
 - Appendix 1: Class Hierarchy https://github.com/bpmbpm/rdf-grapher/blob/main/ver8tree/doc/appendix-to-ontology.md
  
+### design solution
+#### SPARQL
+- https://github.com/bpmbpm/rdf-grapher/pull/255 ver9b/3_sd/3_sd_logic.js — заменена логика applyTripleToRdfInput() на Comunica-based, добавлена serializeStoreToTriG()
