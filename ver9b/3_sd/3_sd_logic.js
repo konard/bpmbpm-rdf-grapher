@@ -230,6 +230,7 @@ async function applyTripleToRdfInput(sparqlQuery, mode) {
 
 /**
  * issue #254: Сериализует N3.Store в формат TriG через N3.Writer
+ * issue #258: Добавлена постобработка для замены полных URI на префиксную форму
  * @param {N3.Store} store - N3.Store с квадами
  * @param {Object} prefixes - Словарь префиксов {prefix: namespace}
  * @returns {Promise<string>} - Текст в формате TriG
@@ -253,10 +254,52 @@ function serializeStoreToTriG(store, prefixes) {
             if (error) {
                 reject(error);
             } else {
-                resolve(result);
+                // issue #258: Постобработка - замена полных URI на префиксную форму
+                // N3.Writer не использует префиксы для URI с не-ASCII символами (кириллица, точки и др.)
+                const processedResult = replaceFullUrisWithPrefixes(result, prefixes);
+                resolve(processedResult);
             }
         });
     });
+}
+
+/**
+ * issue #258: Заменяет полные URI в формате <http://...> на префиксную форму prefix:localName
+ * Это необходимо, так как N3.Writer не использует префиксы для URI содержащих
+ * не-ASCII символы (кириллица) или специальные символы (точки в локальном имени)
+ * @param {string} trigText - Текст в формате TriG
+ * @param {Object} prefixes - Словарь префиксов {prefix: namespace}
+ * @returns {string} - Текст с замененными URI
+ */
+function replaceFullUrisWithPrefixes(trigText, prefixes) {
+    if (!prefixes || Object.keys(prefixes).length === 0) {
+        return trigText;
+    }
+
+    let result = trigText;
+
+    // Сортируем префиксы по длине namespace (от длинных к коротким)
+    // чтобы более специфичные namespace обрабатывались первыми
+    const sortedPrefixes = Object.entries(prefixes)
+        .sort((a, b) => b[1].length - a[1].length);
+
+    for (const [prefix, namespace] of sortedPrefixes) {
+        // Регулярное выражение для поиска полных URI в формате <namespace + localName>
+        // Учитываем, что localName может содержать любые символы, включая кириллицу, точки и др.
+        // Исключаем символы, которые не могут быть в URI: пробелы, >, <
+        const escapedNamespace = namespace.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+        const uriPattern = new RegExp(`<${escapedNamespace}([^>\\s]+)>`, 'g');
+
+        result = result.replace(uriPattern, (match, localName) => {
+            // Проверяем, что localName не пустой
+            if (!localName) {
+                return match;
+            }
+            return `${prefix}:${localName}`;
+        });
+    }
+
+    return result;
 }
 
 /**
