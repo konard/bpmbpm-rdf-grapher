@@ -81,11 +81,16 @@
                     <button class="load-btn" onclick="document.getElementById('file-input').click()">Загрузить</button>
                     <button class="test-btn" onclick="testRdfValidation()">Тест</button>
                     <input type="file" id="file-input" style="display: none;" accept=".ttl,.rdf,.nt,.nq,.trig" onchange="loadFile(event)">
-                    <!-- issue #260: Фильтр TriG для отображения/скрытия технологических данных -->
+                    <!-- issue #260, #262: Фильтр TriG для отображения/скрытия технологических данных -->
                     <select id="trig-filter" onchange="updateTrigFilter()" title="Фильтр TriG данных" style="margin-left: 10px;">
-                        <option value="noTech" selected>Без techtree</option>
+                        <option value="noTech" selected>Без techtree (по умолч.)</option>
                         <option value="all">Все TriG</option>
-                        <option value="onlyTech">Только techtree</option>
+                        <option value="objectTree">ObjectTree</option>
+                        <option value="vadProcessDia">VADProcessDia</option>
+                        <option value="objectTreePlusVad">ObjectTree+VADProcessDia</option>
+                        <option value="vtree">vtree</option>
+                        <option value="techtree">TechTree</option>
+                        <option value="onlyTech">Только techtree (все)</option>
                     </select>
                 </div>
                 <!-- issue #258: textarea теперь readonly (только просмотр quadstore) -->

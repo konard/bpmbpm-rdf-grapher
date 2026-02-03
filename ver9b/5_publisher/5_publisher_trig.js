@@ -77,6 +77,11 @@
             const objInfo = hierarchy[objUri];
             if (!objInfo) return '';
 
+            // issue #262: TechnoTree типы не отображаются в Publisher treeview
+            if (objInfo.isTechnoTree) {
+                return '';
+            }
+
             const prefixedUri = getPrefixedName(objUri, prefixes);
             const localName = getLocalName(objUri);
             const displayLabel = objInfo.label || localName;
@@ -531,8 +536,19 @@
                 return;
             }
 
+            // issue #262: фильтруем TechnoTree типы из корневых элементов
+            const filteredRootUris = rootUris.filter(rootUri => {
+                const objInfo = hierarchy[rootUri];
+                return objInfo && !objInfo.isTechnoTree;
+            });
+
+            if (filteredRootUris.length === 0) {
+                treeContent.innerHTML = '<div class="trig-properties-empty">Нет доступных TriG графов</div>';
+                return;
+            }
+
             let html = '';
-            rootUris.forEach(rootUri => {
+            filteredRootUris.forEach(rootUri => {
                 if (hierarchy[rootUri]) {
                     html += buildTriGTreeHtml(rootUri, hierarchy, prefixes, 0);
                 }

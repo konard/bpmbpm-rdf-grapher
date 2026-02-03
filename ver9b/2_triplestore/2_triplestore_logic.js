@@ -450,8 +450,14 @@ function parseTriGHierarchy(quads, prefixes) {
         'http://example.org/vad#VADProcessDia',
         'http://example.org/vad#ObjectTree',
         'http://example.org/vad#TechTree',
+        'http://example.org/vad#TechnoTree',   // issue #262: технологические деревья
         'http://example.org/vad#ProcessTree',  // устаревший
         'http://example.org/vad#ExecutorTree'  // устаревший
+    ];
+
+    // issue #262: TechnoTree типы (не отображаются в Publisher treeview)
+    const TECHNO_TREE_TYPE_URIS = [
+        'http://example.org/vad#TechnoTree'
     ];
 
     // Собираем все уникальные именованные графы
@@ -501,7 +507,8 @@ function parseTriGHierarchy(quads, prefixes) {
                 hasParent: null,
                 children: [],
                 processes: [],
-                isTrig: graphUris.has(subjectUri)  // Является ли объект именованным графом
+                isTrig: graphUris.has(subjectUri),  // Является ли объект именованным графом
+                isTechnoTree: false  // issue #262: флаг для TechnoTree типов
             };
         }
 
@@ -516,6 +523,10 @@ function parseTriGHierarchy(quads, prefixes) {
             // Проверяем, является ли тип TriG
             if (TRIG_TYPE_URIS.includes(quad.object.value)) {
                 allObjects[subjectUri].isTrig = true;
+            }
+            // issue #262: Проверяем, является ли тип TechnoTree
+            if (TECHNO_TREE_TYPE_URIS.includes(quad.object.value)) {
+                allObjects[subjectUri].isTechnoTree = true;
             }
         }
 
@@ -538,6 +549,7 @@ function parseTriGHierarchy(quads, prefixes) {
             hierarchy[uri].type = objInfo.type;
             hierarchy[uri].hasParent = objInfo.hasParent;
             hierarchy[uri].isTrig = objInfo.isTrig;
+            hierarchy[uri].isTechnoTree = objInfo.isTechnoTree;  // issue #262
             hierarchy[uri].definesProcess = objInfo.definesProcess;
         } else if (objInfo.hasParent) {
             // Не граф, но имеет hasParentObj - добавляем в иерархию
@@ -550,6 +562,7 @@ function parseTriGHierarchy(quads, prefixes) {
                 quads: [],
                 processes: [],
                 isTrig: objInfo.isTrig,
+                isTechnoTree: objInfo.isTechnoTree,  // issue #262
                 definesProcess: objInfo.definesProcess
             };
         }
@@ -557,9 +570,16 @@ function parseTriGHierarchy(quads, prefixes) {
 
     // Проверяем, что все графы имеют hasParentObj
     // ИСКЛЮЧЕНИЕ: vad:root (тип TechTree) не имеет hasParentObj - это корень дерева
+    // issue #262: TechnoTree типы проверяются отдельно (они должны иметь hasParentObj,
+    // но это не является ошибкой валидации в данном контексте)
     Object.values(hierarchy).forEach(graphInfo => {
         // Только для именованных графов проверяем наличие hasParentObj
+        // Пропускаем vad:root и TechnoTree типы (techtree, vtree имеют hasParentObj=techroot)
         if (graphUris.has(graphInfo.uri) && !graphInfo.hasParent && graphInfo.uri !== rootUri) {
+            // issue #262: Пропускаем TechnoTree типы - они не отображаются в treeview
+            if (graphInfo.isTechnoTree) {
+                return;
+            }
             const graphLabel = getPrefixedName(graphInfo.uri, prefixes);
             errors.push({
                 graph: graphLabel,

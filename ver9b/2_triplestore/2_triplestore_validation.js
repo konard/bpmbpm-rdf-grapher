@@ -305,6 +305,7 @@ const VAD_VALIDATION_RULES = {
      *
      * Все схемы процессов (vad:VADProcessDia) должны иметь предикат vad:hasParentObj,
      * указывающий на концепт процесса, который они детализируют.
+     * ИСКЛЮЧЕНИЕ: TechnoTree типы (techtree, vtree) не требуют hasParentObj для данного правила
      *
      * @param {Array} quads - Массив RDF квадов
      * @param {Object} prefixes - Объект префиксов
@@ -315,6 +316,7 @@ const VAD_VALIDATION_RULES = {
 
         const vadProcessDiaGraphs = new Set();
         const graphsWithParentObj = new Set();
+        const technoTreeGraphs = new Set();
 
         quads.forEach(quad => {
             const predicateUri = quad.predicate.value;
@@ -328,6 +330,14 @@ const VAD_VALIDATION_RULES = {
                 vadProcessDiaGraphs.add(subjectUri);
             }
 
+            // Найти все TechnoTree по rdf:type (issue #262)
+            if ((predicateUri === 'http://www.w3.org/1999/02/22-rdf-syntax-ns#type' ||
+                 predicateUri.endsWith('#type')) &&
+                (quad.object.value === 'http://example.org/vad#TechnoTree' ||
+                 quad.object.value.endsWith('#TechnoTree'))) {
+                technoTreeGraphs.add(subjectUri);
+            }
+
             // Найти графы с hasParentObj
             if (predicateUri === 'http://example.org/vad#hasParentObj' ||
                 predicateUri.endsWith('#hasParentObj')) {
@@ -336,7 +346,12 @@ const VAD_VALIDATION_RULES = {
         });
 
         // Проверить, что все VADProcessDia имеют hasParentObj
+        // ИСКЛЮЧЕНИЕ: TechnoTree типы (issue #262)
         vadProcessDiaGraphs.forEach(graphUri => {
+            // Пропускаем TechnoTree графы
+            if (technoTreeGraphs.has(graphUri)) {
+                return;
+            }
             if (!graphsWithParentObj.has(graphUri)) {
                 violations.push({
                     rule: 'vadProcessDiaHasParentObj',
