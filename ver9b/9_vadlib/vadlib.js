@@ -175,7 +175,9 @@ let isNewTrigQuery = false;
 const PTREE_GRAPH_URI = 'http://example.org/vad#ptree';
 const RTREE_GRAPH_URI = 'http://example.org/vad#rtree';
 const TECHROOT_GRAPH_URI = 'http://example.org/vad#techroot';
-const VTREE_GRAPH_URI = 'http://example.org/vad#vtree';
+// issue #264: VTREE_GRAPH_URI устарел - теперь используются отдельные TriG типа vad:Virtual (vt_*)
+// Константа сохранена для обратной совместимости
+const VTREE_GRAPH_URI = 'http://example.org/vad#vtree'; // @deprecated - use isVirtualGraph() instead
 let techAppendixData = {
     loaded: false,
     predicateGroups: {},
@@ -188,20 +190,20 @@ let techAppendixData = {
 const TECHTREE_GRAPH_URI = 'http://example.org/vad#techtree';
 
 // Режимы фильтрации TriG в окне RDF данные
-// issue #262: Расширенные режимы фильтрации
+// issue #262, #264: Расширенные режимы фильтрации
 const TRIG_FILTER_MODES = {
-    ALL: 'all',                       // Все TriG
-    NO_TECH: 'noTech',                // Без TechnoTree (по умолчанию)
-    ONLY_TECH: 'onlyTech',            // Только TechnoTree
-    OBJECT_TREE: 'objectTree',        // Только ObjectTree (ptree, rtree)
-    VAD_PROCESS_DIA: 'vadProcessDia', // Только VADProcessDia
-    OBJECT_TREE_PLUS_VAD: 'objectTreePlusVad', // ObjectTree + VADProcessDia
-    VTREE: 'vtree',                   // Только vtree (виртуальные данные)
-    TECHTREE: 'techtree'              // Только techtree (технологические данные из ontology)
+    ALL: 'all',                       // Все TriG (full quadstore без фильтров)
+    NO_TECH: 'noTech',                // Без TechnoTree (устаревший, сохранён для совместимости)
+    ONLY_TECH: 'onlyTech',            // Только TechnoTree (устаревший, сохранён для совместимости)
+    OBJECT_TREE: 'objectTree',        // Только ObjectTree (концепты процесса и исполнителя: ptree, rtree)
+    VAD_PROCESS_DIA: 'vadProcessDia', // Только VADProcessDia (схемы процессов с индивидами)
+    OBJECT_TREE_PLUS_VAD: 'objectTreePlusVad', // ObjectTree + VADProcessDia (по умолчанию)
+    VIRTUAL: 'virtual',               // Только Virtual (виртуальный TriG вычисляемых параметров) - issue #264
+    TECHTREE: 'techtree'              // Только techtree (vad-basic-ontology_tech_Appendix.ttl)
 };
 
-// Текущий режим фильтрации TriG (по умолчанию - без TechnoTree)
-let currentTrigFilterMode = TRIG_FILTER_MODES.NO_TECH;
+// issue #264: Текущий режим фильтрации TriG (по умолчанию - ObjectTree + VADProcessDia)
+let currentTrigFilterMode = TRIG_FILTER_MODES.OBJECT_TREE_PLUS_VAD;
 
 const PROCESS_OBJECT_PREDICATES = [
     'vad:hasNext', 'http://example.org/vad#hasNext'
@@ -686,13 +688,15 @@ function removeTechQuadsFromStore() {
  */
 function isTechnoTreeGraph(graphUri) {
     if (!graphUri) return false;
-    // TechnoTree графы: techtree, vtree, techroot
+    // issue #264: TechnoTree графы: techtree, techroot (vtree устарел)
+    // Также включает Virtual графы (vt_*) для обратной совместимости
     return graphUri === TECHTREE_GRAPH_URI ||
-           graphUri === VTREE_GRAPH_URI ||
+           graphUri === VTREE_GRAPH_URI || // @deprecated - для обратной совместимости
            graphUri === TECHROOT_GRAPH_URI ||
            graphUri.endsWith('#techtree') ||
-           graphUri.endsWith('#vtree') ||
-           graphUri.endsWith('#techroot');
+           graphUri.endsWith('#vtree') || // @deprecated
+           graphUri.endsWith('#techroot') ||
+           isVirtualGraph(graphUri); // issue #264: Virtual графы (vt_*)
 }
 
 /**
@@ -710,7 +714,7 @@ function isObjectTreeGraph(graphUri) {
 
 /**
  * Проверяет, является ли граф типом VADProcessDia
- * Все графы кроме root, ptree, rtree, techtree, vtree, techroot считаются VADProcessDia
+ * Все графы кроме root, ptree, rtree, techtree, vtree, techroot и vt_* считаются VADProcessDia
  * @param {string} graphUri - URI графа
  * @returns {boolean} - true если граф типа VADProcessDia
  */
@@ -725,60 +729,79 @@ function isVADProcessDiaGraph(graphUri) {
         graphUri.endsWith('#techroot')) {
         return false;
     }
+    // issue #264: Исключаем виртуальные графы типа vad:Virtual (vt_*)
+    if (isVirtualGraph(graphUri)) {
+        return false;
+    }
     return true;
 }
 
 /**
+ * issue #264: Проверяет, является ли граф виртуальным (vad:Virtual)
+ * Виртуальные графы имеют имя vt_* (например, vad:vt_p1 для виртуальных данных процесса p1)
+ * @param {string} graphUri - URI графа
+ * @returns {boolean} - true если граф типа Virtual
+ */
+function isVirtualGraph(graphUri) {
+    if (!graphUri) return false;
+    // Виртуальные графы имеют формат vad:vt_* (v=virtual, t=trig)
+    const localName = getLocalName(graphUri);
+    return localName.startsWith('vt_');
+}
+
+/**
  * Возвращает отфильтрованные квады в зависимости от режима фильтрации
- * issue #262: Расширенные режимы фильтрации
+ * issue #262, #264: Расширенные режимы фильтрации
  * @param {string} filterMode - Режим фильтрации
  * @returns {Array} - Отфильтрованный массив квадов
  */
-function getFilteredQuads(filterMode = TRIG_FILTER_MODES.NO_TECH) {
+function getFilteredQuads(filterMode = TRIG_FILTER_MODES.OBJECT_TREE_PLUS_VAD) {
     switch(filterMode) {
         case TRIG_FILTER_MODES.ALL:
+            // Все TriG (full quadstore без фильтров)
             return currentQuads;
 
         case TRIG_FILTER_MODES.NO_TECH:
-            // Без TechnoTree (techtree, vtree, techroot)
+            // Без TechnoTree (устаревший, сохранён для совместимости)
             return currentQuads.filter(quad => !isTechnoTreeGraph(quad.graph?.value));
 
         case TRIG_FILTER_MODES.ONLY_TECH:
-            // Только TechnoTree (techtree, vtree, techroot)
+            // Только TechnoTree (устаревший, сохранён для совместимости)
             return currentQuads.filter(quad => isTechnoTreeGraph(quad.graph?.value));
 
         case TRIG_FILTER_MODES.OBJECT_TREE:
-            // Только ObjectTree (ptree, rtree)
+            // ObjectTree (концепты процесса и исполнителя: ptree, rtree)
             return currentQuads.filter(quad => isObjectTreeGraph(quad.graph?.value));
 
         case TRIG_FILTER_MODES.VAD_PROCESS_DIA:
-            // Только VADProcessDia
+            // VADProcessDia (схемы процессов с индивидами)
             return currentQuads.filter(quad => isVADProcessDiaGraph(quad.graph?.value));
 
         case TRIG_FILTER_MODES.OBJECT_TREE_PLUS_VAD:
-            // ObjectTree + VADProcessDia (исключая TechnoTree)
+            // ObjectTree + VADProcessDia (по умолчанию)
             return currentQuads.filter(quad => {
                 const graphUri = quad.graph?.value;
                 return isObjectTreeGraph(graphUri) || isVADProcessDiaGraph(graphUri);
             });
 
-        case TRIG_FILTER_MODES.VTREE:
-            // Только vtree (виртуальные данные)
-            return currentQuads.filter(quad =>
-                quad.graph?.value === VTREE_GRAPH_URI ||
-                quad.graph?.value?.endsWith('#vtree')
-            );
+        case TRIG_FILTER_MODES.VIRTUAL:
+            // issue #264: Virtual (виртуальный TriG вычисляемых параметров)
+            // Включает все графы типа vad:Virtual (vt_*)
+            return currentQuads.filter(quad => isVirtualGraph(quad.graph?.value));
 
         case TRIG_FILTER_MODES.TECHTREE:
-            // Только techtree (технологические данные из ontology)
+            // TechTree (vad-basic-ontology_tech_Appendix.ttl)
             return currentQuads.filter(quad =>
                 quad.graph?.value === TECHTREE_GRAPH_URI ||
                 quad.graph?.value?.endsWith('#techtree')
             );
 
         default:
-            // По умолчанию - без TechnoTree
-            return currentQuads.filter(quad => !isTechnoTreeGraph(quad.graph?.value));
+            // issue #264: По умолчанию - ObjectTree + VADProcessDia
+            return currentQuads.filter(quad => {
+                const graphUri = quad.graph?.value;
+                return isObjectTreeGraph(graphUri) || isVADProcessDiaGraph(graphUri);
+            });
     }
 }
 

@@ -446,21 +446,40 @@ vad:Virtual
     rdfs:comment """
         Класс Virtual - технологический класс для виртуальных TriG-контейнеров.
 
+        issue #264: Виртуальные TriG теперь хранятся в общем quadstore и имеют
+        обязательный предикат vad:hasParentObj, указывающий на родительский VADProcessDia.
+
         Виртуальные контейнеры (virtualRDFdata) хранят вычисляемые свойства объектов,
         которые рассчитываются автоматически на основе данных из vad:ptree и VADProcessDia.
 
-        Виртуальные TriG имеют имя tv_{processId} (v = virtual) вместо t_{processId}.
+        Виртуальные TriG имеют имя vt_{processId} (v = virtual, t = trig) вместо t_{processId}.
+
+        СТРУКТУРА ВИРТУАЛЬНОГО TriG:
+        vad:vt_p1 {
+            vad:vt_p1 rdf:type vad:Virtual ;
+                vad:hasParentObj vad:t_p1 .  # Родительский физический TriG (VADProcessDia)
+
+            vad:p1.1 vad:processSubtype vad:DetailedChild .
+            vad:p1.2 vad:processSubtype vad:notDetailedChild .
+        }
 
         Содержимое virtualRDFdata:
         1. vad:vt_p1 rdf:type vad:Virtual - свойства самого виртуального TriG
-        2. vad:processSubtype - вычисленный подтип процесса
+        2. vad:hasParentObj - ссылка на родительский физический TriG
+        3. vad:processSubtype - вычисленный подтип процесса
+
+        ПРАВИЛО УДАЛЕНИЯ (issue #264):
+        При удалении VADProcessDia (vad:t_p1) должен также удаляться
+        соответствующий дочерний TriG типа vad:Virtual (vad:vt_p1).
 
         Пересчёт значений происходит:
         - При запуске index.html
         - При изменении схемы процесса (добавление/удаление процессов)
 
         Просмотр виртуальных данных осуществляется через кнопку «virtualRDFdata»
-        в окне «RDF данные или URI:».
+        или через фильтр «Virtual» в окне quadstore.
+
+        Деревья типа vad:Virtual не отображаются в treeview окна Publisher.
     """ ;
     dcterms:description "Класс для виртуальных TriG-контейнеров с вычисляемыми свойствами" .
 
@@ -868,9 +887,40 @@ vad:ConceptExecutorTreePredicate vad:contextTriGType vad:ExecutorTree .
 # ==============================================================================
 # ЭКЗЕМПЛЯРЫ ТЕХНОЛОГИЧЕСКИХ ДЕРЕВЬЕВ (TECHNOTREE INSTANCES)
 # ==============================================================================
-# vad:techtree и vad:vtree - деревья типа vad:TechnoTree
+# vad:techroot и vad:techtree - деревья типа vad:TechnoTree
 # Не отображаются в treeview окна Publisher
+# issue #264: vad:vtree удалён, используются TriG типа vad:Virtual (vt_*)
 # ==============================================================================
+
+# ------------------------------------------------------------------------------
+# vad:techroot - Корневой узел технологического дерева
+# ------------------------------------------------------------------------------
+# issue #264: Перенесён из vad-basic-ontology.ttl
+# Корень для технологического дерева (techtree)
+# vad:techroot НЕ имеет vad:hasParentObj (он сам является корнем техно-дерева)
+# ПРАВИЛО: только vad:root и vad:techroot могут иметь hasParentObj = null
+# ------------------------------------------------------------------------------
+
+vad:techroot
+    rdf:type vad:TechnoTree ;
+    rdfs:label "Корень Технологического Дерева" ;
+    # issue #264: vad:techroot не имеет hasParentObj (корень техно-дерева)
+    # ПРАВИЛО: только vad:root и vad:techroot могут иметь hasParentObj = null
+    rdfs:comment """
+        Корневой узел технологического дерева (techroot).
+
+        issue #264: Перенесён из vad-basic-ontology.ttl
+
+        Является родителем для:
+        - vad:techtree - дерево технологических данных из ontology
+
+        ПРАВИЛО ВАЛИДАЦИИ:
+        Только vad:root и vad:techroot могут иметь vad:hasParentObj = null.
+        Это правило может использоваться при валидации quadstore.
+
+        Деревья типа vad:TechnoTree не отображаются в treeview окна Publisher.
+    """ ;
+    dcterms:description "Корневой узел технологического дерева" .
 
 # ------------------------------------------------------------------------------
 # vad:techtree - Дерево технологических данных
@@ -898,31 +948,24 @@ vad:techtree
     """ ;
     dcterms:description "Дерево технологических данных из ontology" .
 
-# ------------------------------------------------------------------------------
-# vad:vtree - Дерево виртуальных вычисляемых данных
-# ------------------------------------------------------------------------------
-# Содержит вычисляемые свойства (vad:processSubtype)
-# ------------------------------------------------------------------------------
-
-vad:vtree
-    rdf:type vad:TechnoTree ;
-    rdfs:label "Дерево Виртуальных Данных" ;
-    vad:hasParentObj vad:techroot ;
-    rdfs:comment """
-        Дерево виртуальных вычисляемых данных (vtree).
-
-        Содержит автоматически вычисляемые свойства объектов:
-        - vad:processSubtype - подтип процесса (DetailedChild, DetailedExternal,
-          notDetailedChild, notDetailedExternal, NotDefinedType)
-
-        Данные этого дерева пересчитываются:
-        - При запуске index.html
-        - При изменении схемы процесса (добавление/удаление процессов)
-
-        Дерево типа vad:TechnoTree не отображается в treeview окна Publisher.
-        При сохранении через "Сохранить как" данные vtree исключаются из файла.
-    """ ;
-    dcterms:description "Дерево виртуальных вычисляемых данных" .
+# ==============================================================================
+# issue #264: vad:vtree УДАЛЁН
+# ==============================================================================
+# Вместо единого vad:vtree теперь используются отдельные TriG типа vad:Virtual
+# для каждого VADProcessDia. Формат имени: vad:vt_{processId}
+#
+# Пример:
+#   vad:vt_p1 {
+#       vad:vt_p1 rdf:type vad:Virtual ;
+#           vad:hasParentObj vad:t_p1 .  # Родительский физический TriG
+#
+#       vad:p1.1 vad:processSubtype vad:DetailedChild .
+#       vad:p1.2 vad:processSubtype vad:notDetailedChild .
+#   }
+#
+# ПРАВИЛО: При удалении VADProcessDia (например, vad:t_p1) должен также
+# удаляться соответствующий дочерний TriG типа vad:Virtual (vad:vt_p1).
+# ==============================================================================
 
 # ==============================================================================
 # КОНЕЦ ТЕХНОЛОГИЧЕСКОГО ПРИЛОЖЕНИЯ
