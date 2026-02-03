@@ -14,8 +14,10 @@
 - Технологическая часть онтологии [Tech Appendix - Технологические классы и объекты](https://github.com/bpmbpm/rdf-grapher/blob/main/ver9b/ontology/vad-basic-ontology_tech_Appendix.ttl)
 - [Терминологический словарь (Terminology Dictionary)](https://github.com/bpmbpm/rdf-grapher/blob/main/ver9b/ontology/term.md), например,  ptree - это хранилище концептов процесса, а индивиды процесса хранятся в TriG типа VADProcessDia. 
  
-### requirements
+### LD requirements 
 - triple (requirements for the implementation of triplets)
   - Должны поддерживаться оба формата записи триплета - в Simple Triple (простая, полная) и в Shorthand Triple форме (сокращенная, составная).
-- должно быть организовано quadstore для хранения TriG с использованием стандартной js-библиотеки
+  - Используй запись с префиксом (@prefix)
+  - вместо "a" используй полную запись предиката rdf:type 
+- используй quadstore in-memory для хранения TriG 
 
