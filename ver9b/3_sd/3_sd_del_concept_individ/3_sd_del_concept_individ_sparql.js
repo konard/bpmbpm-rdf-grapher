@@ -299,6 +299,7 @@ DELETE DATA {
 
     /**
      * Генерирует DELETE SPARQL запрос для удаления TriG схемы
+     * issue #264, #270: Также удаляет связанный Virtual TriG (каскадное удаление)
      * @param {string} trigUri - URI TriG графа
      * @param {string} conceptUri - URI концепта процесса
      * @param {Object} prefixes - Объект префиксов
@@ -316,6 +317,15 @@ DELETE DATA {
             ? getPrefixedName(conceptUri, currentPrefixes)
             : `<${conceptUri}>`;
 
+        // issue #264, #270: Вычисляем URI виртуального контейнера (vt_* вместо t_*)
+        // Virtual TriG имеет формат vad:vt_* для TriG vad:t_*
+        let virtualTrigPrefixed = trigPrefixed;
+        if (trigPrefixed.startsWith('vad:t_')) {
+            virtualTrigPrefixed = 'vad:vt_' + trigPrefixed.substring(6);
+        } else if (trigPrefixed.startsWith('<') && trigPrefixed.includes('#t_')) {
+            virtualTrigPrefixed = trigPrefixed.replace('#t_', '#vt_');
+        }
+
         return `${prefixDeclarations}
 
 # Удаление триплета vad:hasTrig в концепте процесса
@@ -326,6 +336,46 @@ DELETE DATA {
 };
 
 # Удаление всего графа TriG
-DROP GRAPH ${trigPrefixed}`;
+DROP GRAPH ${trigPrefixed};
+
+# issue #264, #270: Каскадное удаление связанного Virtual TriG
+# Virtual TriG (vt_*) удаляется вместе с родительским VADProcessDia (t_*)
+DROP SILENT GRAPH ${virtualTrigPrefixed}`;
+    },
+
+    /**
+     * issue #264, #270: Запрос для поиска Virtual TriG по родительскому VADProcessDia
+     * Используется для каскадного удаления Virtual TriG
+     * @param {string} parentTrigUri - URI родительского VADProcessDia TriG
+     */
+    FIND_VIRTUAL_TRIG_BY_PARENT: (parentTrigUri) => `
+PREFIX rdf: <http://www.w3.org/1999/02/22-rdf-syntax-ns#>
+PREFIX vad: <http://example.org/vad#>
+
+SELECT ?virtualTrig WHERE {
+    GRAPH ?virtualTrig {
+        ?virtualTrig rdf:type vad:Virtual .
+        ?virtualTrig vad:hasParentObj <${parentTrigUri}> .
+    }
+}`,
+
+    /**
+     * issue #270: Генерирует DELETE запрос для удаления Virtual TriG
+     * @param {string} virtualTrigUri - URI виртуального TriG
+     * @param {Object} prefixes - Объект префиксов
+     */
+    GENERATE_DELETE_VIRTUAL_TRIG_QUERY: (virtualTrigUri, prefixes) => {
+        const prefixDeclarations = Object.entries(prefixes)
+            .map(([prefix, uri]) => `PREFIX ${prefix}: <${uri}>`)
+            .join('\n');
+
+        const virtualTrigPrefixed = typeof getPrefixedName === 'function'
+            ? getPrefixedName(virtualTrigUri, currentPrefixes)
+            : `<${virtualTrigUri}>`;
+
+        return `${prefixDeclarations}
+
+# issue #270: Удаление Virtual TriG
+DROP GRAPH ${virtualTrigPrefixed}`;
     }
 };
