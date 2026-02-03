@@ -14,3 +14,5 @@
 ### design solution
 #### SPARQL
 - https://github.com/bpmbpm/rdf-grapher/pull/255 ver9b/3_sd/3_sd_logic.js — заменена логика applyTripleToRdfInput() на Comunica-based, добавлена serializeStoreToTriG()
+использование внешних библиотек (Comunica, N3.js) для выполнения SPARQL запросов является правильным подходом вместо написания собственного regex-парсера.
+- ранее: https://github.com/bpmbpm/rdf-grapher/blob/main/ver9b/doc/SimpleVsShorthandTriple.md
