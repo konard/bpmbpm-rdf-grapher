@@ -1,5 +1,65 @@
 // Ссылка на issue: https://github.com/bpmbpm/rdf-grapher/issues/232
+// Ссылка на issue: https://github.com/bpmbpm/rdf-grapher/issues/260
 // 2_triplestore_ui.js - UI функции для работы с RDF данными (ввод, сохранение, загрузка)
+
+/**
+ * issue #260: Обновляет отображение quadstore с учётом фильтра TriG
+ * Вызывается при изменении выпадающего списка фильтра TriG
+ */
+function updateTrigFilter() {
+    const filterSelect = document.getElementById('trig-filter');
+    if (!filterSelect) return;
+
+    const filterMode = filterSelect.value;
+
+    // Обновляем глобальную переменную режима фильтрации
+    if (typeof currentTrigFilterMode !== 'undefined') {
+        currentTrigFilterMode = filterMode;
+    }
+
+    // Обновляем отображение quadstore с учётом фильтра
+    updateQuadstoreDisplay();
+}
+
+/**
+ * issue #260: Обновляет содержимое textarea quadstore с учётом текущего фильтра TriG
+ * Сериализует отфильтрованные квады в формате TriG
+ */
+function updateQuadstoreDisplay() {
+    const rdfInput = document.getElementById('rdf-input');
+    if (!rdfInput) return;
+
+    // Получаем отфильтрованные квады
+    const filterMode = currentTrigFilterMode || TRIG_FILTER_MODES.NO_TECH;
+    const filteredQuads = typeof getFilteredQuads === 'function'
+        ? getFilteredQuads(filterMode)
+        : currentQuads;
+
+    if (!filteredQuads || filteredQuads.length === 0) {
+        rdfInput.value = '';
+        return;
+    }
+
+    // Сериализуем квады в TriG формат
+    try {
+        const writer = new N3.Writer({
+            format: 'application/trig',
+            prefixes: currentPrefixes
+        });
+
+        filteredQuads.forEach(quad => writer.addQuad(quad));
+
+        writer.end((error, result) => {
+            if (error) {
+                console.error('Error serializing quads:', error);
+                return;
+            }
+            rdfInput.value = result;
+        });
+    } catch (error) {
+        console.error('Error updating quadstore display:', error);
+    }
+}
 
 /**
  * Очищает содержимое поля RDF данных

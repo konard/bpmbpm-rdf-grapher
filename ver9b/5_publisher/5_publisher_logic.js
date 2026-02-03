@@ -70,6 +70,16 @@
                 currentQuads = quads;
                 currentStore = null;
 
+                // issue #260: Добавляем технологические квады в общий quadstore (Вариант 2)
+                if (typeof addTechQuadsToStore === 'function') {
+                    addTechQuadsToStore();
+                }
+
+                // issue #260: Обновляем отображение quadstore с учётом текущего фильтра
+                if (typeof updateQuadstoreDisplay === 'function') {
+                    updateQuadstoreDisplay();
+                }
+
                 if (quads.length === 0) {
                     showError('Не найдено RDF триплетов в данных');
                     return;

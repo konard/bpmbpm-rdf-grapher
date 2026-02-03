@@ -64,15 +64,8 @@ const NEW_CONCEPT_CONFIG = {
         parentSelectorType: 'vad:TypeProcess',
         parentSelectorGraph: 'vad:ptree',
         // Дополнительные корневые элементы для выбора родителя
-        parentRootOptions: ['vad:ptree'],
-        // Fallback предикаты, если techtree не загружен
-        fallbackPredicates: [
-            { uri: 'http://www.w3.org/1999/02/22-rdf-syntax-ns#type', prefixed: 'rdf:type' },
-            { uri: 'http://www.w3.org/2000/01/rdf-schema#label', prefixed: 'rdfs:label' },
-            { uri: 'http://purl.org/dc/terms/description', prefixed: 'dcterms:description' },
-            { uri: 'http://example.org/vad#hasParentObj', prefixed: 'vad:hasParentObj' },
-            { uri: 'http://example.org/vad#hasTrig', prefixed: 'vad:hasTrig' }
-        ]
+        parentRootOptions: ['vad:ptree']
+        // issue #260: Fallback предикаты удалены - используются только загруженные из techtree
     },
     'vad:TypeExecutor': {
         techObject: 'http://example.org/vad#ConceptExecutorPredicate',
@@ -87,14 +80,8 @@ const NEW_CONCEPT_CONFIG = {
         readOnlyPredicates: [],
         parentSelectorType: 'vad:TypeExecutor',
         parentSelectorGraph: 'vad:rtree',
-        parentRootOptions: ['vad:rtree'],
-        // Fallback предикаты, если techtree не загружен
-        fallbackPredicates: [
-            { uri: 'http://www.w3.org/1999/02/22-rdf-syntax-ns#type', prefixed: 'rdf:type' },
-            { uri: 'http://www.w3.org/2000/01/rdf-schema#label', prefixed: 'rdfs:label' },
-            { uri: 'http://purl.org/dc/terms/description', prefixed: 'dcterms:description' },
-            { uri: 'http://example.org/vad#hasParentObj', prefixed: 'vad:hasParentObj' }
-        ]
+        parentRootOptions: ['vad:rtree']
+        // issue #260: Fallback предикаты удалены - используются только загруженные из techtree
     }
 };
 
@@ -130,13 +117,13 @@ let intermediateSparqlQueries = [];
 /**
  * Получает предикаты из технологического объекта через SPARQL для создания нового концепта
  * Использует funSPARQLvalues для выполнения запроса
- * При отсутствии данных techtree использует fallback предикаты из конфигурации
+ * issue #260: Fallback предикаты не используются - при отсутствии techtree показывается ошибка
  *
  * Примечание: функция названа getPredicatesForNewConcept чтобы не конфликтовать
  * с существующей функцией getPredicatesFromTechObject в index.html
  *
  * @param {string} techObjectUri - URI технологического объекта
- * @param {Object} config - Конфигурация типа концепта (для fallback)
+ * @param {Object} config - Конфигурация типа концепта
  * @returns {Array<{uri: string, prefixed: string}>} Массив предикатов
  */
 function getPredicatesForNewConcept(techObjectUri, config) {
@@ -165,16 +152,51 @@ function getPredicatesForNewConcept(techObjectUri, config) {
             : '(нет результатов)'
     });
 
-    // Если данные techtree не найдены, используем fallback предикаты из конфигурации
-    // Issue #250 п.4: добавлено более явное предупреждение
-    if (predicates.length === 0 && config && config.fallbackPredicates) {
-        console.warn('ВНИМАНИЕ: techtree не загружен, используются предикаты по умолчанию. Загрузите vad-basic-ontology_tech_Appendix.ttl');
+    // issue #260: Если данные techtree не найдены, показываем ошибку (без fallback)
+    if (predicates.length === 0) {
+        console.error('ОШИБКА: techtree не загружен. Необходимо загрузить vad-basic-ontology_tech_Appendix.ttl');
         intermediateSparqlQueries.push({
-            description: 'Fallback: используются предикаты из конфигурации (techtree не загружен)',
-            query: '-- ВНИМАНИЕ: Нет данных techtree, используются предикаты по умолчанию.\n-- Рекомендуется загрузить vad-basic-ontology_tech_Appendix.ttl --',
-            result: config.fallbackPredicates.map(p => p.prefixed).join(', ')
+            description: 'ОШИБКА: techtree не загружен',
+            query: '-- ОШИБКА: Нет данных techtree.\n-- Загрузите vad-basic-ontology_tech_Appendix.ttl --',
+            result: '(предикаты не найдены)'
         });
-        predicates = config.fallbackPredicates.slice(); // Копируем массив
+
+        // Показываем уведомление об ошибке
+        if (typeof showErrorNotification === 'function') {
+            showErrorNotification('Techtree не загружен. Загрузите vad-basic-ontology_tech_Appendix.ttl');
+        }
+
+        // Показываем диалог для загрузки файла techtree
+        if (typeof showFileNotFoundDialog === 'function') {
+            showFileNotFoundDialog({
+                title: 'Techtree не загружен',
+                message: 'Для создания нового концепта необходимо загрузить технологические данные из файла vad-basic-ontology_tech_Appendix.ttl',
+                fileType: '.ttl',
+                onFileSelected: async (file) => {
+                    try {
+                        const content = await file.text();
+                        // Парсим и добавляем tech appendix в quadstore
+                        if (typeof parseTechAppendix === 'function' && typeof addTechQuadsToStore === 'function') {
+                            const quads = await parseTechAppendix(content);
+                            if (quads && quads.length > 0) {
+                                window.techAppendixQuads = quads;
+                                addTechQuadsToStore();
+                                if (typeof showSuccessNotification === 'function') {
+                                    showSuccessNotification(`Tech appendix загружен из файла: ${file.name}`);
+                                }
+                                // Повторно загружаем предикаты
+                                onNewConceptTypeChange();
+                            }
+                        }
+                    } catch (parseError) {
+                        console.error('Ошибка парсинга tech appendix:', parseError);
+                        if (typeof showErrorNotification === 'function') {
+                            showErrorNotification(`Ошибка парсинга: ${parseError.message}`);
+                        }
+                    }
+                }
+            });
+        }
     }
 
     return predicates;
