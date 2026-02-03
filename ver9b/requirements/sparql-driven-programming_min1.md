@@ -95,3 +95,7 @@ const executors = funSPARQLvalues(
 
 ---
 
+## 3. SPARQL.js vs regex parser
+
+Учитывай https://github.com/bpmbpm/rdf-grapher/pull/255 и делай приоритет использованию внешних библиотек (Comunica, N3.js) для выполнения SPARQL запросов, т.к. это является правильным подходом вместо написания собственного regex-парсера (регулярное выражение).
+
