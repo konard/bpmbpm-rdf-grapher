@@ -1129,6 +1129,59 @@ function hideNewConceptMessage() {
 }
 
 // ==============================================================================
+// ФУНКЦИЯ СПРАВКИ (HELP)
+// ==============================================================================
+
+/**
+ * issue #268: Показывает справку по именованию концептов
+ * Объясняет проблему с точками в идентификаторах (ID) и предлагает альтернативы
+ *
+ * Проблема: N3.Writer при сериализации может выбирать полный URI вместо
+ * prefixed формы для URI, содержащих точки (например, vad:p1.1.1).
+ * Это связано с тем, что точка является специальным символом в Turtle.
+ *
+ * @see https://github.com/bpmbpm/rdf-grapher/blob/main/ver9b/doc/n3js_serialization_format.md#1-%D0%BF%D0%BE%D0%BB%D0%BD%D1%8B%D0%B9-uri-%D0%B2%D0%BC%D0%B5%D1%81%D1%82%D0%BE-prefix
+ */
+function showNewConceptHelp() {
+    const helpMessage = `
+ВНИМАНИЕ: Проблема использования точки (.) в именах (ID) концептов
+
+При использовании точки в идентификаторе концепта (например: p1.1.1, process.1.2)
+библиотека N3.js может сериализовать URI в полной форме вместо префиксной:
+
+   Ожидаемый формат:  vad:p1.1.1
+   Фактический формат: <http://example.org/vad#p1.1.1>
+
+Это происходит потому, что точка (.) является специальным символом в синтаксисе Turtle.
+
+РЕКОМЕНДАЦИЯ:
+Используйте альтернативные разделители для номеров процессов:
+   - Подчёркивание: p1_1_1
+   - Дефис: p1-1-1
+   - CamelCase: p1s1s1 (s = sub)
+
+Подробнее см. документацию:
+https://github.com/bpmbpm/rdf-grapher/blob/main/ver9b/doc/n3js_serialization_format.md#1-полный-uri-вместо-prefix
+    `.trim();
+
+    // Используем более красивый диалог, если доступен, иначе alert
+    if (typeof showInfoDialog === 'function') {
+        showInfoDialog({
+            title: 'Справка: именование концептов',
+            message: helpMessage,
+            linkText: 'Подробнее в документации',
+            linkUrl: 'https://github.com/bpmbpm/rdf-grapher/blob/main/ver9b/doc/n3js_serialization_format.md#1-%D0%BF%D0%BE%D0%BB%D0%BD%D1%8B%D0%B9-uri-%D0%B2%D0%BC%D0%B5%D1%81%D1%82%D0%BE-prefix'
+        });
+    } else {
+        // Fallback на стандартный alert с возможностью открыть ссылку
+        const openDoc = confirm(helpMessage + '\n\nОткрыть документацию в новой вкладке?');
+        if (openDoc) {
+            window.open('https://github.com/bpmbpm/rdf-grapher/blob/main/ver9b/doc/n3js_serialization_format.md#1-%D0%BF%D0%BE%D0%BB%D0%BD%D1%8B%D0%B9-uri-%D0%B2%D0%BC%D0%B5%D1%81%D1%82%D0%BE-prefix', '_blank');
+        }
+    }
+}
+
+// ==============================================================================
 // ЭКСПОРТ ФУНКЦИЙ ДЛЯ ГЛОБАЛЬНОГО ДОСТУПА
 // ==============================================================================
 
@@ -1146,6 +1199,7 @@ if (typeof window !== 'undefined') {
     window.generateIdFromLabel = generateIdFromLabel;
     window.sanitizeConceptId = sanitizeConceptId;            // Fix #5
     window.checkIdExistsSparql = checkIdExistsSparql;        // Issue #250
+    window.showNewConceptHelp = showNewConceptHelp;          // Issue #268
     window.NEW_CONCEPT_CONFIG = NEW_CONCEPT_CONFIG;
     window.NEW_CONCEPT_SPARQL = NEW_CONCEPT_SPARQL;
 }
