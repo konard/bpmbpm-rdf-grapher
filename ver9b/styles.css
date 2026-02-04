@@ -1358,16 +1358,23 @@
             background-color: rgba(0,0,0,0.5);
         }
 
+        /* issue #293: Modal positioned higher and draggable */
         .new-trig-modal-content {
             background-color: white;
-            margin: 10% auto;
+            position: absolute;
+            top: 50px;
+            left: 50%;
+            transform: translateX(-50%);
             padding: 20px;
             border-radius: 8px;
             width: 90%;
             max-width: 500px;
+            max-height: calc(100vh - 100px);
+            overflow-y: auto;
             box-shadow: 0 4px 20px rgba(0,0,0,0.3);
         }
 
+        /* issue #293: Header is draggable */
         .new-trig-modal-header {
             display: flex;
             justify-content: space-between;
@@ -1375,6 +1382,8 @@
             margin-bottom: 20px;
             padding-bottom: 10px;
             border-bottom: 2px solid #FF9800;
+            cursor: move;
+            user-select: none;
         }
 
         .new-trig-modal-header h3 {
@@ -1540,18 +1549,23 @@
             background-color: rgba(0,0,0,0.5);
         }
 
+        /* issue #293: Modal positioned higher and draggable */
         .new-concept-modal-content {
             background-color: white;
-            margin: 5% auto;
+            position: absolute;
+            top: 50px;
+            left: 50%;
+            transform: translateX(-50%);
             padding: 20px;
             border-radius: 8px;
             width: 95%;
             max-width: 700px;
-            max-height: 85vh;
+            max-height: calc(100vh - 100px);
             overflow-y: auto;
             box-shadow: 0 4px 20px rgba(0,0,0,0.3);
         }
 
+        /* issue #293: Header is draggable */
         .new-concept-modal-header {
             display: flex;
             justify-content: space-between;
@@ -1559,6 +1573,8 @@
             margin-bottom: 20px;
             padding-bottom: 10px;
             border-bottom: 2px solid #7B1FA2;
+            cursor: move;
+            user-select: none;
         }
 
         .new-concept-modal-header h3 {
@@ -1872,18 +1888,23 @@
             background-color: rgba(0,0,0,0.5);
         }
 
+        /* issue #293: Modal positioned higher and draggable */
         .del-concept-modal-content {
             background-color: white;
-            margin: 5% auto;
+            position: absolute;
+            top: 50px;
+            left: 50%;
+            transform: translateX(-50%);
             padding: 20px;
             border-radius: 8px;
             width: 95%;
             max-width: 700px;
-            max-height: 85vh;
+            max-height: calc(100vh - 100px);
             overflow-y: auto;
             box-shadow: 0 4px 20px rgba(0,0,0,0.3);
         }
 
+        /* issue #293: Header is draggable */
         .del-concept-modal-header {
             display: flex;
             justify-content: space-between;
@@ -1891,6 +1912,8 @@
             margin-bottom: 20px;
             padding-bottom: 10px;
             border-bottom: 2px solid #f44336;
+            cursor: move;
+            user-select: none;
         }
 
         .del-concept-modal-header h3 {

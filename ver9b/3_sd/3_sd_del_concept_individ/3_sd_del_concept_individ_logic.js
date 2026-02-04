@@ -709,6 +709,12 @@ function openDelConceptModal() {
     const modal = document.getElementById('del-concept-modal');
     if (modal) {
         resetDelConceptForm();
+
+        // issue #293: Сбрасываем позицию модального окна
+        if (typeof resetModalPosition === 'function') {
+            resetModalPosition('del-concept-modal');
+        }
+
         modal.style.display = 'block';
 
         if (typeof updateSmartDesignFieldsState === 'function') {
