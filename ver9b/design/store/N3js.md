@@ -1,5 +1,5 @@
-# design/store/N3js.md 04/02/26
 # N3.js — функции, используемые в проекте RDF Grapher ver9b
+design/store/N3js.md 04/02/26  
 https://github.com/bpmbpm/rdf-grapher/pull/246  
 Quadstore организован на базе библиотеки **N3.js v1.17.2** (`N3.Store`, `N3.Parser`). Данные окна «RDF-данные» хранятся в `currentStore` (N3.Store) и `currentQuads` (массив квадов). Чтение и запись осуществляются через SPARQL-запросы (`funSPARQLvalues` для SELECT, `applyTripleToRdfInput` для INSERT/DELETE).
 
