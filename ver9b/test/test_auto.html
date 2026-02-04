@@ -71,7 +71,7 @@
             // Тест 1: Загрузка и парсинг данных
             logTest('Загрузка Trig_VADv5.ttl', 'running', 'Загрузка файла...');
             try {
-                const response = await fetch('../Trig_VADv5.ttl');
+                const response = await fetch('../dia/Trig_VADv5.ttl');
                 if (!response.ok) throw new Error(`HTTP ${response.status}`);
                 testData = await response.text();
 

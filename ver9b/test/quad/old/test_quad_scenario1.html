@@ -150,7 +150,7 @@
             logStep('Шаг 1.1 — Загрузка Trig_VADv5.ttl', 'running', 'Загрузка и парсинг...');
             try {
                 // Загружаем файл Trig_VADv5.ttl из корня проекта ver9b
-                const response = await fetch('../../Trig_VADv5.ttl');
+                const response = await fetch('../../dia/Trig_VADv5.ttl');
                 if (!response.ok) throw new Error(`HTTP ${response.status}`);
                 testData = await response.text();
 
