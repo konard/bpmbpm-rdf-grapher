@@ -2,41 +2,70 @@
 // Содержит функции для работы с модальным окном New TriG
 
 /**
+ * issue #286: SPARQL-запрос для получения концептов процессов БЕЗ существующего VADProcessDia.
+ * Использует FILTER NOT EXISTS для фильтрации процессов, у которых уже есть схема.
+ *
+ * Алгоритм:
+ * 1. Выбираем процессы из ptree с типом TypeProcess
+ * 2. Исключаем те, у которых есть hasTrig на граф типа VADProcessDia
+ */
+const SPARQL_PROCESSES_WITHOUT_VADPROCESSDIA = `
+    SELECT ?process ?label WHERE {
+        GRAPH vad:ptree {
+            ?process rdf:type vad:TypeProcess .
+            ?process rdfs:label ?label .
+            FILTER NOT EXISTS {
+                ?process vad:hasTrig ?trig .
+                GRAPH ?trig {
+                    ?trig rdf:type vad:VADProcessDia .
+                }
+            }
+        }
+    }
+`;
+
+/**
  * Открывает модальное окно создания нового TriG
  * Вызывается из Smart Design панели
+ * issue #286: SPARQL-driven фильтрация процессов через FILTER NOT EXISTS
  */
-function openNewTrigModal() {
+async function openNewTrigModal() {
     const modal = document.getElementById('new-trig-modal');
     if (!modal) {
         console.error('[3_sd_create_new_trig] Модальное окно new-trig-modal не найдено');
         return;
     }
-    
+
     // Заполняем список концептов процессов
     const processSelect = document.getElementById('new-trig-process-concept');
     if (processSelect) {
         processSelect.innerHTML = '<option value="">-- Выберите концепт процесса --</option>';
-        
-        // Получаем концепты процессов из ptree
-        if (typeof funSPARQLvalues === 'function') {
-            const concepts = funSPARQLvalues(`
-                SELECT ?process ?label WHERE {
-                    GRAPH vad:ptree {
-                        ?process rdf:type vad:TypeProcess .
-                        ?process rdfs:label ?label .
-                    }
-                }
-            `, 'process');
-            
-            concepts.forEach(concept => {
-                const option = document.createElement('option');
-                option.value = concept.uri;
-                option.textContent = concept.label || concept.uri;
-                processSelect.appendChild(option);
-            });
+
+        // issue #286: SPARQL-driven Programming - фильтрация через SPARQL запрос
+        // Используем funSPARQLvaluesComunica для поддержки FILTER NOT EXISTS
+        if (typeof funSPARQLvaluesComunica === 'function') {
+            try {
+                const filteredConcepts = await funSPARQLvaluesComunica(
+                    SPARQL_PROCESSES_WITHOUT_VADPROCESSDIA,
+                    'process'
+                );
+
+                console.log(`[3_sd_create_new_trig] issue #286: SPARQL returned ${filteredConcepts.length} processes without VADProcessDia`);
+
+                filteredConcepts.forEach(concept => {
+                    const option = document.createElement('option');
+                    option.value = concept.uri;
+                    option.textContent = concept.label || concept.uri;
+                    processSelect.appendChild(option);
+                });
+            } catch (error) {
+                console.error('[3_sd_create_new_trig] SPARQL query error:', error);
+            }
+        } else {
+            console.error('[3_sd_create_new_trig] funSPARQLvaluesComunica not available');
         }
     }
-    
+
     modal.style.display = 'block';
 }
 

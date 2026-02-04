@@ -1,0 +1,225 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Test Issue #286 - SPARQL-driven Filter Process Concepts without VADProcessDia</title>
+    <!-- Ссылка на issue: https://github.com/bpmbpm/rdf-grapher/issues/286 -->
+    <style>
+        body { font-family: Consolas, Monaco, monospace; padding: 20px; background-color: #f5f5f5; }
+        h1 { color: #333; border-bottom: 2px solid #1976D2; padding-bottom: 10px; }
+        .test-result { padding: 10px 15px; margin: 5px 0; border-radius: 4px; font-size: 14px; }
+        .test-passed { background-color: #d4edda; border-left: 4px solid #28a745; color: #155724; }
+        .test-failed { background-color: #f8d7da; border-left: 4px solid #dc3545; color: #721c24; }
+        .test-info { background-color: #cce5ff; border-left: 4px solid #007bff; color: #004085; }
+        pre { background: #272822; color: #f8f8f2; padding: 15px; border-radius: 5px; overflow-x: auto; }
+        .summary { margin-top: 20px; padding: 15px; border-radius: 4px; font-size: 16px; font-weight: bold; }
+        .summary-passed { background-color: #d4edda; color: #155724; }
+        .summary-failed { background-color: #f8d7da; color: #721c24; }
+        .sparql-query { background: #1e1e1e; color: #9cdcfe; padding: 15px; border-radius: 5px; overflow-x: auto; white-space: pre-wrap; font-size: 12px; margin: 10px 0; }
+    </style>
+</head>
+<body>
+    <h1>Issue #286: SPARQL-driven Filter Process Concepts without VADProcessDia</h1>
+    <p>Testing SPARQL-driven Programming approach: filtering processes via SPARQL FILTER NOT EXISTS</p>
+
+    <h3>SPARQL Query:</h3>
+    <pre class="sparql-query">SELECT ?process ?label WHERE {
+    GRAPH vad:ptree {
+        ?process rdf:type vad:TypeProcess .
+        ?process rdfs:label ?label .
+        FILTER NOT EXISTS {
+            ?process vad:hasTrig ?trig .
+            GRAPH ?trig {
+                ?trig rdf:type vad:VADProcessDia .
+            }
+        }
+    }
+}</pre>
+
+    <div id="test-log"></div>
+    <div id="test-summary"></div>
+
+    <!-- Подключение библиотеки N3.js -->
+    <script src="https://unpkg.com/n3@1.17.2/browser/n3.min.js"></script>
+
+    <!-- Подключение Comunica для SPARQL -->
+    <script src="https://unpkg.com/@comunica/query-sparql@2.10.0/comunica-browser.js"></script>
+
+    <!-- Подключение основной библиотеки -->
+    <script src="../ver9b/9_vadlib/vadlib.js"></script>
+    <script src="../ver9b/9_vadlib/vadlib_sparql.js"></script>
+    <script src="../ver9b/2_triplestore/2_triplestore_logic.js"></script>
+    <script src="../ver9b/3_sd/3_sd_sparql.js"></script>
+    <script src="../ver9b/3_sd/3_sd_create_new_trig/3_sd_create_new_trig_logic.js"></script>
+
+    <script>
+        // Ссылка на issue: https://github.com/bpmbpm/rdf-grapher/issues/286
+
+        const testLog = document.getElementById('test-log');
+        const testSummary = document.getElementById('test-summary');
+        let testResults = [];
+
+        function logTest(name, status, message) {
+            const div = document.createElement('div');
+            div.className = `test-result test-${status}`;
+            const statusText = status === 'passed' ? '✅ PASSED' : status === 'failed' ? '❌ FAILED' : '📋 INFO';
+            div.textContent = `${statusText}: ${name} - ${message}`;
+            testLog.appendChild(div);
+            if (status !== 'info') {
+                testResults.push({ name, passed: status === 'passed', message });
+            }
+        }
+
+        function showSummary() {
+            const passed = testResults.filter(t => t.passed).length;
+            const total = testResults.length;
+            const allPassed = passed === total;
+            testSummary.className = `summary ${allPassed ? 'summary-passed' : 'summary-failed'}`;
+            testSummary.textContent = `Результат: ${passed}/${total} тестов пройдено ${allPassed ? '✅' : '❌'}`;
+        }
+
+        async function runTests() {
+            let testData = null;
+            let testQuads = [];
+            let testPrefixes = {};
+
+            // Тест 1: Загрузка данных
+            logTest('Загрузка Trig_VADv7.ttl', 'info', 'Загрузка файла...');
+            try {
+                const response = await fetch('../ver9b/dia/Trig_VADv7.ttl');
+                if (!response.ok) throw new Error(`HTTP ${response.status}`);
+                testData = await response.text();
+                logTest('Загрузка файла', 'passed', `Файл загружен (${testData.length} символов)`);
+            } catch (error) {
+                logTest('Загрузка файла', 'failed', `Ошибка: ${error.message}`);
+                showSummary();
+                return;
+            }
+
+            // Тест 2: Парсинг RDF
+            try {
+                await new Promise((resolve, reject) => {
+                    const parser = new N3.Parser({ format: 'trig' });
+                    parser.parse(testData, (error, quad, parsedPrefixes) => {
+                        if (error) { reject(error); return; }
+                        if (quad) { testQuads.push(quad); }
+                        else {
+                            if (parsedPrefixes) testPrefixes = parsedPrefixes;
+                            resolve();
+                        }
+                    });
+                });
+                logTest('Парсинг RDF', 'passed', `Распарсено ${testQuads.length} квадов`);
+            } catch (error) {
+                logTest('Парсинг RDF', 'failed', `Ошибка: ${error.message}`);
+                showSummary();
+                return;
+            }
+
+            // Устанавливаем глобальные переменные
+            currentQuads = testQuads;
+            currentPrefixes = testPrefixes;
+            currentStore = new N3.Store();
+            testQuads.forEach(q => currentStore.addQuad(q));
+
+            // Тест 3: Проверяем доступность funSPARQLvaluesComunica
+            logTest('funSPARQLvaluesComunica', 'info', 'Проверка доступности функции...');
+            if (typeof funSPARQLvaluesComunica === 'function') {
+                logTest('funSPARQLvaluesComunica доступна', 'passed', 'Функция определена');
+            } else {
+                logTest('funSPARQLvaluesComunica доступна', 'failed', 'Функция не определена');
+                showSummary();
+                return;
+            }
+
+            // Тест 4: Проверяем SPARQL запрос на все процессы
+            logTest('Всего процессов', 'info', 'Получение всех процессов из ptree...');
+            try {
+                const allConcepts = await funSPARQLvaluesComunica(`
+                    SELECT ?process ?label WHERE {
+                        GRAPH vad:ptree {
+                            ?process rdf:type vad:TypeProcess .
+                            ?process rdfs:label ?label .
+                        }
+                    }
+                `, 'process');
+
+                logTest('Всего процессов в ptree', 'passed', `${allConcepts.length} процессов`);
+            } catch (error) {
+                logTest('Всего процессов в ptree', 'failed', `Ошибка: ${error.message}`);
+            }
+
+            // Тест 5: SPARQL-driven фильтрация с FILTER NOT EXISTS
+            logTest('SPARQL-driven фильтрация', 'info', 'Выполнение SPARQL с FILTER NOT EXISTS...');
+            try {
+                // Используем тот же SPARQL запрос, что и в openNewTrigModal
+                const filteredConcepts = await funSPARQLvaluesComunica(
+                    SPARQL_PROCESSES_WITHOUT_VADPROCESSDIA,
+                    'process'
+                );
+
+                logTest('После SPARQL фильтрации', 'info', `${filteredConcepts.length} процессов без VADProcessDia`);
+
+                // Проверяем: процессы p1_2, p1_1_1, p1_1_2, p2_1, p2_2, px_x, pNotDefined, pDel НЕ имеют VADProcessDia
+                const processesWithoutDia = filteredConcepts.map(c => c.uri);
+                const shouldNotHaveDia = [
+                    'http://example.org/vad#p1_2',
+                    'http://example.org/vad#p1_1_1',
+                    'http://example.org/vad#p1_1_2',
+                    'http://example.org/vad#p2_1',
+                    'http://example.org/vad#p2_2'
+                ];
+
+                // Проверка: p1, p1_1, p2 НЕ должны быть в отфильтрованных
+                const shouldBeFiltered = [
+                    'http://example.org/vad#p1',
+                    'http://example.org/vad#p1_1',
+                    'http://example.org/vad#p2'
+                ];
+
+                const correctlyFiltered = shouldBeFiltered.every(uri => !processesWithoutDia.includes(uri));
+                const correctlyKept = shouldNotHaveDia.every(uri => processesWithoutDia.includes(uri));
+
+                if (correctlyFiltered && correctlyKept) {
+                    logTest('Корректность SPARQL фильтрации', 'passed',
+                        `p1, p1_1, p2 отфильтрованы; p1_2, p1_1_1, p1_1_2, p2_1, p2_2 оставлены`);
+                } else {
+                    let msg = '';
+                    if (!correctlyFiltered) {
+                        const notFiltered = shouldBeFiltered.filter(uri => processesWithoutDia.includes(uri));
+                        msg += `Не отфильтрованы: ${notFiltered.map(u => u.split('#')[1]).join(', ')}. `;
+                    }
+                    if (!correctlyKept) {
+                        const wronglyFiltered = shouldNotHaveDia.filter(uri => !processesWithoutDia.includes(uri));
+                        msg += `Ошибочно отфильтрованы: ${wronglyFiltered.map(u => u.split('#')[1]).join(', ')}`;
+                    }
+                    logTest('Корректность SPARQL фильтрации', 'failed', msg);
+                }
+
+                // Выводим список доступных для создания TriG
+                logTest('Доступные для создания TriG', 'info',
+                    filteredConcepts.map(c => c.label || c.uri.split('#')[1]).join(', '));
+
+            } catch (error) {
+                logTest('SPARQL-driven фильтрация', 'failed', `Ошибка: ${error.message}`);
+            }
+
+            // Тест 6: Проверяем что SPARQL_PROCESSES_WITHOUT_VADPROCESSDIA определена
+            logTest('SPARQL константа', 'info', 'Проверка константы SPARQL_PROCESSES_WITHOUT_VADPROCESSDIA...');
+            if (typeof SPARQL_PROCESSES_WITHOUT_VADPROCESSDIA === 'string') {
+                logTest('SPARQL_PROCESSES_WITHOUT_VADPROCESSDIA определена', 'passed',
+                    'Константа экспортирована и доступна');
+            } else {
+                logTest('SPARQL_PROCESSES_WITHOUT_VADPROCESSDIA определена', 'failed',
+                    'Константа не определена или не строка');
+            }
+
+            showSummary();
+        }
+
+        // Запуск тестов
+        runTests();
+    </script>
+</body>
+</html>
