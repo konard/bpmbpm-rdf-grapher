@@ -345,6 +345,155 @@
             return results;
         }
 
+        // ==============================================================================
+        // funSPARQLvaluesDouble — получение справочника с выделением недоступных значений
+        // Ссылка на issue: https://github.com/bpmbpm/rdf-grapher/issues/291
+        // ==============================================================================
+
+        /**
+         * Выполняет два SPARQL SELECT запроса и возвращает объединённый результат
+         * с пометкой недоступных (disabled) значений.
+         *
+         * Функция позволяет формировать справочники, где:
+         * - Первый запрос (sparqlQuery1) возвращает полный список значений
+         * - Второй запрос (sparqlQuery2) возвращает подмножество значений,
+         *   которые должны быть помечены как недоступные (disabled)
+         *
+         * Пример использования: в справочнике концептов процессов вывести все процессы
+         * из ptree, но подсветить серым те, которые уже имеют TriG (vad:hasTrig).
+         *
+         * @param {string} sparqlQuery1 - SPARQL SELECT запрос для полного списка
+         * @param {string} variableName1 - Имя переменной для извлечения (без '?')
+         * @param {string} sparqlQuery2 - SPARQL SELECT запрос для списка недоступных значений
+         * @param {string} variableName2 - Имя переменной для извлечения (без '?')
+         * @returns {Promise<Array<{uri: string, label: string, disabled: boolean}>>} Массив результатов
+         *          где disabled=true означает, что значение найдено во втором запросе
+         *
+         * @example
+         * // Получить все процессы, пометив серым те, у которых есть TriG
+         * const processes = await funSPARQLvaluesDouble(
+         *     `SELECT ?process ?label WHERE {
+         *         GRAPH vad:ptree {
+         *             ?process rdf:type vad:TypeProcess .
+         *             ?process rdfs:label ?label .
+         *         }
+         *     }`,
+         *     'process',
+         *     `SELECT ?process WHERE {
+         *         GRAPH vad:ptree {
+         *             ?process rdf:type vad:TypeProcess .
+         *             ?process vad:hasTrig ?trig .
+         *         }
+         *     }`,
+         *     'process'
+         * );
+         * // Результат: [{uri: "vad:p1", label: "Процесс 1", disabled: false},
+         * //             {uri: "vad:pGA", label: "Процесс ГА", disabled: true}, ...]
+         */
+        async function funSPARQLvaluesDouble(sparqlQuery1, variableName1 = 'value', sparqlQuery2, variableName2 = 'value') {
+            const results = [];
+
+            // Если нет текущего store, возвращаем пустой массив
+            if (!currentStore || currentQuads.length === 0) {
+                console.log('funSPARQLvaluesDouble: No data in store');
+                return results;
+            }
+
+            try {
+                // Получаем полный список из первого запроса
+                let allValues = [];
+                if (typeof funSPARQLvaluesComunica === 'function') {
+                    allValues = await funSPARQLvaluesComunica(sparqlQuery1, variableName1);
+                } else if (typeof funSPARQLvalues === 'function') {
+                    allValues = funSPARQLvalues(sparqlQuery1, variableName1);
+                }
+
+                console.log(`funSPARQLvaluesDouble: Query1 returned ${allValues.length} values`);
+
+                // Получаем список недоступных значений из второго запроса
+                let disabledValues = [];
+                if (typeof funSPARQLvaluesComunica === 'function') {
+                    disabledValues = await funSPARQLvaluesComunica(sparqlQuery2, variableName2);
+                } else if (typeof funSPARQLvalues === 'function') {
+                    disabledValues = funSPARQLvalues(sparqlQuery2, variableName2);
+                }
+
+                console.log(`funSPARQLvaluesDouble: Query2 returned ${disabledValues.length} disabled values`);
+
+                // Создаём Set для быстрой проверки недоступных значений
+                const disabledUris = new Set(disabledValues.map(v => v.uri));
+
+                // Формируем результат с пометкой disabled
+                allValues.forEach(value => {
+                    results.push({
+                        uri: value.uri,
+                        label: value.label,
+                        disabled: disabledUris.has(value.uri)
+                    });
+                });
+
+            } catch (error) {
+                console.error('funSPARQLvaluesDouble error:', error);
+            }
+
+            return results;
+        }
+
+        /**
+         * Синхронная версия funSPARQLvaluesDouble для случаев,
+         * когда асинхронный вызов неудобен.
+         *
+         * @param {string} sparqlQuery1 - SPARQL SELECT запрос для полного списка
+         * @param {string} variableName1 - Имя переменной для извлечения
+         * @param {string} sparqlQuery2 - SPARQL SELECT запрос для списка недоступных значений
+         * @param {string} variableName2 - Имя переменной для извлечения
+         * @returns {Array<{uri: string, label: string, disabled: boolean}>} Массив результатов
+         */
+        function funSPARQLvaluesDoubleSync(sparqlQuery1, variableName1 = 'value', sparqlQuery2, variableName2 = 'value') {
+            const results = [];
+
+            // Если нет текущего store, возвращаем пустой массив
+            if (!currentStore || currentQuads.length === 0) {
+                console.log('funSPARQLvaluesDoubleSync: No data in store');
+                return results;
+            }
+
+            try {
+                // Получаем полный список из первого запроса (синхронно)
+                let allValues = [];
+                if (typeof funSPARQLvalues === 'function') {
+                    allValues = funSPARQLvalues(sparqlQuery1, variableName1);
+                }
+
+                console.log(`funSPARQLvaluesDoubleSync: Query1 returned ${allValues.length} values`);
+
+                // Получаем список недоступных значений из второго запроса (синхронно)
+                let disabledValues = [];
+                if (typeof funSPARQLvalues === 'function') {
+                    disabledValues = funSPARQLvalues(sparqlQuery2, variableName2);
+                }
+
+                console.log(`funSPARQLvaluesDoubleSync: Query2 returned ${disabledValues.length} disabled values`);
+
+                // Создаём Set для быстрой проверки недоступных значений
+                const disabledUris = new Set(disabledValues.map(v => v.uri));
+
+                // Формируем результат с пометкой disabled
+                allValues.forEach(value => {
+                    results.push({
+                        uri: value.uri,
+                        label: value.label,
+                        disabled: disabledUris.has(value.uri)
+                    });
+                });
+
+            } catch (error) {
+                console.error('funSPARQLvaluesDoubleSync error:', error);
+            }
+
+            return results;
+        }
+
         /**
          * Выполняет SPARQL UPDATE запрос (INSERT/DELETE) через Comunica.
          * Предназначена для будущего использования при автоматическом выполнении
