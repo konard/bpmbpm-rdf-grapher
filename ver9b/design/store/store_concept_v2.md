@@ -1,5 +1,5 @@
 # Концепция хранилища techtree и currentQuads (версия 2)
-
+design/store/store_concept_v2.md 04/02/26  
 Ссылка на issue: https://github.com/bpmbpm/rdf-grapher/issues/264
 
 ## Содержание
