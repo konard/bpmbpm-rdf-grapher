@@ -265,6 +265,7 @@
     </div>
 
     <!-- Модальное окно для создания нового TriG -->
+    <!-- issue #290: Унифицировано с New Concept и Del Concept\Individ -->
     <div id="new-trig-modal" class="new-trig-modal">
         <div class="new-trig-modal-content">
             <div class="new-trig-modal-header">
@@ -287,9 +288,20 @@
                     <label for="new-trig-label">rdfs:label (автоматически):</label>
                     <input type="text" id="new-trig-label" placeholder="Схема процесса {processLabel}" readonly style="background-color: #f5f5f5;">
                 </div>
+                <!-- issue #290: Промежуточный SPARQL запрос (унифицировано с New Concept) -->
+                <div id="new-trig-intermediate-sparql" style="display: none;">
+                    <div class="intermediate-sparql-header">
+                        <label>Промежуточный SPARQL:</label>
+                        <button class="toggle-sparql-btn" onclick="toggleNewTrigIntermediateSparql()">Свернуть/Развернуть</button>
+                    </div>
+                    <textarea class="intermediate-sparql-textarea" rows="8" readonly></textarea>
+                </div>
             </div>
+            <!-- issue #290: Область сообщений (унифицировано с New Concept и Del Concept) -->
+            <div id="new-trig-message" class="new-trig-message" style="display: none;"></div>
             <div class="new-trig-modal-buttons">
                 <button class="new-trig-cancel-btn" onclick="closeNewTrigModal()">Отмена</button>
+                <button class="new-trig-sparql-btn" onclick="toggleNewTrigIntermediateSparql()">Промежуточный SPARQL</button>
                 <button class="new-trig-create-btn" onclick="createNewTrig()">Создать запрос New TriG</button>
             </div>
         </div>

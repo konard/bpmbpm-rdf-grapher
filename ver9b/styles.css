@@ -1465,6 +1465,42 @@
             background-color: #F57C00;
         }
 
+        /* issue #290: Кнопка "Промежуточный SPARQL" в модальном окне New TriG */
+        .new-trig-sparql-btn {
+            background-color: #607D8B;
+            color: white;
+        }
+
+        .new-trig-sparql-btn:hover {
+            background-color: #455A64;
+        }
+
+        /* issue #290: Стили сообщений в модальном окне New TriG (унифицированы с New Concept) */
+        .new-trig-message {
+            padding: 10px 15px;
+            border-radius: 4px;
+            margin-top: 15px;
+            font-size: 14px;
+        }
+
+        .new-trig-message.success {
+            background-color: #e8f5e9;
+            color: #2e7d32;
+            border: 1px solid #a5d6a7;
+        }
+
+        .new-trig-message.error {
+            background-color: #ffebee;
+            color: #c62828;
+            border: 1px solid #ef9a9a;
+        }
+
+        .new-trig-message.info {
+            background-color: #e3f2fd;
+            color: #1565C0;
+            border: 1px solid #90CAF9;
+        }
+
         /* ============================================================================= */
         /* Стили для модального окна New Concept */
         /* ============================================================================= */
