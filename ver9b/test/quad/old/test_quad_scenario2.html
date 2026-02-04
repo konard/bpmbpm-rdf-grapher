@@ -135,7 +135,7 @@
          */
         async function prepareData() {
             // Загрузка Trig_VADv5.ttl
-            const response = await fetch('../../Trig_VADv5.ttl');
+            const response = await fetch('../../dia/Trig_VADv5.ttl');
             if (!response.ok) throw new Error(`HTTP ${response.status}`);
             const testData = await response.text();
 

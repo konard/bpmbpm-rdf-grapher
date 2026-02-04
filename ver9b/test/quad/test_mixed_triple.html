@@ -170,7 +170,7 @@
          * Загружает и парсит TriG данные
          */
         async function loadTriGData() {
-            const response = await fetch('../../Trig_VADv5.ttl');
+            const response = await fetch('../../dia/Trig_VADv5.ttl');
             if (!response.ok) throw new Error(`HTTP ${response.status}`);
             const data = await response.text();
 

@@ -1,9 +1,11 @@
 // Ссылка на issue: https://github.com/bpmbpm/rdf-grapher/issues/232
 // Ссылка на issue: https://github.com/bpmbpm/rdf-grapher/issues/260
+// Ссылка на issue: https://github.com/bpmbpm/rdf-grapher/issues/272
 // 1_example_data_ui.js - UI функции загрузки примеров
 //
 // issue #260: Убраны встроенные данные (fallback). Примеры загружаются только из файлов.
 // При ошибке загрузки показывается диалог с предложением указать расположение файла.
+// issue #272: Файлы примеров перемещены в подпапку dia/ (относительный путь dia/Trig_VADv5.ttl)
 
 /**
  * Универсальная функция загрузки примера из файла.
@@ -101,7 +103,8 @@ async function loadExampleFromFile(filename, exampleName, inputFormat, visualiza
  * - t_pGA, t_p1: схемы процессов (VADProcessDia)
  */
 function loadExampleTrigVADv5() {
-    loadExampleFromFile('Trig_VADv5.ttl', 'Trig_VADv5', 'trig', 'vad-trig');
+    // issue #272: Файлы примеров перемещены в подпапку dia/
+    loadExampleFromFile('dia/Trig_VADv5.ttl', 'Trig_VADv5', 'trig', 'vad-trig');
 }
 
 /**
@@ -112,7 +115,8 @@ function loadExampleTrigVADv5() {
  * - vad:pDel: концепт процесса для тестирования удаления
  */
 function loadExampleTrigVADv6() {
-    loadExampleFromFile('Trig_VADv6.ttl', 'Trig_VADv6', 'trig', 'vad-trig');
+    // issue #272: Файлы примеров перемещены в подпапку dia/
+    loadExampleFromFile('dia/Trig_VADv6.ttl', 'Trig_VADv6', 'trig', 'vad-trig');
 }
 
 /**
