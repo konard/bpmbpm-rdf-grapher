@@ -1,6 +1,11 @@
 {
-    "_comment": "Ссылка на issue: https://github.com/bpmbpm/rdf-grapher/issues/232",
-    "_description": "Конфигурация состояния окон при старте программы",
+    "_comment": "Ссылка на issue: https://github.com/bpmbpm/rdf-grapher/issues/232, #280",
+    "_description": "Конфигурация состояния окон при старте программы и список примеров",
+    "diaFiles": [
+        {"name": "Trig_VADv5", "file": "dia/Trig_VADv5.ttl", "format": "trig", "mode": "vad-trig"},
+        {"name": "Trig_VADv6", "file": "dia/Trig_VADv6.ttl", "format": "trig", "mode": "vad-trig"},
+        {"name": "Trig_VADv7", "file": "dia/Trig_VADv7.ttl", "format": "trig", "mode": "vad-trig"}
+    ],
     "windows": {
         "1_example_data": {
             "title": "Загрузить пример RDF данных",

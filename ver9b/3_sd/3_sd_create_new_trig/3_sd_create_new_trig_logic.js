@@ -80,52 +80,61 @@ function updateNewTrigFields() {
 
 /**
  * Создаёт SPARQL запрос для нового TriG контейнера
+ * issue #280: Исправлено - все триплеты размещены в именованных графах
  */
 function createNewTrig() {
     const processSelect = document.getElementById('new-trig-process-concept');
     const trigIdInput = document.getElementById('new-trig-id');
     const trigLabelInput = document.getElementById('new-trig-label');
-    
+
     if (!processSelect || !processSelect.value) {
         alert('Выберите концепт процесса');
         return;
     }
-    
+
     const processUri = processSelect.value;
     const trigId = trigIdInput ? trigIdInput.value : '';
     const trigLabel = trigLabelInput ? trigLabelInput.value : '';
-    
+
     if (!trigId) {
         alert('ID TriG не может быть пустым');
         return;
     }
-    
-    // Формируем SPARQL INSERT запрос
+
+    // issue #280: Получаем prefixed name для процесса
+    const processPrefixed = typeof getPrefixedName === 'function'
+        ? getPrefixedName(processUri, currentPrefixes)
+        : '<' + processUri + '>';
+
+    // issue #280: Формируем SPARQL INSERT запрос
+    // Все триплеты размещены внутри соответствующих именованных графов:
+    // - Метаданные TriG (rdf:type, rdfs:label, vad:hasParentObj) внутри нового графа vad:${trigId}
+    // - Связь концепта процесса со схемой (vad:hasTrig) в графе vad:ptree
     const sparqlQuery = `PREFIX rdf: <http://www.w3.org/1999/02/22-rdf-syntax-ns#>
 PREFIX rdfs: <http://www.w3.org/2000/01/rdf-schema#>
 PREFIX vad: <http://example.org/vad#>
 
 # Создание нового TriG контейнера (VADProcessDia)
+# issue #280: Все триплеты размещены в именованных графах
 INSERT DATA {
-    # Метаданные TriG в дефолтном графе
-    vad:${trigId} rdf:type vad:VADProcessDia .
-    vad:${trigId} rdfs:label "${trigLabel}" .
-    
     # Связь концепта процесса со схемой в ptree
     GRAPH vad:ptree {
-        ${typeof getPrefixedName === 'function' ? getPrefixedName(processUri, currentPrefixes) : '<' + processUri + '>'} vad:hasTrig vad:${trigId} .
+        ${processPrefixed} vad:hasTrig vad:${trigId} .
     }
-    
-    # Пустой граф для нового TriG
+
+    # Метаданные и содержимое нового TriG
     GRAPH vad:${trigId} {
+        vad:${trigId} rdf:type vad:VADProcessDia .
+        vad:${trigId} rdfs:label "${trigLabel}" .
+        vad:${trigId} vad:hasParentObj ${processPrefixed} .
     }
 }`;
-    
+
     // Выводим в Result in SPARQL
     const resultTextarea = document.getElementById('result-sparql-query');
     if (resultTextarea) {
         resultTextarea.value = sparqlQuery;
     }
-    
+
     closeNewTrigModal();
 }
