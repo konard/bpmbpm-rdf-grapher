@@ -1,5 +1,5 @@
 # Форматирование при сериализации N3.js
-
+design/store/n3js_serialization_format.md 04/02/26  
 Ссылка на issue: https://github.com/bpmbpm/rdf-grapher/issues/264 (пункт 4)
 
 ## Проблема
