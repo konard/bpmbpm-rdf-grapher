@@ -1,6 +1,7 @@
 // issue #232: Модуль бизнес-логики Smart Design
 // Содержит функции создания, удаления триплетов и применения SPARQL запросов
 // issue #254: Рефакторинг - использование Comunica для выполнения SPARQL UPDATE и N3.Writer для сериализации
+// issue #274: Инвалидация trigHierarchy после SPARQL UPDATE для обновления диаграммы
 
 /**
  * Создаёт SPARQL INSERT запрос на основе выбранных полей Smart Design
@@ -219,7 +220,15 @@ async function applyTripleToRdfInput(sparqlQuery, mode) {
             message = 'SPARQL запрос выполнен';
         }
 
+        // issue #274: Инвалидируем trigHierarchy после SPARQL UPDATE
+        // Это необходимо, чтобы при следующем нажатии "Показать" данные были перепарсены
+        // и обновленные rdfs:label отобразились на диаграмме
+        trigHierarchy = {};
+        selectedTrigUri = null;
+        virtualRDFdata = {};
+
         console.log(`issue #254: SPARQL UPDATE выполнен через Comunica, ${currentQuads.length} триплетов в store`);
+        console.log('issue #274: trigHierarchy инвалидирован для обновления диаграммы');
         showResultSparqlMessage(message, 'success');
 
     } catch (error) {
@@ -343,7 +352,16 @@ function refreshQuadstoreFromRdfInput() {
             // issue #254: Также обновляем currentStore для синхронизации
             currentStore = new N3.Store();
             quads.forEach(q => currentStore.addQuad(q));
+
+            // issue #274: Инвалидируем trigHierarchy при обновлении quadstore
+            // Это необходимо, чтобы при следующем нажатии "Показать" данные были перепарсены
+            // и обновленные rdfs:label отобразились на диаграмме
+            trigHierarchy = {};
+            selectedTrigUri = null;
+            virtualRDFdata = {};
+
             console.log(`issue #254: Quadstore обновлён из textarea, ${quads.length} триплетов`);
+            console.log('issue #274: trigHierarchy инвалидирован для обновления диаграммы');
         }
     } catch (e) {
         console.warn('issue #254: Не удалось обновить quadstore:', e.message);
