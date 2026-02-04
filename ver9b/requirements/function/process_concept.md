@@ -1,6 +1,6 @@
 ## process concept
 Создание и удаление концепта процесса. 
-### New concept process
+### 1 New concept process
 Функциональные требования к Созданию концепта процесса. При создании Концепта процесса.  
 Ввести 
 - обязательно: id, label, Parent
@@ -11,7 +11,7 @@
 - отсутствие одноименного в ptree (имеющегося c таким же именем), допустимость id (укажи ограничения quadstore на формат id для subject) + рекомендации по id (не точки).
 - 
 
-### requirements arc
+#### requirements arc
 - https://github.com/bpmbpm/rdf-grapher/blob/main/ver8tree/requirements/business-requirements.md
 - 1 Добавь кнопку New Concept в окно Smart Design.
   - https://github.com/bpmbpm/rdf-grapher/issues/205
