@@ -443,3 +443,183 @@
 
             return newBinding;
         }
+
+        // ==============================================================================
+        // funSPARQLask — выполнение SPARQL ASK запросов
+        // Ссылка на issue: https://github.com/bpmbpm/rdf-grapher/issues/270
+        // ==============================================================================
+
+        /**
+         * Выполняет SPARQL ASK запрос и возвращает boolean результат.
+         * Поддерживает простые ASK запросы с GRAPH паттернами.
+         *
+         * @param {string} sparqlQuery - SPARQL ASK запрос
+         * @returns {Promise<boolean>} true если паттерн найден, false иначе
+         *
+         * @example
+         * // Проверка: является ли граф виртуальным
+         * const isVirtual = await funSPARQLask(`
+         *     ASK {
+         *         GRAPH <http://example.org/vad#vt_p1> {
+         *             <http://example.org/vad#vt_p1> rdf:type vad:Virtual .
+         *         }
+         *     }
+         * `);
+         */
+        async function funSPARQLask(sparqlQuery) {
+            // Если нет текущего store, возвращаем false
+            if (!currentStore || currentQuads.length === 0) {
+                console.log('funSPARQLask: No data in store');
+                return false;
+            }
+
+            try {
+                // Инициализируем Comunica engine если нужно
+                if (!comunicaEngine) {
+                    if (typeof Comunica !== 'undefined' && Comunica.QueryEngine) {
+                        comunicaEngine = new Comunica.QueryEngine();
+                    } else {
+                        console.error('funSPARQLask: Comunica не загружена, используем fallback');
+                        return funSPARQLaskSimple(sparqlQuery);
+                    }
+                }
+
+                // Выполняем ASK запрос через Comunica
+                const result = await comunicaEngine.queryBoolean(sparqlQuery, {
+                    sources: [currentStore]
+                });
+
+                return result;
+            } catch (error) {
+                console.error('funSPARQLask error:', error);
+                // Fallback на простую реализацию при ошибке Comunica
+                console.log('funSPARQLask: Fallback на funSPARQLaskSimple');
+                return funSPARQLaskSimple(sparqlQuery);
+            }
+        }
+
+        /**
+         * Простая реализация SPARQL ASK для случаев когда Comunica недоступна.
+         * Поддерживает базовые паттерны с GRAPH.
+         *
+         * @param {string} sparqlQuery - SPARQL ASK запрос
+         * @returns {boolean} true если паттерн найден, false иначе
+         */
+        function funSPARQLaskSimple(sparqlQuery) {
+            try {
+                // Парсим ASK запрос
+                const askMatch = sparqlQuery.match(/ASK\s*\{([\s\S]*)\}/i);
+                if (!askMatch) {
+                    console.log('funSPARQLaskSimple: Not an ASK query');
+                    return false;
+                }
+
+                const whereClause = askMatch[1].trim();
+
+                // Парсим GRAPH паттерн если есть
+                const graphMatch = whereClause.match(/GRAPH\s+(<[^>]+>|[\w]+:[\w]+)\s*\{([\s\S]*?)\}/i);
+
+                let graphUri = null;
+                let patterns;
+
+                if (graphMatch) {
+                    // Разрешаем URI графа
+                    let graphValue = graphMatch[1];
+                    if (graphValue.startsWith('<') && graphValue.endsWith('>')) {
+                        graphUri = graphValue.slice(1, -1);
+                    } else {
+                        // Prefixed name
+                        const colonIndex = graphValue.indexOf(':');
+                        if (colonIndex > 0) {
+                            const prefix = graphValue.substring(0, colonIndex);
+                            const local = graphValue.substring(colonIndex + 1);
+                            const namespace = currentPrefixes[prefix];
+                            if (namespace) {
+                                graphUri = namespace + local;
+                            }
+                        }
+                    }
+                    patterns = parseTriplePatterns(graphMatch[2]);
+                } else {
+                    patterns = parseTriplePatterns(whereClause);
+                }
+
+                // Проверяем каждый квад на соответствие паттернам
+                for (const quad of currentQuads) {
+                    // Если указан граф, проверяем соответствие
+                    if (graphUri && quad.graph?.value !== graphUri) {
+                        continue;
+                    }
+
+                    // Проверяем соответствие паттернам
+                    let allPatternsMatch = true;
+                    for (const pattern of patterns) {
+                        const match = matchQuadToPattern(quad, pattern, {});
+                        if (!match) {
+                            allPatternsMatch = false;
+                            break;
+                        }
+                    }
+
+                    if (allPatternsMatch && patterns.length > 0) {
+                        return true;
+                    }
+                }
+
+                return false;
+            } catch (error) {
+                console.error('funSPARQLaskSimple error:', error);
+                return false;
+            }
+        }
+
+        /**
+         * Проверяет, является ли граф виртуальным через SPARQL ASK запрос.
+         * SPARQL-driven альтернатива isVirtualGraph().
+         *
+         * issue #270: Замена isVirtualGraph() на SPARQL-проверку rdf:type vad:Virtual
+         *
+         * @param {string} graphUri - URI графа для проверки
+         * @returns {Promise<boolean>} true если граф типа vad:Virtual
+         */
+        async function isVirtualGraphSPARQL(graphUri) {
+            if (!graphUri) return false;
+
+            const sparqlQuery = `
+                PREFIX rdf: <http://www.w3.org/1999/02/22-rdf-syntax-ns#>
+                PREFIX vad: <http://example.org/vad#>
+                ASK {
+                    GRAPH <${graphUri}> {
+                        <${graphUri}> rdf:type vad:Virtual .
+                    }
+                }
+            `;
+
+            return await funSPARQLask(sparqlQuery);
+        }
+
+        /**
+         * Синхронная версия проверки виртуального графа через N3.Store.
+         * Используется для критичных по производительности операций.
+         *
+         * issue #270: SPARQL-driven альтернатива isVirtualGraph()
+         *
+         * @param {string} graphUri - URI графа для проверки
+         * @returns {boolean} true если граф типа vad:Virtual
+         */
+        function isVirtualGraphByType(graphUri) {
+            if (!graphUri || !currentStore) return false;
+
+            const RDF_TYPE = 'http://www.w3.org/1999/02/22-rdf-syntax-ns#type';
+            const VAD_VIRTUAL = 'http://example.org/vad#Virtual';
+
+            // Используем N3.Store.getQuads() для быстрой проверки
+            const quads = currentStore.getQuads(
+                graphUri,      // subject = graphUri
+                RDF_TYPE,      // predicate = rdf:type
+                VAD_VIRTUAL,   // object = vad:Virtual
+                graphUri       // graph = graphUri
+            );
+
+            return quads.length > 0;
+        }

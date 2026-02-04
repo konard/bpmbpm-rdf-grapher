@@ -376,7 +376,12 @@ function calculateProcessSubtypes(hierarchy, prefixes) {
 /**
  * Генерирует строковое представление virtualRDFdata в формате TriG
  * Создаёт виртуальные контейнеры (vt_*) для каждого TriG типа VADProcessDia
- * @param {Object} virtualData - Виртуальные данные
+ *
+ * issue #264, #270: Каждый Virtual TriG имеет:
+ * - rdf:type vad:Virtual (для SPARQL-driven проверки типа)
+ * - vad:hasParentObj <parentTrigUri> (связь с родительским VADProcessDia)
+ *
+ * @param {Object} virtualData - Виртуальные данные { trigUri: { processUri: processInfo } }
  * @param {Object} prefixes - Словарь префиксов
  * @returns {string} - Строка в формате TriG
  */
@@ -387,6 +392,7 @@ function formatVirtualRDFdata(virtualData, prefixes) {
     output += '# Эти данные вычисляются автоматически при загрузке и не хранятся в RDF.\n';
     output += '# Пересчёт происходит при изменении схемы процесса.\n';
     output += '# Для каждого TriG типа VADProcessDia создаётся виртуальный двойник (vt_*).\n';
+    output += '# issue #264: Virtual TriG связан с родителем через vad:hasParentObj.\n';
     output += '# ==============================================================================\n\n';
 
     // Добавляем префиксы
@@ -417,7 +423,10 @@ function formatVirtualRDFdata(virtualData, prefixes) {
         output += `${virtualContainerName} {\n`;
 
         // Свойства самого виртуального TriG (используем virtualContainerName, а не trigLabel)
-        output += `    ${virtualContainerName} rdf:type vad:Virtual .\n\n`;
+        // issue #270: rdf:type vad:Virtual для SPARQL-driven проверки
+        output += `    ${virtualContainerName} rdf:type vad:Virtual .\n`;
+        // issue #264, #270: hasParentObj связывает Virtual TriG с родительским VADProcessDia
+        output += `    ${virtualContainerName} vad:hasParentObj ${trigLabel} .\n\n`;
 
         // Свойства процессов
         for (const [processUri, processInfo] of Object.entries(processes)) {
@@ -431,6 +440,135 @@ function formatVirtualRDFdata(virtualData, prefixes) {
     }
 
     return output;
+}
+
+/**
+ * issue #270: Добавляет виртуальные квады в currentStore и currentQuads
+ * Парсит virtualRDFdata и создаёт N3.Quad объекты для хранения в store
+ *
+ * @param {Object} virtualData - Виртуальные данные { trigUri: { processUri: processInfo } }
+ * @param {Object} prefixes - Словарь префиксов
+ * @returns {Array} - Массив созданных квадов
+ */
+function addVirtualQuadsToStore(virtualData, prefixes) {
+    if (!virtualData || Object.keys(virtualData).length === 0) {
+        return [];
+    }
+
+    const VAD_NS = 'http://example.org/vad#';
+    const RDF_NS = 'http://www.w3.org/1999/02/22-rdf-syntax-ns#';
+
+    const newQuads = [];
+    const factory = N3.DataFactory;
+    const { namedNode } = factory;
+
+    // Для каждого TriG создаём виртуальный контейнер
+    for (const [trigUri, processes] of Object.entries(virtualData)) {
+        // Пропускаем TriG без процессов
+        if (Object.keys(processes).length === 0) {
+            continue;
+        }
+
+        // Формируем URI виртуального контейнера (vt_ вместо t_)
+        let virtualContainerUri;
+        if (trigUri.includes('#t_')) {
+            virtualContainerUri = trigUri.replace('#t_', '#vt_');
+        } else {
+            // Извлекаем локальное имя и добавляем vt_ префикс
+            const localName = trigUri.split('#').pop() || trigUri.split('/').pop();
+            virtualContainerUri = VAD_NS + 'vt_' + localName;
+        }
+
+        const virtualGraphNode = namedNode(virtualContainerUri);
+
+        // rdf:type vad:Virtual
+        newQuads.push(factory.quad(
+            virtualGraphNode,
+            namedNode(RDF_NS + 'type'),
+            namedNode(VAD_NS + 'Virtual'),
+            virtualGraphNode
+        ));
+
+        // vad:hasParentObj <parentTrigUri>
+        newQuads.push(factory.quad(
+            virtualGraphNode,
+            namedNode(VAD_NS + 'hasParentObj'),
+            namedNode(trigUri),
+            virtualGraphNode
+        ));
+
+        // Добавляем processSubtype для каждого процесса
+        for (const [processUri, processInfo] of Object.entries(processes)) {
+            const subtype = processInfo.processSubtype || 'unknown';
+            newQuads.push(factory.quad(
+                namedNode(processUri),
+                namedNode(VAD_NS + 'processSubtype'),
+                namedNode(VAD_NS + subtype),
+                virtualGraphNode
+            ));
+        }
+    }
+
+    // Добавляем квады в currentQuads и currentStore
+    if (newQuads.length > 0) {
+        currentQuads.push(...newQuads);
+
+        if (currentStore) {
+            newQuads.forEach(quad => currentStore.addQuad(quad));
+        }
+
+        // Также добавляем виртуальные графы в trigHierarchy
+        addVirtualTrigsToHierarchy(newQuads, virtualData, prefixes);
+    }
+
+    console.log(`addVirtualQuadsToStore: Added ${newQuads.length} virtual quads`);
+    return newQuads;
+}
+
+/**
+ * issue #270: Добавляет виртуальные TriG в trigHierarchy для корректной фильтрации
+ *
+ * @param {Array} virtualQuads - Массив виртуальных квадов
+ * @param {Object} virtualData - Виртуальные данные
+ * @param {Object} prefixes - Словарь префиксов
+ */
+function addVirtualTrigsToHierarchy(virtualQuads, virtualData, prefixes) {
+    if (!trigHierarchy) return;
+
+    const VAD_NS = 'http://example.org/vad#';
+
+    // Группируем квады по графу
+    const quadsByGraph = {};
+    virtualQuads.forEach(quad => {
+        const graphUri = quad.graph?.value;
+        if (graphUri) {
+            if (!quadsByGraph[graphUri]) {
+                quadsByGraph[graphUri] = [];
+            }
+            quadsByGraph[graphUri].push(quad);
+        }
+    });
+
+    // Добавляем записи в trigHierarchy для каждого виртуального графа
+    for (const [graphUri, quads] of Object.entries(quadsByGraph)) {
+        // Находим родительский trigUri
+        let parentTrigUri = null;
+        if (graphUri.includes('#vt_')) {
+            parentTrigUri = graphUri.replace('#vt_', '#t_');
+        }
+
+        trigHierarchy[graphUri] = {
+            uri: graphUri,
+            label: getPrefixedName(graphUri, prefixes),
+            type: VAD_NS + 'Virtual',
+            hasParent: parentTrigUri,
+            children: [],
+            quads: quads,
+            processes: [],
+            isTrig: true,
+            isVirtual: true  // issue #270: Маркер виртуального TriG
+        };
+    }
 }
 
 /**

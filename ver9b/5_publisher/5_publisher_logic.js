@@ -33,6 +33,19 @@
 
             currentMode = visualizationMode;
 
+            // issue #270: В режиме vad-trig, если данные уже загружены (trigHierarchy не пустой),
+            // Кнопка "Показать" должна ревизуализировать текущий выбранный TriG,
+            // не перепарсивая textarea (который может содержать отфильтрованные данные).
+            // Фильтр quadstore влияет только на отображение в textarea, не на Publisher.
+            if (visualizationMode === 'vad-trig' &&
+                trigHierarchy && Object.keys(trigHierarchy).length > 0 &&
+                selectedTrigUri && trigHierarchy[selectedTrigUri]) {
+                // Данные уже загружены, делаем ревизуализацию выбранного TriG
+                console.log('issue #270: Re-visualizing existing data for TriG:', selectedTrigUri);
+                await revisualizeTrigVAD(selectedTrigUri);
+                return;
+            }
+
             if (!rdfInput) {
                 showError('Пожалуйста, введите RDF данные');
                 return;
@@ -68,7 +81,10 @@
 
                 currentPrefixes = prefixes;
                 currentQuads = quads;
-                currentStore = null;
+
+                // issue #270: Phase 1 - Инициализируем currentStore для SPARQL-driven подхода
+                currentStore = new N3.Store();
+                quads.forEach(quad => currentStore.addQuad(quad));
 
                 // issue #260: Добавляем технологические квады в общий quadstore (Вариант 2)
                 if (typeof addTechQuadsToStore === 'function') {
@@ -115,6 +131,17 @@
                     // Вычисляем виртуальные данные (processSubtype)
                     virtualRDFdata = calculateProcessSubtypes(trigHierarchy, prefixes);
 
+                    // issue #270: Добавляем виртуальные квады в store и hierarchy
+                    // Это позволяет фильтру 'virtual' в quadstore показывать Virtual TriG
+                    if (typeof addVirtualQuadsToStore === 'function') {
+                        addVirtualQuadsToStore(virtualRDFdata, prefixes);
+                    }
+
+                    // issue #270: Обновляем отображение quadstore с виртуальными данными
+                    if (typeof updateQuadstoreDisplay === 'function') {
+                        updateQuadstoreDisplay();
+                    }
+
                     // Выбираем корневой TriG для начального отображения
                     // Используем первый из корневых TriG, если есть
                     selectedTrigUri = hierarchyResult.rootTrigUris.length > 0 ? hierarchyResult.rootTrigUris[0] : null;
@@ -132,14 +159,22 @@
 
                     // Валидация VAD для квадов корневого графа
                     const rootGraphInfo = trigHierarchy[selectedTrigUri];
-                    if (rootGraphInfo) {
-                        const validation = validateVAD(rootGraphInfo.quads, prefixes);
-                        if (!validation.valid) {
-                            showValidationError(formatVADErrors(validation.errors));
-                            button.disabled = false;
-                            button.textContent = 'Показать';
-                            return;
-                        }
+
+                    // issue #270: Проверка существования rootGraphInfo и его quads перед использованием
+                    if (!rootGraphInfo || !rootGraphInfo.quads) {
+                        console.warn('issue #270: rootGraphInfo или rootGraphInfo.quads отсутствует для:', selectedTrigUri);
+                        showError('Не удалось найти данные для выбранного TriG');
+                        button.disabled = false;
+                        button.textContent = 'Показать';
+                        return;
+                    }
+
+                    const validation = validateVAD(rootGraphInfo.quads, prefixes);
+                    if (!validation.valid) {
+                        showValidationError(formatVADErrors(validation.errors));
+                        button.disabled = false;
+                        button.textContent = 'Показать';
+                        return;
                     }
 
                     // Продолжаем с квадами только из выбранного графа
@@ -310,7 +345,11 @@
          */
         async function revisualizeTrigVAD(trigUri) {
             const graphInfo = trigHierarchy[trigUri];
-            if (!graphInfo) return;
+            // issue #270: Проверка наличия graphInfo и graphInfo.quads
+            if (!graphInfo || !graphInfo.quads) {
+                console.warn('issue #270: graphInfo или graphInfo.quads отсутствует для:', trigUri);
+                return;
+            }
 
             const layoutEngine = document.getElementById('layout-engine').value;
 

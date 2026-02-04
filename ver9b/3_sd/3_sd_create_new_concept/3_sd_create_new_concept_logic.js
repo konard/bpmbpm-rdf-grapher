@@ -441,6 +441,54 @@ SELECT ?s WHERE {
     return exists;
 }
 
+/**
+ * issue #270: Проверяет существование ID через SPARQL ASK запрос.
+ * Рекомендуемый подход согласно store_concept_v3.md Phase 1.
+ *
+ * Использует ASK запрос вместо SELECT для более эффективной проверки.
+ *
+ * @param {string} fullUri - Полный URI объекта для проверки
+ * @param {string} graphUri - URI графа для проверки (например, vad:ptree или vad:rtree)
+ * @returns {Promise<boolean>} true если ID уже существует в указанном графе
+ */
+async function checkIdExistsAsk(fullUri, graphUri) {
+    const sparqlQuery = `
+PREFIX rdf: <http://www.w3.org/1999/02/22-rdf-syntax-ns#>
+PREFIX vad: <http://example.org/vad#>
+
+ASK {
+    GRAPH <${graphUri}> {
+        <${fullUri}> ?p ?o .
+    }
+}`;
+
+    // Сохраняем промежуточный запрос для отображения
+    intermediateSparqlQueries.push({
+        description: 'issue #270: Проверка существования ID через ASK',
+        query: sparqlQuery,
+        result: '(выполняется...)'
+    });
+
+    let exists = false;
+
+    if (typeof funSPARQLask === 'function') {
+        exists = await funSPARQLask(sparqlQuery);
+    } else {
+        // Fallback на SELECT-версию
+        exists = checkIdExistsSparql(fullUri, graphUri);
+    }
+
+    // Обновляем результат промежуточного запроса
+    const lastQuery = intermediateSparqlQueries[intermediateSparqlQueries.length - 1];
+    if (lastQuery && lastQuery.description === 'issue #270: Проверка существования ID через ASK') {
+        lastQuery.result = exists
+            ? `ID уже существует: ${fullUri}`
+            : `ID свободен: ${fullUri}`;
+    }
+
+    return exists;
+}
+
 // ==============================================================================
 // ФУНКЦИИ ГЕНЕРАЦИИ ID
 // ==============================================================================

@@ -737,13 +737,30 @@ function isVADProcessDiaGraph(graphUri) {
 }
 
 /**
- * issue #264: Проверяет, является ли граф виртуальным (vad:Virtual)
- * Виртуальные графы имеют имя vt_* (например, vad:vt_p1 для виртуальных данных процесса p1)
+ * issue #264, #270: Проверяет, является ли граф виртуальным (vad:Virtual)
+ *
+ * Стратегия проверки (issue #270 - SPARQL-driven programming):
+ * 1. Первичная проверка: через rdf:type vad:Virtual в N3.Store (SPARQL-driven)
+ * 2. Fallback: проверка имени vt_* (для обратной совместимости до загрузки данных)
+ *
+ * Согласно store_concept_v3.md:
+ * - Для критичных по производительности операций используем синхронную проверку
+ * - Имя vt_* ДОЛЖНО соответствовать типу vad:Virtual (правило валидации)
+ *
  * @param {string} graphUri - URI графа
  * @returns {boolean} - true если граф типа Virtual
  */
 function isVirtualGraph(graphUri) {
     if (!graphUri) return false;
+
+    // issue #270: Первичная проверка через rdf:type vad:Virtual (SPARQL-driven)
+    // Используем синхронную версию isVirtualGraphByType если доступен currentStore
+    if (currentStore && typeof isVirtualGraphByType === 'function') {
+        const byType = isVirtualGraphByType(graphUri);
+        if (byType) return true;
+    }
+
+    // Fallback: проверка по имени vt_* (для обратной совместимости)
     // Виртуальные графы имеют формат vad:vt_* (v=virtual, t=trig)
     const localName = getLocalName(graphUri);
     return localName.startsWith('vt_');
@@ -752,34 +769,45 @@ function isVirtualGraph(graphUri) {
 /**
  * Возвращает отфильтрованные квады в зависимости от режима фильтрации
  * issue #262, #264: Расширенные режимы фильтрации
+ * issue #270: Phase 1 - Использует currentStore.getQuads() вместо currentQuads
  * @param {string} filterMode - Режим фильтрации
  * @returns {Array} - Отфильтрованный массив квадов
  */
 function getFilteredQuads(filterMode = TRIG_FILTER_MODES.OBJECT_TREE_PLUS_VAD) {
+    // issue #270: Phase 1 - Используем currentStore.getQuads() как источник данных
+    // Fallback на currentQuads если store не инициализирован
+    const sourceQuads = (currentStore && typeof currentStore.getQuads === 'function')
+        ? currentStore.getQuads(null, null, null, null)
+        : currentQuads;
+
+    if (!sourceQuads || sourceQuads.length === 0) {
+        return [];
+    }
+
     switch(filterMode) {
         case TRIG_FILTER_MODES.ALL:
             // Все TriG (full quadstore без фильтров)
-            return currentQuads;
+            return sourceQuads;
 
         case TRIG_FILTER_MODES.NO_TECH:
             // Без TechnoTree (устаревший, сохранён для совместимости)
-            return currentQuads.filter(quad => !isTechnoTreeGraph(quad.graph?.value));
+            return sourceQuads.filter(quad => !isTechnoTreeGraph(quad.graph?.value));
 
         case TRIG_FILTER_MODES.ONLY_TECH:
             // Только TechnoTree (устаревший, сохранён для совместимости)
-            return currentQuads.filter(quad => isTechnoTreeGraph(quad.graph?.value));
+            return sourceQuads.filter(quad => isTechnoTreeGraph(quad.graph?.value));
 
         case TRIG_FILTER_MODES.OBJECT_TREE:
             // ObjectTree (концепты процесса и исполнителя: ptree, rtree)
-            return currentQuads.filter(quad => isObjectTreeGraph(quad.graph?.value));
+            return sourceQuads.filter(quad => isObjectTreeGraph(quad.graph?.value));
 
         case TRIG_FILTER_MODES.VAD_PROCESS_DIA:
             // VADProcessDia (схемы процессов с индивидами)
-            return currentQuads.filter(quad => isVADProcessDiaGraph(quad.graph?.value));
+            return sourceQuads.filter(quad => isVADProcessDiaGraph(quad.graph?.value));
 
         case TRIG_FILTER_MODES.OBJECT_TREE_PLUS_VAD:
             // ObjectTree + VADProcessDia (по умолчанию)
-            return currentQuads.filter(quad => {
+            return sourceQuads.filter(quad => {
                 const graphUri = quad.graph?.value;
                 return isObjectTreeGraph(graphUri) || isVADProcessDiaGraph(graphUri);
             });
@@ -787,18 +815,18 @@ function getFilteredQuads(filterMode = TRIG_FILTER_MODES.OBJECT_TREE_PLUS_VAD) {
         case TRIG_FILTER_MODES.VIRTUAL:
             // issue #264: Virtual (виртуальный TriG вычисляемых параметров)
             // Включает все графы типа vad:Virtual (vt_*)
-            return currentQuads.filter(quad => isVirtualGraph(quad.graph?.value));
+            return sourceQuads.filter(quad => isVirtualGraph(quad.graph?.value));
 
         case TRIG_FILTER_MODES.TECHTREE:
             // TechTree (vad-basic-ontology_tech_Appendix.ttl)
-            return currentQuads.filter(quad =>
+            return sourceQuads.filter(quad =>
                 quad.graph?.value === TECHTREE_GRAPH_URI ||
                 quad.graph?.value?.endsWith('#techtree')
             );
 
         default:
             // issue #264: По умолчанию - ObjectTree + VADProcessDia
-            return currentQuads.filter(quad => {
+            return sourceQuads.filter(quad => {
                 const graphUri = quad.graph?.value;
                 return isObjectTreeGraph(graphUri) || isVADProcessDiaGraph(graphUri);
             });

@@ -618,9 +618,10 @@
             }
 
             // Количество триплетов
+            // issue #270: Проверка наличия quads перед обращением к length
             html += `<div class="trig-property-item">`;
             html += `<div class="trig-property-predicate">Триплеты</div>`;
-            html += `<div class="trig-property-value">${graphInfo.quads.length} шт.</div>`;
+            html += `<div class="trig-property-value">${graphInfo.quads?.length || 0} шт.</div>`;
             html += `</div>`;
 
             propertiesContent.innerHTML = html;
