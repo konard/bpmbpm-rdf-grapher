@@ -287,19 +287,9 @@
                     <label for="new-trig-label">rdfs:label (автоматически):</label>
                     <input type="text" id="new-trig-label" placeholder="Схема процесса {processLabel}" readonly style="background-color: #f5f5f5;">
                 </div>
-                <!-- issue #288: Промежуточный SPARQL запрос -->
-                <div id="new-trig-intermediate-sparql" style="display: none;">
-                    <div class="intermediate-sparql-header">
-                        <label>Промежуточный SPARQL:</label>
-                        <button class="toggle-sparql-btn" onclick="toggleNewTrigIntermediateSparql()">Свернуть/Развернуть</button>
-                    </div>
-                    <textarea class="intermediate-sparql-textarea" rows="8" readonly></textarea>
-                </div>
             </div>
-            <div id="new-trig-message" class="new-trig-message" style="display: none;"></div>
             <div class="new-trig-modal-buttons">
                 <button class="new-trig-cancel-btn" onclick="closeNewTrigModal()">Отмена</button>
-                <button class="new-trig-sparql-btn" onclick="toggleNewTrigIntermediateSparql()">Промежуточный SPARQL</button>
                 <button class="new-trig-create-btn" onclick="createNewTrig()">Создать запрос New TriG</button>
             </div>
         </div>
