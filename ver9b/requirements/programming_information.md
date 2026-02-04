@@ -8,7 +8,7 @@
 #### programming concept
 - Максимальное использование в коде SPARQL-запросов, см. [SPARQL-driven Programming Guide](https://github.com/bpmbpm/rdf-grapher/blob/main/ver9b/requirements/sparql-driven-programming_min1.md)
 - Формирование наборов SPARQL-запросов в отдельных файлах *sparql.js
-- периодически в promt добавлять: Напоминаю о приоритете Программирование на основе SPARQL.
+- периодически в promt добавлять: Напоминаю о приоритете SPARQL-driven Programming (Программирование на основе SPARQL).
   
 ### Ontology 
 - [Basic VAD Ontology - Базовая онтология верхнеуровневых процессов](https://github.com/bpmbpm/rdf-grapher/blob/main/ver9b/ontology/vad-basic-ontology.ttl)
