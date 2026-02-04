@@ -1,5 +1,5 @@
 ### auto documentation requirements 
-- Обновляй файлы только в корне 
+- Обновляй файлы только в корне https://github.com/bpmbpm/rdf-grapher/blob/main/ver9b/doc/
 - при обновлении указывай Pull Request по которому происходило обновление и дату
 
 ### Тпебования к отдельным файлам 
