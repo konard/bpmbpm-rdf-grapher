@@ -158,7 +158,6 @@
                     </div>
                 </div>
 
-                <button id="visualize-btn" onclick="visualize()">Показать</button>
             </div>
         </div>
     </div>
@@ -404,6 +403,10 @@
             <span class="window-toggle" id="toggle-5_publisher">&#9660;</span>
         </div>
         <div class="window-content" id="content-5_publisher">
+            <!-- issue #276: Кнопка Обновить перенесена из окна RDF данные в Publisher -->
+            <div class="publisher-controls">
+                <button id="refresh-btn" onclick="refreshVisualization()">Обновить</button>
+            </div>
             <div class="result-container" id="result-container">
                 <!-- VAD TriG режим: контейнер с диаграммой слева и панелями справа -->
                 <div class="vad-trig-container" id="vad-trig-container" style="display: none;">
