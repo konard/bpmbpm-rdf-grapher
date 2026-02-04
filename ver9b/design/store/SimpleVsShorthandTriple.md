@@ -1,5 +1,5 @@
 # Simple Triple vs Shorthand Triple в quadstore (N3.js)
-
+design/store/SimpleVsShorthandTriple.md 04/02/26  
 Ссылка на issue: https://github.com/bpmbpm/rdf-grapher/issues/245
 
 ## 1. Используемый quadstore
