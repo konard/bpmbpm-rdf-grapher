@@ -1,4 +1,4 @@
-## process \ Executor concept + Dia (New + Del)
+## process \ executor concept + Dia (New + Del)
 Создание и удаление концепта процесса. 
 ### 1 New concept process
 Функциональные требования к Созданию концепта процесса. При создании Концепта процесса.  
