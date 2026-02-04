@@ -53,10 +53,12 @@
         </div>
         <div class="window-content" id="content-1_example_data">
             <div class="description">
-                <p>
-                    <span class="example-link" onclick="loadExampleTrigVADv5()">Trig_VADv5</span>
-                    <span class="example-link" onclick="loadExampleTrigVADv6()">Trig_VADv6</span>
-                </p>
+                <!-- issue #284: Заменены ссылки на выпадающий список с динамическим сканированием папки dia/ -->
+                <div class="example-select-container">
+                    <select id="example-select" onchange="loadSelectedExample()">
+                        <option value="">-- Выберите пример --</option>
+                    </select>
+                </div>
                 <div id="example-status" class="example-status" style="display: none;"></div>
             </div>
         </div>
