@@ -1,11 +1,13 @@
 // Ссылка на issue: https://github.com/bpmbpm/rdf-grapher/issues/232
 // Ссылка на issue: https://github.com/bpmbpm/rdf-grapher/issues/260
 // Ссылка на issue: https://github.com/bpmbpm/rdf-grapher/issues/272
+// Ссылка на issue: https://github.com/bpmbpm/rdf-grapher/issues/280
 // 1_example_data_ui.js - UI функции загрузки примеров
 //
 // issue #260: Убраны встроенные данные (fallback). Примеры загружаются только из файлов.
 // При ошибке загрузки показывается диалог с предложением указать расположение файла.
 // issue #272: Файлы примеров перемещены в подпапку dia/ (относительный путь dia/Trig_VADv5.ttl)
+// issue #280: Динамическая загрузка списка примеров из config.json (diaFiles)
 
 /**
  * Универсальная функция загрузки примера из файла.
@@ -125,3 +127,74 @@ function loadExampleTrigVADv6() {
 function loadExample() {
     loadExampleTrigVADv5();
 }
+
+/**
+ * issue #280: Динамически загружает список примеров из config.json и отображает их в UI
+ * Примеры отображаются в горизонтальную линию как кликабельные ссылки
+ */
+async function loadDiaFilesFromConfig() {
+    try {
+        const response = await fetch('config.json');
+        if (!response.ok) {
+            console.warn('issue #280: config.json не найден, используются стандартные примеры');
+            return;
+        }
+
+        const config = await response.json();
+        if (!config.diaFiles || !Array.isArray(config.diaFiles) || config.diaFiles.length === 0) {
+            console.log('issue #280: diaFiles не найден в config.json, используются стандартные примеры');
+            return;
+        }
+
+        // Находим контейнер для примеров
+        const contentEl = document.getElementById('content-1_example_data');
+        if (!contentEl) {
+            console.warn('issue #280: Контейнер content-1_example_data не найден');
+            return;
+        }
+
+        const descriptionEl = contentEl.querySelector('.description');
+        if (!descriptionEl) {
+            console.warn('issue #280: Элемент .description не найден');
+            return;
+        }
+
+        // Находим или создаем контейнер для ссылок на примеры
+        let linksContainer = descriptionEl.querySelector('p');
+        if (!linksContainer) {
+            linksContainer = document.createElement('p');
+            descriptionEl.insertBefore(linksContainer, descriptionEl.firstChild);
+        }
+
+        // Очищаем существующие ссылки и создаем новые из конфига
+        linksContainer.innerHTML = '';
+
+        config.diaFiles.forEach((fileConfig, index) => {
+            const span = document.createElement('span');
+            span.className = 'example-link';
+            span.textContent = fileConfig.name;
+            span.onclick = function() {
+                loadExampleFromFile(
+                    fileConfig.file,
+                    fileConfig.name,
+                    fileConfig.format || 'trig',
+                    fileConfig.mode || 'vad-trig'
+                );
+            };
+            linksContainer.appendChild(span);
+
+            // Добавляем пробел между ссылками (кроме последней)
+            if (index < config.diaFiles.length - 1) {
+                linksContainer.appendChild(document.createTextNode(' '));
+            }
+        });
+
+        console.log(`issue #280: Загружено ${config.diaFiles.length} примеров из config.json`);
+
+    } catch (error) {
+        console.error('issue #280: Ошибка загрузки diaFiles из config.json:', error);
+    }
+}
+
+// issue #280: Автоматически загружаем список примеров при старте
+document.addEventListener('DOMContentLoaded', loadDiaFilesFromConfig);
