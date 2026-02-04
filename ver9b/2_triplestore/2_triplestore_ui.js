@@ -129,13 +129,14 @@ function saveAsFile() {
 
 /**
  * Загружает файл, выбранный пользователем
+ * issue #282: После успешной загрузки автоматически вызывает refreshVisualization и открывает Publisher
  */
-function loadFile(event) {
+async function loadFile(event) {
     const file = event.target.files[0];
     if (!file) return;
 
     const reader = new FileReader();
-    reader.onload = function(e) {
+    reader.onload = async function(e) {
         document.getElementById('rdf-input').value = e.target.result;
 
         // Определяем формат по расширению
@@ -147,6 +148,14 @@ function loadFile(event) {
 
         document.getElementById('input-format').value = format;
 
+        // issue #282: Устанавливаем режим vad-trig для TriG файлов
+        if (format === 'trig' || extension === 'ttl') {
+            document.getElementById('visualization-mode').value = 'vad-trig';
+            if (typeof updateModeDescription === 'function') {
+                updateModeDescription();
+            }
+        }
+
         // Обновляем статус загрузки
         const statusEl = document.getElementById('example-status');
         statusEl.textContent = `Файл ${file.name} успешно загружен`;
@@ -157,6 +166,17 @@ function loadFile(event) {
 
         // Сбрасываем значение input для возможности повторной загрузки того же файла
         event.target.value = '';
+
+        // issue #282: Автоматически вызываем refreshVisualization после успешной загрузки файла
+        if (typeof refreshVisualization === 'function') {
+            console.log('issue #282: Auto-calling refreshVisualization after successful file load');
+            await refreshVisualization();
+
+            // issue #282: После успешной загрузки разворачиваем панель Publisher, если она свёрнута
+            if (typeof applyPanelCollapsedState === 'function') {
+                applyPanelCollapsedState('5_publisher', false);
+            }
+        }
     };
     reader.readAsText(file);
 }

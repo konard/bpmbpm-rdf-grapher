@@ -538,9 +538,10 @@ function buildConceptUri(id, prefix = 'vad') {
  * Вызывается по клику на кнопку "New Concept"
  */
 function openNewConceptModal() {
-    // Issue #223: Проверяем, что данные загружены и распарсены
+    // Issue #223, #282: Проверяем, что данные загружены и распарсены
+    // issue #282: Удалено сообщение "нажмите кнопку Показать" - данные загружаются автоматически
     if (typeof currentQuads === 'undefined' || currentQuads.length === 0) {
-        alert('Сначала загрузите и отобразите RDF данные (нажмите кнопку "Показать").\n\nFirst load and display RDF data (click "Показать" button).');
+        alert('Данные quadstore пусты. Загрузите пример данных (Trig_VADv5 или Trig_VADv6) в разделе "Загрузить пример RDF данных".\n\nQuadstore is empty. Load example data (Trig_VADv5 or Trig_VADv6) in "Load example RDF data" section.');
         return;
     }
 
