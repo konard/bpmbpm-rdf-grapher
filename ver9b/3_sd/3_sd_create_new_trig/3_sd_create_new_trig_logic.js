@@ -2,56 +2,34 @@
 // Содержит функции для работы с модальным окном New TriG
 
 /**
- * issue #286: Получает множество URI процессов, у которых уже есть TriG типа VADProcessDia.
- * Используется для фильтрации в openNewTrigModal().
+ * issue #286: SPARQL-запрос для получения концептов процессов БЕЗ существующего VADProcessDia.
+ * Использует FILTER NOT EXISTS для фильтрации процессов, у которых уже есть схема.
  *
- * @returns {Set<string>} Множество URI процессов с существующими схемами
+ * Алгоритм:
+ * 1. Выбираем процессы из ptree с типом TypeProcess
+ * 2. Исключаем те, у которых есть hasTrig на граф типа VADProcessDia
  */
-function getProcessesWithVADProcessDia() {
-    const processesWithTrig = new Set();
-    const VAD_HAS_TRIG = 'http://example.org/vad#hasTrig';
-    const RDF_TYPE = 'http://www.w3.org/1999/02/22-rdf-syntax-ns#type';
-    const VAD_PROCESS_DIA = 'http://example.org/vad#VADProcessDia';
-    const VAD_PTREE = 'http://example.org/vad#ptree';
-
-    if (typeof currentQuads === 'undefined' || !Array.isArray(currentQuads)) {
-        console.log('[3_sd_create_new_trig] currentQuads not available');
-        return processesWithTrig;
+const SPARQL_PROCESSES_WITHOUT_VADPROCESSDIA = `
+    SELECT ?process ?label WHERE {
+        GRAPH vad:ptree {
+            ?process rdf:type vad:TypeProcess .
+            ?process rdfs:label ?label .
+            FILTER NOT EXISTS {
+                ?process vad:hasTrig ?trig .
+                GRAPH ?trig {
+                    ?trig rdf:type vad:VADProcessDia .
+                }
+            }
+        }
     }
-
-    // Шаг 1: Найти все связи process -> trig через vad:hasTrig в ptree
-    const processTrigMap = new Map(); // processUri -> trigUri
-    currentQuads.forEach(quad => {
-        if (quad.graph?.value === VAD_PTREE &&
-            quad.predicate?.value === VAD_HAS_TRIG) {
-            processTrigMap.set(quad.subject.value, quad.object.value);
-        }
-    });
-
-    // Шаг 2: Проверить, что TriG имеет тип VADProcessDia
-    processTrigMap.forEach((trigUri, processUri) => {
-        // Ищем триплет: trigUri rdf:type vad:VADProcessDia в графе trigUri
-        const hasVADProcessDiaType = currentQuads.some(quad =>
-            quad.graph?.value === trigUri &&
-            quad.subject?.value === trigUri &&
-            quad.predicate?.value === RDF_TYPE &&
-            quad.object?.value === VAD_PROCESS_DIA
-        );
-        if (hasVADProcessDiaType) {
-            processesWithTrig.add(processUri);
-        }
-    });
-
-    console.log(`[3_sd_create_new_trig] issue #286: Found ${processesWithTrig.size} processes with VADProcessDia`);
-    return processesWithTrig;
-}
+`;
 
 /**
  * Открывает модальное окно создания нового TriG
  * Вызывается из Smart Design панели
- * issue #286: Фильтруются концепты процессов, у которых уже есть TriG типа VADProcessDia
+ * issue #286: SPARQL-driven фильтрация процессов через FILTER NOT EXISTS
  */
-function openNewTrigModal() {
+async function openNewTrigModal() {
     const modal = document.getElementById('new-trig-modal');
     if (!modal) {
         console.error('[3_sd_create_new_trig] Модальное окно new-trig-modal не найдено');
@@ -63,31 +41,28 @@ function openNewTrigModal() {
     if (processSelect) {
         processSelect.innerHTML = '<option value="">-- Выберите концепт процесса --</option>';
 
-        // issue #286: Получаем множество процессов, у которых уже есть VADProcessDia
-        const processesWithDia = getProcessesWithVADProcessDia();
+        // issue #286: SPARQL-driven Programming - фильтрация через SPARQL запрос
+        // Используем funSPARQLvaluesComunica для поддержки FILTER NOT EXISTS
+        if (typeof funSPARQLvaluesComunica === 'function') {
+            try {
+                const filteredConcepts = await funSPARQLvaluesComunica(
+                    SPARQL_PROCESSES_WITHOUT_VADPROCESSDIA,
+                    'process'
+                );
 
-        // Получаем все концепты процессов из ptree
-        if (typeof funSPARQLvalues === 'function') {
-            const allConcepts = funSPARQLvalues(`
-                SELECT ?process ?label WHERE {
-                    GRAPH vad:ptree {
-                        ?process rdf:type vad:TypeProcess .
-                        ?process rdfs:label ?label .
-                    }
-                }
-            `, 'process');
+                console.log(`[3_sd_create_new_trig] issue #286: SPARQL returned ${filteredConcepts.length} processes without VADProcessDia`);
 
-            // issue #286: Фильтруем - оставляем только процессы без VADProcessDia
-            const filteredConcepts = allConcepts.filter(concept => !processesWithDia.has(concept.uri));
-
-            console.log(`[3_sd_create_new_trig] issue #286: Filtered ${allConcepts.length} -> ${filteredConcepts.length} concepts`);
-
-            filteredConcepts.forEach(concept => {
-                const option = document.createElement('option');
-                option.value = concept.uri;
-                option.textContent = concept.label || concept.uri;
-                processSelect.appendChild(option);
-            });
+                filteredConcepts.forEach(concept => {
+                    const option = document.createElement('option');
+                    option.value = concept.uri;
+                    option.textContent = concept.label || concept.uri;
+                    processSelect.appendChild(option);
+                });
+            } catch (error) {
+                console.error('[3_sd_create_new_trig] SPARQL query error:', error);
+            }
+        } else {
+            console.error('[3_sd_create_new_trig] funSPARQLvaluesComunica not available');
         }
     }
 

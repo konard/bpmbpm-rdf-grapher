@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Test Issue #286 - Filter Process Concepts without VADProcessDia</title>
+    <title>Test Issue #286 - SPARQL-driven Filter Process Concepts without VADProcessDia</title>
     <!-- Ссылка на issue: https://github.com/bpmbpm/rdf-grapher/issues/286 -->
     <style>
         body { font-family: Consolas, Monaco, monospace; padding: 20px; background-color: #f5f5f5; }
@@ -16,16 +16,35 @@
         .summary { margin-top: 20px; padding: 15px; border-radius: 4px; font-size: 16px; font-weight: bold; }
         .summary-passed { background-color: #d4edda; color: #155724; }
         .summary-failed { background-color: #f8d7da; color: #721c24; }
+        .sparql-query { background: #1e1e1e; color: #9cdcfe; padding: 15px; border-radius: 5px; overflow-x: auto; white-space: pre-wrap; font-size: 12px; margin: 10px 0; }
     </style>
 </head>
 <body>
-    <h1>Issue #286: Filter Process Concepts without VADProcessDia</h1>
-    <p>Testing that openNewTrigModal filters out processes that already have VADProcessDia TriG.</p>
+    <h1>Issue #286: SPARQL-driven Filter Process Concepts without VADProcessDia</h1>
+    <p>Testing SPARQL-driven Programming approach: filtering processes via SPARQL FILTER NOT EXISTS</p>
+
+    <h3>SPARQL Query:</h3>
+    <pre class="sparql-query">SELECT ?process ?label WHERE {
+    GRAPH vad:ptree {
+        ?process rdf:type vad:TypeProcess .
+        ?process rdfs:label ?label .
+        FILTER NOT EXISTS {
+            ?process vad:hasTrig ?trig .
+            GRAPH ?trig {
+                ?trig rdf:type vad:VADProcessDia .
+            }
+        }
+    }
+}</pre>
+
     <div id="test-log"></div>
     <div id="test-summary"></div>
 
     <!-- Подключение библиотеки N3.js -->
     <script src="https://unpkg.com/n3@1.17.2/browser/n3.min.js"></script>
+
+    <!-- Подключение Comunica для SPARQL -->
+    <script src="https://unpkg.com/@comunica/query-sparql@2.10.0/comunica-browser.js"></script>
 
     <!-- Подключение основной библиотеки -->
     <script src="../ver9b/9_vadlib/vadlib.js"></script>
@@ -104,47 +123,20 @@
             currentStore = new N3.Store();
             testQuads.forEach(q => currentStore.addQuad(q));
 
-            // Тест 3: Проверяем getProcessesWithVADProcessDia
-            logTest('getProcessesWithVADProcessDia', 'info', 'Поиск процессов с VADProcessDia...');
-            try {
-                if (typeof getProcessesWithVADProcessDia === 'function') {
-                    const processesWithDia = getProcessesWithVADProcessDia();
-
-                    // В Trig_VADv7.ttl: p1, p1_1, p2 имеют hasTrig
-                    // Ожидаем: p1 -> t_p1 (VADProcessDia), p1_1 -> t_p1_1 (VADProcessDia), p2 -> t_p2 (VADProcessDia)
-                    const expectedWithDia = [
-                        'http://example.org/vad#p1',
-                        'http://example.org/vad#p1_1',
-                        'http://example.org/vad#p2'
-                    ];
-
-                    logTest('Найдено процессов с VADProcessDia', 'info',
-                        `${processesWithDia.size}: ${Array.from(processesWithDia).map(u => u.split('#')[1]).join(', ')}`);
-
-                    // Проверка: все ожидаемые должны быть в результате
-                    const allExpectedFound = expectedWithDia.every(uri => processesWithDia.has(uri));
-                    if (allExpectedFound) {
-                        logTest('Ожидаемые процессы найдены', 'passed',
-                            `p1, p1_1, p2 правильно определены как имеющие VADProcessDia`);
-                    } else {
-                        const missing = expectedWithDia.filter(uri => !processesWithDia.has(uri));
-                        logTest('Ожидаемые процессы найдены', 'failed',
-                            `Отсутствуют: ${missing.map(u => u.split('#')[1]).join(', ')}`);
-                    }
-                } else {
-                    logTest('getProcessesWithVADProcessDia', 'failed', 'Функция не определена');
-                }
-            } catch (error) {
-                logTest('getProcessesWithVADProcessDia', 'failed', `Ошибка: ${error.message}`);
+            // Тест 3: Проверяем доступность funSPARQLvaluesComunica
+            logTest('funSPARQLvaluesComunica', 'info', 'Проверка доступности функции...');
+            if (typeof funSPARQLvaluesComunica === 'function') {
+                logTest('funSPARQLvaluesComunica доступна', 'passed', 'Функция определена');
+            } else {
+                logTest('funSPARQLvaluesComunica доступна', 'failed', 'Функция не определена');
+                showSummary();
+                return;
             }
 
-            // Тест 4: Проверяем фильтрацию в funSPARQLvalues
-            logTest('Фильтрация концептов', 'info', 'Проверка фильтрации...');
+            // Тест 4: Проверяем SPARQL запрос на все процессы
+            logTest('Всего процессов', 'info', 'Получение всех процессов из ptree...');
             try {
-                const processesWithDia = getProcessesWithVADProcessDia();
-
-                // Получаем все процессы
-                const allConcepts = funSPARQLvalues(`
+                const allConcepts = await funSPARQLvaluesComunica(`
                     SELECT ?process ?label WHERE {
                         GRAPH vad:ptree {
                             ?process rdf:type vad:TypeProcess .
@@ -153,11 +145,21 @@
                     }
                 `, 'process');
 
-                // Фильтруем
-                const filteredConcepts = allConcepts.filter(c => !processesWithDia.has(c.uri));
+                logTest('Всего процессов в ptree', 'passed', `${allConcepts.length} процессов`);
+            } catch (error) {
+                logTest('Всего процессов в ptree', 'failed', `Ошибка: ${error.message}`);
+            }
 
-                logTest('Всего процессов в ptree', 'info', `${allConcepts.length}`);
-                logTest('После фильтрации', 'info', `${filteredConcepts.length}`);
+            // Тест 5: SPARQL-driven фильтрация с FILTER NOT EXISTS
+            logTest('SPARQL-driven фильтрация', 'info', 'Выполнение SPARQL с FILTER NOT EXISTS...');
+            try {
+                // Используем тот же SPARQL запрос, что и в openNewTrigModal
+                const filteredConcepts = await funSPARQLvaluesComunica(
+                    SPARQL_PROCESSES_WITHOUT_VADPROCESSDIA,
+                    'process'
+                );
+
+                logTest('После SPARQL фильтрации', 'info', `${filteredConcepts.length} процессов без VADProcessDia`);
 
                 // Проверяем: процессы p1_2, p1_1_1, p1_1_2, p2_1, p2_2, px_x, pNotDefined, pDel НЕ имеют VADProcessDia
                 const processesWithoutDia = filteredConcepts.map(c => c.uri);
@@ -180,7 +182,7 @@
                 const correctlyKept = shouldNotHaveDia.every(uri => processesWithoutDia.includes(uri));
 
                 if (correctlyFiltered && correctlyKept) {
-                    logTest('Корректность фильтрации', 'passed',
+                    logTest('Корректность SPARQL фильтрации', 'passed',
                         `p1, p1_1, p2 отфильтрованы; p1_2, p1_1_1, p1_1_2, p2_1, p2_2 оставлены`);
                 } else {
                     let msg = '';
@@ -192,7 +194,7 @@
                         const wronglyFiltered = shouldNotHaveDia.filter(uri => !processesWithoutDia.includes(uri));
                         msg += `Ошибочно отфильтрованы: ${wronglyFiltered.map(u => u.split('#')[1]).join(', ')}`;
                     }
-                    logTest('Корректность фильтрации', 'failed', msg);
+                    logTest('Корректность SPARQL фильтрации', 'failed', msg);
                 }
 
                 // Выводим список доступных для создания TriG
@@ -200,7 +202,17 @@
                     filteredConcepts.map(c => c.label || c.uri.split('#')[1]).join(', '));
 
             } catch (error) {
-                logTest('Фильтрация концептов', 'failed', `Ошибка: ${error.message}`);
+                logTest('SPARQL-driven фильтрация', 'failed', `Ошибка: ${error.message}`);
+            }
+
+            // Тест 6: Проверяем что SPARQL_PROCESSES_WITHOUT_VADPROCESSDIA определена
+            logTest('SPARQL константа', 'info', 'Проверка константы SPARQL_PROCESSES_WITHOUT_VADPROCESSDIA...');
+            if (typeof SPARQL_PROCESSES_WITHOUT_VADPROCESSDIA === 'string') {
+                logTest('SPARQL_PROCESSES_WITHOUT_VADPROCESSDIA определена', 'passed',
+                    'Константа экспортирована и доступна');
+            } else {
+                logTest('SPARQL_PROCESSES_WITHOUT_VADPROCESSDIA определена', 'failed',
+                    'Константа не определена или не строка');
             }
 
             showSummary();
