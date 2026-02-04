@@ -1465,6 +1465,49 @@
             background-color: #F57C00;
         }
 
+        /* issue #288: Стили для промежуточного SPARQL в New TriG */
+        .new-trig-sparql-btn {
+            background-color: #9E9E9E;
+            color: white;
+        }
+
+        .new-trig-sparql-btn:hover {
+            background-color: #757575;
+        }
+
+        .new-trig-message {
+            padding: 10px;
+            margin-top: 10px;
+            border-radius: 4px;
+            display: none;
+        }
+
+        .new-trig-message.success {
+            background-color: #E8F5E9;
+            color: #2E7D32;
+            border: 1px solid #A5D6A7;
+        }
+
+        .new-trig-message.error {
+            background-color: #FFEBEE;
+            color: #C62828;
+            border: 1px solid #EF9A9A;
+        }
+
+        .new-trig-message.info {
+            background-color: #E3F2FD;
+            color: #1565C0;
+            border: 1px solid #90CAF9;
+        }
+
+        #new-trig-intermediate-sparql {
+            margin-top: 15px;
+            padding: 15px;
+            background-color: #f5f5f5;
+            border-radius: 4px;
+            border: 1px solid #e0e0e0;
+        }
+
         /* ============================================================================= */
         /* Стили для модального окна New Concept */
         /* ============================================================================= */
