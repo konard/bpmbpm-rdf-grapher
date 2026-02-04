@@ -1,7 +1,7 @@
 ### auto documentation requirements 
 Алгоритм обновления документации в папке https://github.com/bpmbpm/rdf-grapher/blob/main/ver9b/doc/ (авто документирование):
 - делай архив zip до обновления и размещай его в папке https://github.com/bpmbpm/rdf-grapher/tree/main/ver9b/doc/old
-- обновляй файлы только в корне https://github.com/bpmbpm/rdf-grapher/blob/main/ver9b/doc/
+- обновляй файлы только в корне https://github.com/bpmbpm/rdf-grapher/blob/main/ver9b/doc/ включая 1_example_data.md, 2_triplestore.md и остальные файлы папки /doc
 - при обновлении указывай Pull Request по которому происходило обновление и дату
 
 ### Требования к отдельным файлам 
