@@ -1465,6 +1465,57 @@
             background-color: #F57C00;
         }
 
+        /* issue #291: Кнопка "Промежуточный SPARQL" для New TriG */
+        .new-trig-sparql-btn {
+            background-color: #607D8B;
+            color: white;
+        }
+
+        .new-trig-sparql-btn:hover {
+            background-color: #455A64;
+        }
+
+        /* issue #291: Сообщения для New TriG (унификация с New Concept) */
+        .new-trig-message {
+            padding: 10px 15px;
+            border-radius: 4px;
+            margin-top: 15px;
+            font-size: 14px;
+        }
+
+        .new-trig-message.success {
+            background-color: #e8f5e9;
+            color: #2e7d32;
+            border: 1px solid #a5d6a7;
+        }
+
+        .new-trig-message.error {
+            background-color: #ffebee;
+            color: #c62828;
+            border: 1px solid #ef9a9a;
+        }
+
+        .new-trig-message.warning {
+            background-color: #fff3e0;
+            color: #e65100;
+            border: 1px solid #ffcc80;
+        }
+
+        /* issue #291: Промежуточный SPARQL для New TriG */
+        #new-trig-intermediate-sparql {
+            margin-top: 15px;
+            padding: 15px;
+            background-color: #f5f5f5;
+            border-radius: 6px;
+            border: 1px solid #e0e0e0;
+        }
+
+        /* issue #291: Стиль для недоступных (disabled) опций в select */
+        .new-trig-field select option.disabled-option {
+            color: #9e9e9e;
+            background-color: #f5f5f5;
+        }
+
         /* ============================================================================= */
         /* Стили для модального окна New Concept */
         /* ============================================================================= */

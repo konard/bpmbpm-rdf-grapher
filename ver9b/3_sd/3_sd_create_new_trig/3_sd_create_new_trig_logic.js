@@ -1,13 +1,71 @@
-// issue #232: Модуль создания нового TriG контейнера
-// Содержит функции для работы с модальным окном New TriG
+// issue #291: Модуль создания нового TriG контейнера
+// PR #292 | 2026-02-04
+// Унифицировано с New Concept и Del Concept модалями
+// Добавлена функция funSPARQLvaluesDouble для справочников с подсветкой недоступных значений
 
 /**
- * issue #286: SPARQL-запрос для получения концептов процессов БЕЗ существующего VADProcessDia.
- * Использует FILTER NOT EXISTS для фильтрации процессов, у которых уже есть схема.
+ * ==============================================================================
+ * CREATE NEW TRIG MODULE
+ * ==============================================================================
  *
- * Алгоритм:
- * 1. Выбираем процессы из ptree с типом TypeProcess
- * 2. Исключаем те, у которых есть hasTrig на граф типа VADProcessDia
+ * Модуль для создания новых TriG контейнеров (VADProcessDia) в системе RDF Grapher.
+ *
+ * Алгоритм работы (issue #291):
+ * 1. Пользователь нажимает кнопку "New TriG (VADProcessDia)" в окне Smart Design
+ * 2. Проверяется, что quadstore не пуст (аналогично New Concept и Del Concept)
+ * 3. Через funSPARQLvaluesDouble загружается список концептов процессов:
+ *    - Первый запрос: все процессы из vad:ptree
+ *    - Второй запрос: процессы, у которых уже есть vad:hasTrig
+ *    - Процессы с hasTrig отмечаются серым (disabled) в справочнике
+ * 4. Отображается форма с полями ввода
+ * 5. Кнопка "Промежуточный SPARQL" показывает использованные SPARQL запросы
+ * 6. Формируется итоговый SPARQL INSERT запрос
+ *
+ * @file 3_sd_create_new_trig_logic.js
+ * @version 2.0
+ * @date 2026-02-04
+ * @see funSPARQLvaluesDouble - функция для справочников с недоступными значениями
+ */
+
+// ==============================================================================
+// SPARQL ЗАПРОСЫ
+// ==============================================================================
+
+/**
+ * SPARQL запрос для получения ВСЕХ концептов процессов из ptree
+ * (первый запрос для funSPARQLvaluesDouble)
+ */
+const SPARQL_ALL_PROCESSES = `
+PREFIX rdf: <http://www.w3.org/1999/02/22-rdf-syntax-ns#>
+PREFIX rdfs: <http://www.w3.org/2000/01/rdf-schema#>
+PREFIX vad: <http://example.org/vad#>
+
+SELECT ?process ?label WHERE {
+    GRAPH vad:ptree {
+        ?process rdf:type vad:TypeProcess .
+        ?process rdfs:label ?label .
+    }
+}`;
+
+/**
+ * SPARQL запрос для получения процессов, у которых УЖЕ ЕСТЬ hasTrig
+ * (второй запрос для funSPARQLvaluesDouble - эти будут disabled)
+ */
+const SPARQL_PROCESSES_WITH_TRIG = `
+PREFIX rdf: <http://www.w3.org/1999/02/22-rdf-syntax-ns#>
+PREFIX vad: <http://example.org/vad#>
+
+SELECT ?process WHERE {
+    GRAPH vad:ptree {
+        ?process rdf:type vad:TypeProcess .
+        ?process vad:hasTrig ?trig .
+    }
+}`;
+
+/**
+ * issue #286: SPARQL запрос для получения концептов процессов БЕЗ существующего VADProcessDia.
+ * Использует FILTER NOT EXISTS для фильтрации процессов, у которых уже есть схема.
+ * (Оставлен для обратной совместимости с funSPARQLvaluesComunica)
  */
 const SPARQL_PROCESSES_WITHOUT_VADPROCESSDIA = `
     SELECT ?process ?label WHERE {
@@ -24,49 +82,257 @@ const SPARQL_PROCESSES_WITHOUT_VADPROCESSDIA = `
     }
 `;
 
+// ==============================================================================
+// ГЛОБАЛЬНЫЕ ПЕРЕМЕННЫЕ МОДУЛЯ
+// ==============================================================================
+
+/**
+ * Состояние модуля создания TriG
+ */
+let newTrigState = {
+    isOpen: false,
+    selectedProcess: null,
+    processesWithTrig: new Set(), // URI процессов, у которых уже есть TriG
+    intermediateSparql: ''
+};
+
+/**
+ * Хранилище промежуточных SPARQL запросов для отображения
+ */
+let newTrigIntermediateSparqlQueries = [];
+
+// ==============================================================================
+// ФУНКЦИИ UI: МОДАЛЬНОЕ ОКНО
+// ==============================================================================
+
 /**
  * Открывает модальное окно создания нового TriG
- * Вызывается из Smart Design панели
- * issue #286: SPARQL-driven фильтрация процессов через FILTER NOT EXISTS
+ * issue #291: Унифицировано с openNewConceptModal() и openDelConceptModal()
+ * - Сначала проверяется quadstore
+ * - Затем открывается окно
  */
 async function openNewTrigModal() {
+    // issue #291: Проверяем, что данные загружены и распарсены (как в New Concept и Del Concept)
+    if (typeof currentQuads === 'undefined' || currentQuads.length === 0) {
+        alert('Данные quadstore пусты. Загрузите пример данных (Trig_VADv5 или Trig_VADv6) в разделе "Загрузить пример RDF данных".\n\nQuadstore is empty. Load example data (Trig_VADv5 or Trig_VADv6) in "Load example RDF data" section.');
+        return;
+    }
+
     const modal = document.getElementById('new-trig-modal');
     if (!modal) {
         console.error('[3_sd_create_new_trig] Модальное окно new-trig-modal не найдено');
         return;
     }
 
-    // Заполняем список концептов процессов
+    // Очищаем предыдущее состояние
+    newTrigState = {
+        isOpen: true,
+        selectedProcess: null,
+        processesWithTrig: new Set(),
+        intermediateSparql: ''
+    };
+    newTrigIntermediateSparqlQueries = [];
+
+    // Сбрасываем форму
+    resetNewTrigForm();
+
+    // Заполняем список концептов процессов с использованием funSPARQLvaluesDouble
+    await populateProcessConceptsWithDouble();
+
+    // Показываем модальное окно
+    modal.style.display = 'block';
+
+    // Обновляем состояние полей Smart Design
+    if (typeof updateSmartDesignFieldsState === 'function') {
+        updateSmartDesignFieldsState();
+    }
+}
+
+/**
+ * Заполняет dropdown концептов процессов с использованием funSPARQLvaluesDouble
+ * issue #291: Процессы с hasTrig отмечаются серым (disabled)
+ */
+async function populateProcessConceptsWithDouble() {
     const processSelect = document.getElementById('new-trig-process-concept');
-    if (processSelect) {
-        processSelect.innerHTML = '<option value="">-- Выберите концепт процесса --</option>';
+    if (!processSelect) return;
 
-        // issue #286: SPARQL-driven Programming - фильтрация через SPARQL запрос
-        // Используем funSPARQLvaluesComunica для поддержки FILTER NOT EXISTS
-        if (typeof funSPARQLvaluesComunica === 'function') {
-            try {
-                const filteredConcepts = await funSPARQLvaluesComunica(
-                    SPARQL_PROCESSES_WITHOUT_VADPROCESSDIA,
-                    'process'
-                );
+    processSelect.innerHTML = '<option value="">-- Выберите концепт процесса --</option>';
 
-                console.log(`[3_sd_create_new_trig] issue #286: SPARQL returned ${filteredConcepts.length} processes without VADProcessDia`);
+    // issue #291: Используем funSPARQLvaluesDouble для получения справочника
+    // Первый запрос: все процессы
+    // Второй запрос: процессы с hasTrig (будут disabled)
+    if (typeof funSPARQLvaluesDouble === 'function') {
+        try {
+            const concepts = await funSPARQLvaluesDouble(
+                SPARQL_ALL_PROCESSES,
+                'process',
+                SPARQL_PROCESSES_WITH_TRIG,
+                'process'
+            );
 
-                filteredConcepts.forEach(concept => {
-                    const option = document.createElement('option');
-                    option.value = concept.uri;
-                    option.textContent = concept.label || concept.uri;
-                    processSelect.appendChild(option);
-                });
-            } catch (error) {
-                console.error('[3_sd_create_new_trig] SPARQL query error:', error);
-            }
-        } else {
-            console.error('[3_sd_create_new_trig] funSPARQLvaluesComunica not available');
+            console.log(`[3_sd_create_new_trig] funSPARQLvaluesDouble returned ${concepts.length} processes`);
+
+            // Сохраняем промежуточные SPARQL запросы
+            newTrigIntermediateSparqlQueries.push({
+                description: 'Получение всех концептов процессов из ptree (funSPARQLvaluesDouble - Query 1)',
+                query: SPARQL_ALL_PROCESSES,
+                result: `Найдено ${concepts.length} процессов`
+            });
+
+            const disabledCount = concepts.filter(c => c.disabled).length;
+            newTrigIntermediateSparqlQueries.push({
+                description: 'Получение процессов с существующим hasTrig (funSPARQLvaluesDouble - Query 2)',
+                query: SPARQL_PROCESSES_WITH_TRIG,
+                result: `Найдено ${disabledCount} процессов с существующим TriG (отмечены серым)`
+            });
+
+            // Сохраняем Set процессов с TriG для проверки при создании
+            newTrigState.processesWithTrig = new Set(
+                concepts.filter(c => c.disabled).map(c => c.uri)
+            );
+
+            // Добавляем опции в select
+            concepts.forEach(concept => {
+                const option = document.createElement('option');
+                option.value = concept.uri;
+                option.textContent = concept.label || concept.uri;
+
+                // Помечаем disabled процессы серым
+                if (concept.disabled) {
+                    option.disabled = true;
+                    option.classList.add('disabled-option');
+                    option.textContent += ' (уже имеет TriG)';
+                }
+
+                processSelect.appendChild(option);
+            });
+
+            // Обновляем отображение промежуточного SPARQL
+            displayNewTrigIntermediateSparql();
+
+        } catch (error) {
+            console.error('[3_sd_create_new_trig] funSPARQLvaluesDouble error:', error);
+            // Fallback на старый метод
+            await populateProcessConceptsFallback();
         }
+    } else if (typeof funSPARQLvaluesDoubleSync === 'function') {
+        // Используем синхронную версию
+        try {
+            const concepts = funSPARQLvaluesDoubleSync(
+                SPARQL_ALL_PROCESSES,
+                'process',
+                SPARQL_PROCESSES_WITH_TRIG,
+                'process'
+            );
+
+            console.log(`[3_sd_create_new_trig] funSPARQLvaluesDoubleSync returned ${concepts.length} processes`);
+
+            // Сохраняем промежуточные SPARQL запросы
+            newTrigIntermediateSparqlQueries.push({
+                description: 'Получение всех концептов процессов из ptree',
+                query: SPARQL_ALL_PROCESSES,
+                result: `Найдено ${concepts.length} процессов`
+            });
+
+            const disabledCount = concepts.filter(c => c.disabled).length;
+            newTrigIntermediateSparqlQueries.push({
+                description: 'Получение процессов с существующим hasTrig',
+                query: SPARQL_PROCESSES_WITH_TRIG,
+                result: `Найдено ${disabledCount} процессов с существующим TriG`
+            });
+
+            newTrigState.processesWithTrig = new Set(
+                concepts.filter(c => c.disabled).map(c => c.uri)
+            );
+
+            concepts.forEach(concept => {
+                const option = document.createElement('option');
+                option.value = concept.uri;
+                option.textContent = concept.label || concept.uri;
+
+                if (concept.disabled) {
+                    option.disabled = true;
+                    option.classList.add('disabled-option');
+                    option.textContent += ' (уже имеет TriG)';
+                }
+
+                processSelect.appendChild(option);
+            });
+
+            displayNewTrigIntermediateSparql();
+
+        } catch (error) {
+            console.error('[3_sd_create_new_trig] funSPARQLvaluesDoubleSync error:', error);
+            await populateProcessConceptsFallback();
+        }
+    } else {
+        // Fallback: используем старый метод с funSPARQLvaluesComunica
+        await populateProcessConceptsFallback();
+    }
+}
+
+/**
+ * Fallback метод для заполнения dropdown (использует FILTER NOT EXISTS)
+ */
+async function populateProcessConceptsFallback() {
+    const processSelect = document.getElementById('new-trig-process-concept');
+    if (!processSelect) return;
+
+    // issue #286: SPARQL-driven Programming - фильтрация через SPARQL запрос
+    if (typeof funSPARQLvaluesComunica === 'function') {
+        try {
+            const filteredConcepts = await funSPARQLvaluesComunica(
+                SPARQL_PROCESSES_WITHOUT_VADPROCESSDIA,
+                'process'
+            );
+
+            console.log(`[3_sd_create_new_trig] Fallback: funSPARQLvaluesComunica returned ${filteredConcepts.length} processes without VADProcessDia`);
+
+            newTrigIntermediateSparqlQueries.push({
+                description: 'Получение процессов без VADProcessDia (fallback метод с FILTER NOT EXISTS)',
+                query: SPARQL_PROCESSES_WITHOUT_VADPROCESSDIA,
+                result: `Найдено ${filteredConcepts.length} процессов без схемы`
+            });
+
+            filteredConcepts.forEach(concept => {
+                const option = document.createElement('option');
+                option.value = concept.uri;
+                option.textContent = concept.label || concept.uri;
+                processSelect.appendChild(option);
+            });
+
+            displayNewTrigIntermediateSparql();
+
+        } catch (error) {
+            console.error('[3_sd_create_new_trig] Fallback SPARQL query error:', error);
+        }
+    } else {
+        console.error('[3_sd_create_new_trig] No SPARQL query function available');
+    }
+}
+
+/**
+ * Сбрасывает форму создания TriG
+ */
+function resetNewTrigForm() {
+    const processSelect = document.getElementById('new-trig-process-concept');
+    const trigIdInput = document.getElementById('new-trig-id');
+    const trigLabelInput = document.getElementById('new-trig-label');
+
+    if (processSelect) processSelect.innerHTML = '<option value="">-- Выберите концепт процесса --</option>';
+    if (trigIdInput) trigIdInput.value = '';
+    if (trigLabelInput) trigLabelInput.value = '';
+
+    // Скрываем промежуточный SPARQL
+    const intermediateSparqlContainer = document.getElementById('new-trig-intermediate-sparql');
+    if (intermediateSparqlContainer) {
+        intermediateSparqlContainer.style.display = 'none';
+        const textarea = intermediateSparqlContainer.querySelector('textarea');
+        if (textarea) textarea.value = '';
     }
 
-    modal.style.display = 'block';
+    // Скрываем сообщения
+    hideNewTrigMessage();
 }
 
 /**
@@ -77,6 +343,13 @@ function closeNewTrigModal() {
     if (modal) {
         modal.style.display = 'none';
     }
+
+    newTrigState.isOpen = false;
+
+    // Обновляем состояние полей Smart Design
+    if (typeof updateSmartDesignFieldsState === 'function') {
+        updateSmartDesignFieldsState();
+    }
 }
 
 /**
@@ -86,47 +359,127 @@ function updateNewTrigFields() {
     const processSelect = document.getElementById('new-trig-process-concept');
     const trigIdInput = document.getElementById('new-trig-id');
     const trigLabelInput = document.getElementById('new-trig-label');
-    
+
     if (!processSelect || !trigIdInput || !trigLabelInput) return;
-    
+
     const processUri = processSelect.value;
     if (!processUri) {
         trigIdInput.value = '';
         trigLabelInput.value = '';
+        newTrigState.selectedProcess = null;
         return;
     }
-    
+
+    newTrigState.selectedProcess = processUri;
+
     // Извлекаем ID процесса
-    const processId = typeof getPrefixedName === 'function' 
+    const processId = typeof getPrefixedName === 'function'
         ? getPrefixedName(processUri, currentPrefixes).replace('vad:', '')
         : processUri.split('#').pop();
-    
-    const processLabel = processSelect.options[processSelect.selectedIndex].textContent;
-    
+
+    const processLabel = processSelect.options[processSelect.selectedIndex].textContent.replace(' (уже имеет TriG)', '');
+
     trigIdInput.value = `t_${processId}`;
     trigLabelInput.value = `Схема процесса ${processLabel}`;
 }
 
 /**
+ * Переключает видимость промежуточного SPARQL
+ */
+function toggleNewTrigIntermediateSparql() {
+    const container = document.getElementById('new-trig-intermediate-sparql');
+    if (container) {
+        const isVisible = container.style.display !== 'none';
+        container.style.display = isVisible ? 'none' : 'block';
+    }
+}
+
+/**
+ * Отображает промежуточные SPARQL запросы
+ */
+function displayNewTrigIntermediateSparql() {
+    const container = document.getElementById('new-trig-intermediate-sparql');
+    const textarea = container ? container.querySelector('textarea') : null;
+
+    if (!container || !textarea) return;
+
+    if (newTrigIntermediateSparqlQueries.length === 0) {
+        container.style.display = 'none';
+        return;
+    }
+
+    let sparqlText = '# ===== Промежуточные SPARQL запросы (funSPARQLvaluesDouble) =====\n\n';
+
+    newTrigIntermediateSparqlQueries.forEach((query, index) => {
+        sparqlText += `# --- ${index + 1}. ${query.description} ---\n`;
+        sparqlText += query.query.trim() + '\n';
+        if (query.result) {
+            sparqlText += `\n# Результат:\n# ${query.result}\n`;
+        }
+        sparqlText += '\n';
+    });
+
+    textarea.value = sparqlText;
+    newTrigState.intermediateSparql = sparqlText;
+
+    // Показываем контейнер по умолчанию (issue #291: как в New Concept)
+    container.style.display = 'block';
+}
+
+/**
+ * Показывает сообщение в модальном окне
+ * @param {string} message - Текст сообщения
+ * @param {string} type - Тип: 'success', 'error', 'warning'
+ */
+function showNewTrigMessage(message, type = 'info') {
+    const messageDiv = document.getElementById('new-trig-message');
+    if (messageDiv) {
+        messageDiv.textContent = message;
+        messageDiv.className = `new-trig-message ${type}`;
+        messageDiv.style.display = 'block';
+    }
+}
+
+/**
+ * Скрывает сообщение
+ */
+function hideNewTrigMessage() {
+    const messageDiv = document.getElementById('new-trig-message');
+    if (messageDiv) {
+        messageDiv.style.display = 'none';
+    }
+}
+
+/**
  * Создаёт SPARQL запрос для нового TriG контейнера
  * issue #280: Исправлено - все триплеты размещены в именованных графах
+ * issue #291: Добавлена проверка на уже существующий TriG
  */
 function createNewTrig() {
+    hideNewTrigMessage();
+
     const processSelect = document.getElementById('new-trig-process-concept');
     const trigIdInput = document.getElementById('new-trig-id');
     const trigLabelInput = document.getElementById('new-trig-label');
 
     if (!processSelect || !processSelect.value) {
-        alert('Выберите концепт процесса');
+        showNewTrigMessage('Выберите концепт процесса', 'error');
         return;
     }
 
     const processUri = processSelect.value;
+
+    // issue #291: Проверяем, что у выбранного процесса ещё нет TriG
+    if (newTrigState.processesWithTrig.has(processUri)) {
+        showNewTrigMessage('Выбранный процесс уже имеет схему (TriG). Выберите другой процесс.', 'error');
+        return;
+    }
+
     const trigId = trigIdInput ? trigIdInput.value : '';
     const trigLabel = trigLabelInput ? trigLabelInput.value : '';
 
     if (!trigId) {
-        alert('ID TriG не может быть пустым');
+        showNewTrigMessage('ID TriG не может быть пустым', 'error');
         return;
     }
 
@@ -159,11 +512,45 @@ INSERT DATA {
     }
 }`;
 
+    // Добавляем финальный SPARQL в промежуточные запросы
+    newTrigIntermediateSparqlQueries.push({
+        description: 'Итоговый SPARQL INSERT запрос для создания TriG',
+        query: sparqlQuery,
+        result: `Создание TriG: vad:${trigId} для процесса ${processPrefixed}`
+    });
+
+    // Обновляем отображение промежуточного SPARQL
+    displayNewTrigIntermediateSparql();
+
     // Выводим в Result in SPARQL
     const resultTextarea = document.getElementById('result-sparql-query');
     if (resultTextarea) {
         resultTextarea.value = sparqlQuery;
     }
 
+    // Отмечаем что это запрос New TriG
+    window.isNewTrigQuery = true;
+
+    showNewTrigMessage(
+        `SPARQL INSERT запрос для нового TriG "vad:${trigId}" успешно сгенерирован. ` +
+        `Запрос выведен в "Result in SPARQL".`,
+        'success'
+    );
+
     closeNewTrigModal();
+}
+
+// ==============================================================================
+// ЭКСПОРТ ФУНКЦИЙ ДЛЯ ГЛОБАЛЬНОГО ДОСТУПА
+// ==============================================================================
+
+// Делаем функции доступными глобально для использования из HTML
+if (typeof window !== 'undefined') {
+    window.openNewTrigModal = openNewTrigModal;
+    window.closeNewTrigModal = closeNewTrigModal;
+    window.updateNewTrigFields = updateNewTrigFields;
+    window.toggleNewTrigIntermediateSparql = toggleNewTrigIntermediateSparql;
+    window.createNewTrig = createNewTrig;
+    window.showNewTrigMessage = showNewTrigMessage;
+    window.hideNewTrigMessage = hideNewTrigMessage;
 }
