@@ -18,3 +18,16 @@ Proceed.
 
 
 Run timestamp: 2026-01-07T19:16:00.691Z
+
+---
+
+Issue to solve: https://github.com/bpmbpm/rdf-grapher/issues/274
+Your prepared branch: issue-274-810c56c53e24
+Your prepared working directory: /tmp/gh-issue-solver-1770211595722
+Your forked repository: konard/bpmbpm-rdf-grapher
+Original repository (upstream): bpmbpm/rdf-grapher
+
+Proceed.
+
+
+Run timestamp: 2026-02-04T13:26:41.636Z
