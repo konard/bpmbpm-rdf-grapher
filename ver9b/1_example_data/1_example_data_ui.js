@@ -47,6 +47,18 @@ async function loadExampleFromFile(filename, exampleName, inputFormat, visualiza
         statusEl.style.backgroundColor = '#d4edda';
         statusEl.style.borderColor = '#c3e6cb';
         statusEl.style.color = '#155724';
+
+        // issue #282: Автоматически вызываем refreshVisualization после успешной загрузки примера
+        // Это выполняет валидацию и парсинг данных, после чего открывается окно Publisher
+        if (typeof refreshVisualization === 'function') {
+            console.log('issue #282: Auto-calling refreshVisualization after successful example load');
+            await refreshVisualization();
+
+            // issue #282: После успешной загрузки разворачиваем панель Publisher, если она свёрнута
+            if (typeof applyPanelCollapsedState === 'function') {
+                applyPanelCollapsedState('5_publisher', false);
+            }
+        }
     } catch (error) {
         console.warn(`Не удалось загрузить файл ${fullPath}:`, error.message);
 
@@ -77,6 +89,17 @@ async function loadExampleFromFile(filename, exampleName, inputFormat, visualiza
 
                         if (typeof showSuccessNotification === 'function') {
                             showSuccessNotification(`Пример ${exampleName} загружен из файла: ${file.name}`);
+                        }
+
+                        // issue #282: Автоматически вызываем refreshVisualization после загрузки файла из диалога
+                        if (typeof refreshVisualization === 'function') {
+                            console.log('issue #282: Auto-calling refreshVisualization after successful file dialog load');
+                            await refreshVisualization();
+
+                            // issue #282: После успешной загрузки разворачиваем панель Publisher, если она свёрнута
+                            if (typeof applyPanelCollapsedState === 'function') {
+                                applyPanelCollapsedState('5_publisher', false);
+                            }
                         }
                     } catch (parseError) {
                         statusEl.textContent = `Ошибка парсинга файла: ${parseError.message}`;
