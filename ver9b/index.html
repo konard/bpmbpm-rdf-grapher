@@ -723,7 +723,109 @@ WHERE {
                     handleSelectChange(this, 'Object', function() { return false; }, true);
                 });
             }
+
+            // issue #293: Инициализация перетаскивания модальных окон
+            initDraggableModals();
         });
+
+        // issue #293: Функции для перетаскивания модальных окон
+        /**
+         * Инициализирует перетаскивание для всех модальных окон
+         */
+        function initDraggableModals() {
+            // Модальные окна и их заголовки
+            const modals = [
+                { modal: 'new-concept-modal', header: 'new-concept-modal-header', content: 'new-concept-modal-content' },
+                { modal: 'new-trig-modal', header: 'new-trig-modal-header', content: 'new-trig-modal-content' },
+                { modal: 'del-concept-modal', header: 'del-concept-modal-header', content: 'del-concept-modal-content' }
+            ];
+
+            modals.forEach(config => {
+                const modalContent = document.querySelector(`#${config.modal} .${config.content.split('-').slice(-2).join('-')}`);
+                const header = document.querySelector(`#${config.modal} .${config.header.split('-').slice(-2).join('-')}`);
+
+                if (modalContent && header) {
+                    makeDraggable(modalContent, header, config.modal);
+                }
+            });
+        }
+
+        /**
+         * Делает элемент перетаскиваемым за указанный заголовок
+         * @param {HTMLElement} element - Элемент для перетаскивания
+         * @param {HTMLElement} header - Заголовок за который перетаскиваем
+         * @param {string} modalId - ID модального окна
+         */
+        function makeDraggable(element, header, modalId) {
+            let pos1 = 0, pos2 = 0, pos3 = 0, pos4 = 0;
+            let isDragging = false;
+
+            header.onmousedown = dragMouseDown;
+
+            function dragMouseDown(e) {
+                // Не перетаскивать если клик по кнопке закрытия или help
+                if (e.target.tagName === 'BUTTON' || e.target.closest('button')) {
+                    return;
+                }
+
+                e.preventDefault();
+                isDragging = true;
+                pos3 = e.clientX;
+                pos4 = e.clientY;
+                document.onmouseup = closeDragElement;
+                document.onmousemove = elementDrag;
+            }
+
+            function elementDrag(e) {
+                if (!isDragging) return;
+                e.preventDefault();
+                pos1 = pos3 - e.clientX;
+                pos2 = pos4 - e.clientY;
+                pos3 = e.clientX;
+                pos4 = e.clientY;
+
+                // Убираем transform при перетаскивании и используем абсолютное позиционирование
+                element.style.transform = 'none';
+
+                // Вычисляем новую позицию
+                let newTop = element.offsetTop - pos2;
+                let newLeft = element.offsetLeft - pos1;
+
+                // Ограничиваем позицию в пределах окна
+                const maxTop = window.innerHeight - 100;
+                const maxLeft = window.innerWidth - 100;
+
+                newTop = Math.max(0, Math.min(newTop, maxTop));
+                newLeft = Math.max(0, Math.min(newLeft, maxLeft));
+
+                element.style.top = newTop + "px";
+                element.style.left = newLeft + "px";
+            }
+
+            function closeDragElement() {
+                isDragging = false;
+                document.onmouseup = null;
+                document.onmousemove = null;
+            }
+        }
+
+        /**
+         * Сбрасывает позицию модального окна в центр (при повторном открытии)
+         * @param {string} modalId - ID модального окна
+         */
+        function resetModalPosition(modalId) {
+            const modal = document.getElementById(modalId);
+            if (!modal) return;
+
+            const contentClass = modalId.replace('-modal', '-modal-content');
+            const content = modal.querySelector('.' + contentClass);
+
+            if (content) {
+                content.style.top = '50px';
+                content.style.left = '50%';
+                content.style.transform = 'translateX(-50%)';
+            }
+        }
     </script>
 </body>
 </html>

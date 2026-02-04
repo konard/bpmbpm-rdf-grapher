@@ -1,5 +1,5 @@
-<!-- PR #292 | 2026-02-04 -->
-<!-- Ссылка на issue: https://github.com/bpmbpm/rdf-grapher/issues/291 -->
+<!-- PR #294 | 2026-02-04 -->
+<!-- Ссылка на issue: https://github.com/bpmbpm/rdf-grapher/issues/293 -->
 
 # Наиболее важные функции RDF Grapher ver9b
 
@@ -597,3 +597,83 @@ Quadstore организован на базе библиотеки **N3.js v1.1
 - Независимость от конкретной реализации хранилища
 - Самодокументируемый код (SPARQL-запросы описывают логику)
 - Возможность замены библиотек без изменения бизнес-логики
+
+---
+
+## Наиболее важные Удаленные функции
+
+В ходе рефакторинга проекта и перехода к SPARQL-driven Programming некоторые функции были удалены или заменены. Ниже приведены 5 наиболее значимых удалённых функций.
+
+### 1. getProcessesWithVADProcessDia
+
+**Удалена в:** PR #287 (issue #286)
+
+**Причина удаления:** Заменена на SPARQL-driven подход с использованием `FILTER NOT EXISTS`. Вместо ручного построения множества процессов с VADProcessDia теперь используется единый SPARQL запрос через `funSPARQLvaluesComunica`, который фильтрует процессы непосредственно на уровне запроса.
+
+**Было:**
+```javascript
+function getProcessesWithVADProcessDia() {
+    // Ручной обход currentQuads и построение Set
+}
+```
+
+**Стало:** Использование `funSPARQLvaluesDouble` с двумя SPARQL запросами.
+
+---
+
+### 2. getProcessConceptsManual
+
+**Удалена в:** PR #290 (revert issue #288)
+
+**Причина удаления:** Функция была добавлена как fallback для ручного получения концептов процессов из `currentQuads`, когда SPARQL запросы не работали. После стабилизации SPARQL-движка и унификации подхода через `funSPARQLvalues` / `funSPARQLvaluesComunica`, ручной fallback стал избыточным.
+
+**Было:**
+```javascript
+function getProcessConceptsManual() {
+    // Прямой обход currentQuads для получения концептов
+}
+```
+
+---
+
+### 3. displayNewTrigIntermediateSparql / toggleNewTrigIntermediateSparql
+
+**Удалены в:** PR #290 (revert issue #288)
+
+**Причина удаления:** Функции отображения промежуточных SPARQL запросов в модальном окне New TriG были удалены при откате PR #289. Функциональность промежуточного SPARQL была признана избыточной для пользователя — достаточно видеть финальный SPARQL в поле "Result in SPARQL".
+
+**Было:**
+```javascript
+function displayNewTrigIntermediateSparql() { /* показ промежуточных запросов */ }
+function toggleNewTrigIntermediateSparql() { /* переключение видимости */ }
+```
+
+---
+
+### 4. showNewTrigMessage / hideNewTrigMessage
+
+**Удалены в:** PR #292 (issue #291)
+
+**Причина удаления:** При унификации модальных окон New Concept, New TriG и Del Concept функции сообщений были объединены в общий механизм. Вместо отдельных функций для каждого модального окна теперь используется единый подход к отображению сообщений.
+
+**Было:**
+```javascript
+function showNewTrigMessage(message, type = 'info') { /* показ сообщения */ }
+function hideNewTrigMessage() { /* скрытие сообщения */ }
+```
+
+---
+
+### 5. deleteSubjectOld / deleteSubjectNew
+
+**Удалены в:** PR связанный с issue #254
+
+**Причина удаления:** Функции ручного удаления субъектов через строковые манипуляции с TriG контентом были заменены на SPARQL DELETE через Comunica. Переход к `applyTripleToRdfInput` с полноценными SPARQL DELETE WHERE запросами обеспечил надёжность и соответствие стандартам.
+
+**Было:**
+```javascript
+function deleteSubjectOld(graphContent, subjectName) { /* regex-based удаление */ }
+function deleteSubjectNew(graphContent, subjectName) { /* улучшенный regex */ }
+```
+
+**Стало:** Использование `applyTripleToRdfInput` с SPARQL DELETE WHERE запросами.

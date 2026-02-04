@@ -561,6 +561,12 @@ function openNewConceptModal() {
     if (modal) {
         // Сбрасываем форму
         resetNewConceptForm();
+
+        // issue #293: Сбрасываем позицию модального окна
+        if (typeof resetModalPosition === 'function') {
+            resetModalPosition('new-concept-modal');
+        }
+
         modal.style.display = 'block';
 
         // Обновляем состояние полей Smart Design

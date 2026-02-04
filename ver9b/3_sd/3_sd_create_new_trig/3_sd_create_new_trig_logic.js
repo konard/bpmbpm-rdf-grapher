@@ -136,6 +136,11 @@ async function openNewTrigModal() {
     // Сбрасываем форму
     resetNewTrigForm();
 
+    // issue #293: Сбрасываем позицию модального окна
+    if (typeof resetModalPosition === 'function') {
+        resetModalPosition('new-trig-modal');
+    }
+
     // Заполняем список концептов процессов с использованием funSPARQLvaluesDouble
     await populateProcessConceptsWithDouble();
 
