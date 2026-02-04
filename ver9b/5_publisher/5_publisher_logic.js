@@ -33,8 +33,8 @@
 
             currentMode = visualizationMode;
 
-            // issue #270: В режиме vad-trig, если данные уже загружены (trigHierarchy не пустой),
-            // Кнопка "Показать" должна ревизуализировать текущий выбранный TriG,
+            // issue #270, #276: В режиме vad-trig, если данные уже загружены (trigHierarchy не пустой),
+            // Кнопка "Обновить" должна ревизуализировать текущий выбранный TriG,
             // не перепарсивая textarea (который может содержать отфильтрованные данные).
             // Фильтр quadstore влияет только на отображение в textarea, не на Publisher.
             if (visualizationMode === 'vad-trig' &&
@@ -53,9 +53,12 @@
 
             showLoading();
 
-            const button = document.getElementById('visualize-btn');
-            button.disabled = true;
-            button.textContent = 'Обработка...';
+            // issue #276: Кнопка теперь называется refresh-btn и находится в Publisher
+            const button = document.getElementById('refresh-btn');
+            if (button) {
+                button.disabled = true;
+                button.textContent = 'Обработка...';
+            }
 
             try {
                 const parser = new N3.Parser({ format: inputFormat });
@@ -106,8 +109,10 @@
                     const validation = validateVAD(quads, prefixes);
                     if (!validation.valid) {
                         showValidationError(formatVADErrors(validation.errors));
-                        button.disabled = false;
-                        button.textContent = 'Показать';
+                        if (button) {
+                            button.disabled = false;
+                            button.textContent = 'Обновить';
+                        }
                         return;
                     }
                 }
@@ -120,8 +125,10 @@
                     if (!hierarchyResult.valid) {
                         showValidationError(formatVADTriGErrors(hierarchyResult.errors));
                         toggleVADTriGPanels(false);
-                        button.disabled = false;
-                        button.textContent = 'Показать';
+                        if (button) {
+                            button.disabled = false;
+                            button.textContent = 'Обновить';
+                        }
                         return;
                     }
 
@@ -164,16 +171,20 @@
                     if (!rootGraphInfo || !rootGraphInfo.quads) {
                         console.warn('issue #270: rootGraphInfo или rootGraphInfo.quads отсутствует для:', selectedTrigUri);
                         showError('Не удалось найти данные для выбранного TriG');
-                        button.disabled = false;
-                        button.textContent = 'Показать';
+                        if (button) {
+                            button.disabled = false;
+                            button.textContent = 'Обновить';
+                        }
                         return;
                     }
 
                     const validation = validateVAD(rootGraphInfo.quads, prefixes);
                     if (!validation.valid) {
                         showValidationError(formatVADErrors(validation.errors));
-                        button.disabled = false;
-                        button.textContent = 'Показать';
+                        if (button) {
+                            button.disabled = false;
+                            button.textContent = 'Обновить';
+                        }
                         return;
                     }
 
@@ -240,8 +251,10 @@
 
                     console.log(`VAD TriG: Обработано ${quads.length} триплетов, отображается граф ${getPrefixedName(selectedTrigUri, prefixes)}`);
 
-                    button.disabled = false;
-                    button.textContent = 'Показать';
+                    if (button) {
+                        button.disabled = false;
+                        button.textContent = 'Обновить';
+                    }
                     return;
                 }
 
@@ -303,8 +316,10 @@
                 const enhancedMessage = enhanceParseError(error.message, rdfInput);
                 showError(enhancedMessage);
             } finally {
-                button.disabled = false;
-                button.textContent = 'Показать';
+                if (button) {
+                    button.disabled = false;
+                    button.textContent = 'Обновить';
+                }
             }
         }
 
@@ -391,6 +406,334 @@
 
             } catch (error) {
                 console.error('Ошибка при перевизуализации VAD TriG:', error);
+            }
+        }
+
+        // ============================================================================
+        // ОБНОВЛЕНИЕ ВИЗУАЛИЗАЦИИ (issue #276)
+        // ============================================================================
+
+        /**
+         * issue #276: Обновляет визуализацию: пере-читает quadstore, перестраивает treeview,
+         * отображает схему. Запоминает последний активный узел и восстанавливает фокус.
+         *
+         * Логика работы:
+         * 1. Запоминает текущий выбранный TriG URI (selectedTrigUri)
+         * 2. Пере-парсит данные из textarea rdf-input
+         * 3. Перестраивает trigHierarchy и treeview
+         * 4. Если запомненный TriG существует - восстанавливает на него фокус
+         * 5. Если запомненный TriG удалён - фокус как при первом открытии схемы
+         */
+        async function refreshVisualization() {
+            const rdfInput = document.getElementById('rdf-input').value.trim();
+            const inputFormat = document.getElementById('input-format').value;
+            const outputFormat = document.getElementById('output-format').value;
+            const layoutEngine = document.getElementById('layout-engine').value;
+            const visualizationMode = document.getElementById('visualization-mode').value;
+
+            // issue #276: Запоминаем текущий выбранный TriG для последующего восстановления фокуса
+            const previousSelectedTrigUri = selectedTrigUri;
+            console.log('issue #276: refreshVisualization - remembering selectedTrigUri:', previousSelectedTrigUri);
+
+            const maxLabelLengthInput = document.getElementById('max-label-length');
+            const maxLabelLengthValue = parseInt(maxLabelLengthInput.value, 10);
+            if (!isNaN(maxLabelLengthValue) && maxLabelLengthValue >= 5 && maxLabelLengthValue <= 200) {
+                currentMaxLabelLength = maxLabelLengthValue;
+            } else {
+                currentMaxLabelLength = DEFAULT_MAX_LABEL_LENGTH;
+                maxLabelLengthInput.value = DEFAULT_MAX_LABEL_LENGTH;
+            }
+
+            const maxVadRowLengthInput = document.getElementById('max-vad-row-length');
+            const maxVadRowLengthValue = parseInt(maxVadRowLengthInput.value, 10);
+            if (!isNaN(maxVadRowLengthValue) && maxVadRowLengthValue >= 2 && maxVadRowLengthValue <= 20) {
+                currentMaxVadRowLength = maxVadRowLengthValue;
+            } else {
+                currentMaxVadRowLength = DEFAULT_MAX_VAD_ROW_LENGTH;
+                maxVadRowLengthInput.value = DEFAULT_MAX_VAD_ROW_LENGTH;
+            }
+
+            currentMode = visualizationMode;
+
+            if (!rdfInput) {
+                showError('Пожалуйста, введите RDF данные');
+                return;
+            }
+
+            showLoading();
+
+            const button = document.getElementById('refresh-btn');
+            if (button) {
+                button.disabled = true;
+                button.textContent = 'Обновление...';
+            }
+
+            try {
+                // issue #276: Сбрасываем trigHierarchy для полного пере-парсинга
+                trigHierarchy = null;
+
+                const parser = new N3.Parser({ format: inputFormat });
+                const quads = [];
+                let prefixes = {};
+
+                await new Promise((resolve, reject) => {
+                    parser.parse(rdfInput, (error, quad, parsedPrefixes) => {
+                        if (error) {
+                            reject(error);
+                            return;
+                        }
+                        if (quad) {
+                            quads.push(quad);
+                        } else {
+                            if (parsedPrefixes) {
+                                prefixes = parsedPrefixes;
+                            }
+                            resolve();
+                        }
+                    });
+                });
+
+                currentPrefixes = prefixes;
+                currentQuads = quads;
+
+                // Инициализируем currentStore для SPARQL-driven подхода
+                currentStore = new N3.Store();
+                quads.forEach(quad => currentStore.addQuad(quad));
+
+                // Добавляем технологические квады в общий quadstore
+                if (typeof addTechQuadsToStore === 'function') {
+                    addTechQuadsToStore();
+                }
+
+                // Обновляем отображение quadstore с учётом текущего фильтра
+                if (typeof updateQuadstoreDisplay === 'function') {
+                    updateQuadstoreDisplay();
+                }
+
+                if (quads.length === 0) {
+                    showError('Не найдено RDF триплетов в данных');
+                    return;
+                }
+
+                // Обработка режима VAD TriG
+                if (currentMode === 'vad-trig') {
+                    // Парсим иерархию TriG графов
+                    const hierarchyResult = parseTriGHierarchy(quads, prefixes);
+
+                    if (!hierarchyResult.valid) {
+                        showValidationError(formatVADTriGErrors(hierarchyResult.errors));
+                        toggleVADTriGPanels(false);
+                        if (button) {
+                            button.disabled = false;
+                            button.textContent = 'Обновить';
+                        }
+                        return;
+                    }
+
+                    // Сохраняем иерархию
+                    trigHierarchy = hierarchyResult.hierarchy;
+
+                    // Вычисляем виртуальные данные (processSubtype)
+                    virtualRDFdata = calculateProcessSubtypes(trigHierarchy, prefixes);
+
+                    // Добавляем виртуальные квады в store и hierarchy
+                    if (typeof addVirtualQuadsToStore === 'function') {
+                        addVirtualQuadsToStore(virtualRDFdata, prefixes);
+                    }
+
+                    // Обновляем отображение quadstore с виртуальными данными
+                    if (typeof updateQuadstoreDisplay === 'function') {
+                        updateQuadstoreDisplay();
+                    }
+
+                    // issue #276: Определяем TriG для фокуса
+                    // Если ранее выбранный TriG всё ещё существует, используем его
+                    // Иначе выбираем первый корневой TriG (как при первом открытии)
+                    if (previousSelectedTrigUri && trigHierarchy[previousSelectedTrigUri]) {
+                        selectedTrigUri = previousSelectedTrigUri;
+                        console.log('issue #276: Restored focus to previously selected TriG:', selectedTrigUri);
+                    } else {
+                        selectedTrigUri = hierarchyResult.rootTrigUris.length > 0 ? hierarchyResult.rootTrigUris[0] : null;
+                        console.log('issue #276: Previous TriG not found, using first root TriG:', selectedTrigUri);
+                    }
+
+                    // Показываем панели VAD TriG
+                    toggleVADTriGPanels(true);
+
+                    // Отображаем дерево TriG (передаём массив всех корневых TriG)
+                    displayTriGTree(trigHierarchy, hierarchyResult.rootTrigUris, prefixes);
+
+                    // issue #276: Выделяем выбранный TriG в дереве
+                    if (selectedTrigUri) {
+                        // Отображаем свойства выбранного TriG
+                        displayTriGProperties(selectedTrigUri, trigHierarchy, prefixes);
+
+                        // Выделяем элемент в дереве
+                        const treeItems = document.querySelectorAll('.trig-tree-item');
+                        treeItems.forEach(item => {
+                            if (item.getAttribute('data-trig-uri') === selectedTrigUri) {
+                                item.classList.add('selected', 'active');
+                            } else {
+                                item.classList.remove('selected', 'active');
+                            }
+                        });
+                    }
+
+                    // Валидация VAD для квадов выбранного графа
+                    const rootGraphInfo = trigHierarchy[selectedTrigUri];
+
+                    if (!rootGraphInfo || !rootGraphInfo.quads) {
+                        console.warn('issue #276: rootGraphInfo или rootGraphInfo.quads отсутствует для:', selectedTrigUri);
+                        showError('Не удалось найти данные для выбранного TriG');
+                        if (button) {
+                            button.disabled = false;
+                            button.textContent = 'Обновить';
+                        }
+                        return;
+                    }
+
+                    const validation = validateVAD(rootGraphInfo.quads, prefixes);
+                    if (!validation.valid) {
+                        showValidationError(formatVADErrors(validation.errors));
+                        if (button) {
+                            button.disabled = false;
+                            button.textContent = 'Обновить';
+                        }
+                        return;
+                    }
+
+                    // Продолжаем с квадами только из выбранного графа
+                    activeFilters = [...getFilterConfig('vad').hiddenPredicates];
+
+                    const filteredQuads = rootGraphInfo.quads.filter(quad => {
+                        const predicateUri = quad.predicate.value;
+                        const predicateLabel = getPrefixedName(predicateUri, prefixes);
+                        return !isPredicateHidden(predicateUri, predicateLabel);
+                    });
+
+                    // Временно переключаемся в режим VAD для генерации DOT
+                    const originalQuads = currentQuads;
+                    currentQuads = rootGraphInfo.quads;
+                    currentMode = 'vad';
+
+                    const dotCode = rdfToDot(filteredQuads, prefixes, selectedTrigUri);
+                    currentDotCode = dotCode;
+                    console.log('issue #276: refresh VAD TriG - Сгенерированный DOT-код:', dotCode);
+
+                    currentQuads = originalQuads;
+                    currentMode = 'vad-trig';
+
+                    const viz = await Viz.instance();
+                    const svgString = viz.renderString(dotCode, {
+                        format: 'svg',
+                        engine: layoutEngine
+                    });
+
+                    // В режиме VAD TriG используем специальный контейнер vad-trig-output
+                    const output = document.getElementById('vad-trig-output');
+                    currentScale = 1.0;
+                    applyZoom();
+
+                    if (outputFormat === 'svg') {
+                        output.innerHTML = svgString;
+                        currentSvgElement = output.querySelector('svg');
+                        document.getElementById('export-buttons').style.display = 'block';
+                        document.getElementById('vad-trig-zoom-controls').style.display = 'flex';
+                    } else if (outputFormat === 'png') {
+                        const pngDataUrl = await svgToPng(svgString);
+                        output.innerHTML = `<img src="${pngDataUrl}" alt="RDF Graph" style="max-width: 100%;">`;
+                        const tempDiv = document.createElement('div');
+                        tempDiv.innerHTML = svgString;
+                        currentSvgElement = tempDiv.querySelector('svg');
+                        document.getElementById('export-buttons').style.display = 'block';
+                        document.getElementById('vad-trig-zoom-controls').style.display = 'flex';
+                    }
+
+                    displayLegend();
+                    displayPrefixes(prefixes);
+                    displayFilters();
+                    addNodeClickHandlers();
+                    closeAllPropertiesPanels();
+
+                    // Обновляем SPARQL запрос для выбранного TriG
+                    updateSparqlQueryForTriG();
+
+                    // Обновляем выпадающие списки Smart Design, если режим активен
+                    if (document.getElementById('sparql-mode').value === 'smart-design') {
+                        populateSmartDesignDropdowns();
+                    }
+
+                    console.log(`issue #276: refresh - Обработано ${quads.length} триплетов, отображается граф ${getPrefixedName(selectedTrigUri, prefixes)}`);
+
+                    if (button) {
+                        button.disabled = false;
+                        button.textContent = 'Обновить';
+                    }
+                    return;
+                }
+
+                // Скрываем панели VAD TriG для других режимов
+                toggleVADTriGPanels(false);
+
+                // Обычный режим визуализации (не VAD TriG)
+                activeFilters = [...getFilterConfig(currentMode).hiddenPredicates];
+
+                const filteredQuads = quads.filter(quad => {
+                    const predicateUri = quad.predicate.value;
+                    const predicateLabel = getPrefixedName(predicateUri, prefixes);
+                    return !isPredicateHidden(predicateUri, predicateLabel);
+                });
+
+                const dotCode = rdfToDot(filteredQuads, prefixes);
+                currentDotCode = dotCode;
+
+                const viz = await Viz.instance();
+                const svgString = viz.renderString(dotCode, {
+                    format: 'svg',
+                    engine: layoutEngine
+                });
+
+                const output = document.getElementById('output');
+                currentScale = 1.0;
+                applyZoom();
+
+                if (outputFormat === 'svg') {
+                    output.innerHTML = svgString;
+                    currentSvgElement = output.querySelector('svg');
+                    document.getElementById('export-buttons').style.display = 'block';
+                    document.getElementById('zoom-controls').style.display = 'flex';
+                } else if (outputFormat === 'png') {
+                    const pngDataUrl = await svgToPng(svgString);
+                    output.innerHTML = `<img src="${pngDataUrl}" alt="RDF Graph" style="max-width: 100%;">`;
+                    const tempDiv = document.createElement('div');
+                    tempDiv.innerHTML = svgString;
+                    currentSvgElement = tempDiv.querySelector('svg');
+                    document.getElementById('export-buttons').style.display = 'block';
+                    document.getElementById('zoom-controls').style.display = 'flex';
+                }
+
+                if (currentMode !== 'base') {
+                    displayLegend();
+                } else {
+                    document.getElementById('legend-panel').style.display = 'none';
+                }
+
+                displayPrefixes(prefixes);
+                displayFilters();
+                addNodeClickHandlers();
+                closeAllPropertiesPanels();
+
+                console.log(`issue #276: refresh - Обработано ${quads.length} триплетов`);
+
+            } catch (error) {
+                console.error('Ошибка при обновлении визуализации:', error);
+                const enhancedMessage = enhanceParseError(error.message, rdfInput);
+                showError(enhancedMessage);
+            } finally {
+                if (button) {
+                    button.disabled = false;
+                    button.textContent = 'Обновить';
+                }
             }
         }
 
