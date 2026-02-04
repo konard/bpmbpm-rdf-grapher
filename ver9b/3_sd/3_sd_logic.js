@@ -227,9 +227,16 @@ async function applyTripleToRdfInput(sparqlQuery, mode) {
         selectedTrigUri = null;
         virtualRDFdata = {};
 
+        // issue #278: Обновляем отображение quadstore после SPARQL UPDATE
+        // чтобы пользователь видел изменения без необходимости нажимать "Обновить"
+        if (typeof updateQuadstoreDisplay === 'function') {
+            updateQuadstoreDisplay();
+            console.log('issue #278: quadstore display обновлён после SPARQL UPDATE');
+        }
+
         console.log(`issue #254: SPARQL UPDATE выполнен через Comunica, ${currentQuads.length} триплетов в store`);
         console.log('issue #274: trigHierarchy инвалидирован для обновления диаграммы');
-        showResultSparqlMessage(message, 'success');
+        showResultSparqlMessage(message + '. Нажмите "Обновить" для отображения в treeview.', 'success');
 
     } catch (error) {
         console.error('issue #254: Ошибка выполнения SPARQL UPDATE:', error);

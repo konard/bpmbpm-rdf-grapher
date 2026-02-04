@@ -1188,7 +1188,7 @@ function hideNewConceptMessage() {
  * prefixed формы для URI, содержащих точки (например, vad:p1.1.1).
  * Это связано с тем, что точка является специальным символом в Turtle.
  *
- * @see https://github.com/bpmbpm/rdf-grapher/blob/main/ver9b/doc/n3js_serialization_format.md#1-%D0%BF%D0%BE%D0%BB%D0%BD%D1%8B%D0%B9-uri-%D0%B2%D0%BC%D0%B5%D1%81%D1%82%D0%BE-prefix
+ * @see https://github.com/bpmbpm/rdf-grapher/blob/main/ver9b/design/store/n3js_serialization_format.md#1-%D0%BF%D0%BE%D0%BB%D0%BD%D1%8B%D0%B9-uri-%D0%B2%D0%BC%D0%B5%D1%81%D1%82%D0%BE-prefix
  */
 function showNewConceptHelp() {
     const helpMessage = `
@@ -1209,7 +1209,7 @@ function showNewConceptHelp() {
    - CamelCase: p1s1s1 (s = sub)
 
 Подробнее см. документацию:
-https://github.com/bpmbpm/rdf-grapher/blob/main/ver9b/doc/n3js_serialization_format.md#1-полный-uri-вместо-prefix
+https://github.com/bpmbpm/rdf-grapher/blob/main/ver9b/design/store/n3js_serialization_format.md#1-полный-uri-вместо-prefix
     `.trim();
 
     // Используем более красивый диалог, если доступен, иначе alert
@@ -1218,13 +1218,13 @@ https://github.com/bpmbpm/rdf-grapher/blob/main/ver9b/doc/n3js_serialization_for
             title: 'Справка: именование концептов',
             message: helpMessage,
             linkText: 'Подробнее в документации',
-            linkUrl: 'https://github.com/bpmbpm/rdf-grapher/blob/main/ver9b/doc/n3js_serialization_format.md#1-%D0%BF%D0%BE%D0%BB%D0%BD%D1%8B%D0%B9-uri-%D0%B2%D0%BC%D0%B5%D1%81%D1%82%D0%BE-prefix'
+            linkUrl: 'https://github.com/bpmbpm/rdf-grapher/blob/main/ver9b/design/store/n3js_serialization_format.md#1-%D0%BF%D0%BE%D0%BB%D0%BD%D1%8B%D0%B9-uri-%D0%B2%D0%BC%D0%B5%D1%81%D1%82%D0%BE-prefix'
         });
     } else {
         // Fallback на стандартный alert с возможностью открыть ссылку
         const openDoc = confirm(helpMessage + '\n\nОткрыть документацию в новой вкладке?');
         if (openDoc) {
-            window.open('https://github.com/bpmbpm/rdf-grapher/blob/main/ver9b/doc/n3js_serialization_format.md#1-%D0%BF%D0%BE%D0%BB%D0%BD%D1%8B%D0%B9-uri-%D0%B2%D0%BC%D0%B5%D1%81%D1%82%D0%BE-prefix', '_blank');
+            window.open('https://github.com/bpmbpm/rdf-grapher/blob/main/ver9b/design/store/n3js_serialization_format.md#1-%D0%BF%D0%BE%D0%BB%D0%BD%D1%8B%D0%B9-uri-%D0%B2%D0%BC%D0%B5%D1%81%D1%82%D0%BE-prefix', '_blank');
         }
     }
 }
