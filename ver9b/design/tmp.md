@@ -5,3 +5,6 @@
 funSPARQLvaluesComunicaUpdate https://github.com/bpmbpm/rdf-grapher/issues/293
 
 Скриншоты https://github.com/bpmbpm/rdf-grapher/pull/304
+
+## 2
+Реализацию reasoner в папке 10_reasoner
