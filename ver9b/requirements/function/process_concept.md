@@ -55,12 +55,21 @@
         rdfs:label "Группа исполнителей процесса p1.1.1" ;
         vad:includes vad:Executor21 .    
 ```
-  - максимум: в этом же TriG удалить связи не с этого, а на этот объект, т.е. других индивидов (входящие связи)  
+- максимум: в этом же TriG удалить связи не с этого, а на этот объект, т.е. других индивидов (входящие связи)  
       vad:hasNext vad:p1.1.1 .
+- не нужно учесть, что нет ссылок извне на индивид, т.к. [resume](https://github.com/bpmbpm/rdf-grapher/blob/main/ver9b/analysis/new_individ_process.md#31-resume-bpmbpm) ссылки только на TriG (дочерний или внешний) через virtualRDFdata
+
+``` 
+vad:processSubtype
+vad:DetailedExternal
+```
 
 ### D5 Del individ Executor 
 Просто.  Удалить все   
       vad:includes vad:Executor21, vad:Executor22 .
+
+## Also
+- https://github.com/bpmbpm/rdf-grapher/blob/main/ver9b/doc/algorithm/io_concept_individ_v3.md
  
 ### Требования не сюда:
 - Запись нового элемента TriG осуществляется в конец TriG. - это к реализации SPARQL - запроса, а не его созданию, т.е. требование к Result. Создание Концепта тут не при чем. 
