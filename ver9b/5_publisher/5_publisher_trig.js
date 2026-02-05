@@ -747,6 +747,7 @@
 
         /**
          * issue #301: Раскрывает все родительские узлы до указанного элемента
+         * issue #305: Исключаем object-composition-list из автоматического раскрытия
          * @param {HTMLElement} element - Элемент дерева
          */
         function expandParentNodes(element) {
@@ -754,7 +755,9 @@
 
             while (parent) {
                 // Если родитель - это контейнер дочерних элементов (.trig-tree-children), раскрываем его
-                if (parent.classList && parent.classList.contains('trig-tree-children')) {
+                // issue #305: Исключаем object-composition-list - "Состав объектов" не должен раскрываться автоматически
+                if (parent.classList && parent.classList.contains('trig-tree-children') &&
+                    !parent.classList.contains('object-composition-list')) {
                     parent.style.display = 'block';
 
                     // Также обновляем иконку переключателя (toggle)
