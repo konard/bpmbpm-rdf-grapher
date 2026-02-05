@@ -958,3 +958,5 @@ vad:t_main {
 - 4.3 Вариант C: Всегда индексированный (включая первый индивид), также внутренний счетыик - как отдельный параметр (свойство) TriG схемы процесса
 
 ## 3.2 Дополнительные материалы
+- https://github.com/bpmbpm/rdf-grapher/blob/main/ver9b/info/archi.md
+- https://github.com/bpmbpm/rdf-grapher/blob/main/ver9b/info/anatomy_of_bpms.md
