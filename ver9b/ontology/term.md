@@ -123,10 +123,11 @@ vad:t_pGA {
 #### 2.5.1 Concept vs Individ в других системах
 https://github.com/bpmbpm/rdf-grapher/blob/main/ver9b/analysis/new_indovid_process.md
 - Visio: Concept = Master Shape. Individ = Shape - фигура на схеме. Набор Master Shape хранится в Трафарете (stencil): файл с расширением.vss, а трафарет в Шаблоне (template): [файл с расширением .vst](https://visio-rel.narod.ru/regV.htm). См. [visio doc](https://github.com/bpmbpm/rdf-grapher/blob/main/ver9b/info/anatomy_of_bpms.md#concept-and-individ)  
-- ARIS
+- [ARIS](https://github.com/bpmbpm/rdf-grapher/blob/main/ver9b/analysis/new_indovid_process.md#2-aris-toolset)
   - ARIS различает Definition (определение объекта) и Occurrence (вхождение на диаграмме)
   - Несколько вхождений (occurrences) одного объекта на разных диаграммах ссылаются на одно и то же Definition
-   Occurrence - вхождение, местонахожднение, как частный случай чего-то общего общего (концепта) 
+
+Occurrence - вхождение, местонахожднение, как частный случай чего-то общего общего (концепта) 
 #### 2.5.2 Problem 
 Когда мы с шаблона \ трафарета в visio (ARIS и т.п.) перетаскиваем фигуры (фигурки, Shape) то каждому новому Shape (копии master из stencil) нужно присвоить id и желательно на основе id master. 
 
