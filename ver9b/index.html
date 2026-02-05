@@ -425,7 +425,13 @@
                     <!-- Обертка для диаграммы -->
                     <div class="vad-trig-diagram-wrapper">
                         <div class="diagram-panel">
-                            <div class="diagram-panel-header">Диаграмма</div>
+                            <div class="diagram-panel-header">
+                                <span class="diagram-header-text">Диаграмма</span>
+                                <div class="diagram-nav-buttons">
+                                    <button class="diagram-nav-btn" id="diagram-nav-back" onclick="navigateDiagramBack()" title="Назад" disabled>&lt;</button>
+                                    <button class="diagram-nav-btn" id="diagram-nav-forward" onclick="navigateDiagramForward()" title="Вперёд" disabled>&gt;</button>
+                                </div>
+                            </div>
                             <div class="diagram-panel-content">
                                 <div class="zoom-container vad-trig-zoom-container" id="vad-trig-zoom-container">
                                     <div class="zoom-content" id="vad-trig-zoom-content">

@@ -517,6 +517,11 @@
 
                 // Обработка режима VAD TriG
                 if (currentMode === 'vad-trig') {
+                    // issue #301: Сбрасываем историю навигации при загрузке новых данных
+                    if (typeof resetNavigationHistory === 'function') {
+                        resetNavigationHistory();
+                    }
+
                     // Парсим иерархию TriG графов
                     const hierarchyResult = parseTriGHierarchy(quads, prefixes);
 
@@ -555,6 +560,11 @@
                     } else {
                         selectedTrigUri = hierarchyResult.rootTrigUris.length > 0 ? hierarchyResult.rootTrigUris[0] : null;
                         console.log('issue #276: Previous TriG not found, using first root TriG:', selectedTrigUri);
+                    }
+
+                    // issue #301: Добавляем начальный TriG в историю навигации
+                    if (selectedTrigUri && typeof addToNavigationHistory === 'function') {
+                        addToNavigationHistory(selectedTrigUri);
                     }
 
                     // Показываем панели VAD TriG
