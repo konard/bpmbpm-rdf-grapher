@@ -849,19 +849,19 @@
         /* issue #303: Buttons resized ~3x smaller, cursor style fixed */
         .diagram-nav-buttons {
             display: flex;
-            gap: 2px;
-            margin-left: 8px;
+            gap: 3px;
+            margin-left: 12px;
         }
 
         .diagram-nav-btn {
-            width: 16px;
-            height: 14px;
+            width: 24px;
+            height: 21px;
             padding: 0;
-            border: 1px solid rgba(255, 255, 255, 0.4);
-            border-radius: 2px;
-            background-color: rgba(255, 255, 255, 0.2);
+            border: 1px solid rgba(255, 255, 255, 0.7);
+            border-radius: 3px;
+            background-color: rgba(255, 255, 255, 0.35);
             color: white;
-            font-size: 9px;
+            font-size: 14px;
             font-weight: bold;
             cursor: pointer;
             transition: all 0.2s ease;
@@ -869,16 +869,16 @@
         }
 
         .diagram-nav-btn:hover:not(:disabled) {
-            background-color: rgba(255, 255, 255, 0.3);
-            border-color: rgba(255, 255, 255, 0.6);
+            background-color: rgba(255, 255, 255, 0.5);
+            border-color: rgba(255, 255, 255, 0.9);
         }
 
         .diagram-nav-btn:active:not(:disabled) {
-            background-color: rgba(255, 255, 255, 0.4);
+            background-color: rgba(255, 255, 255, 0.6);
         }
 
         .diagram-nav-btn:disabled {
-            opacity: 0.4;
+            opacity: 0.5;
             cursor: default;
         }
 
