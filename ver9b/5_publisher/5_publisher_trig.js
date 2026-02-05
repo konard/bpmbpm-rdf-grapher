@@ -629,20 +629,20 @@
 
         /**
          * Обработчик выбора TriG в дереве
+         * issue #301: Добавлена поддержка навигационной истории и синхронизации TreeView
          * @param {string} trigUri - URI выбранного TriG
+         * @param {boolean} skipHistoryUpdate - Пропустить обновление истории (используется при навигации назад/вперёд)
          */
-        function selectTriG(trigUri) {
+        function selectTriG(trigUri, skipHistoryUpdate = false) {
             selectedTrigUri = trigUri;
 
-            // Обновляем выделение в дереве
-            const treeItems = document.querySelectorAll('.trig-tree-item');
-            treeItems.forEach(item => {
-                if (item.getAttribute('data-trig-uri') === trigUri) {
-                    item.classList.add('selected', 'active');
-                } else {
-                    item.classList.remove('selected', 'active');
-                }
-            });
+            // issue #301: Обновляем историю навигации (если это не навигация по истории)
+            if (!skipHistoryUpdate && trigUri) {
+                addToNavigationHistory(trigUri);
+            }
+
+            // issue #301: Обновляем выделение в дереве и раскрываем путь к элементу
+            highlightAndExpandTreePath(trigUri);
 
             // Отображаем свойства выбранного TriG
             displayTriGProperties(trigUri, trigHierarchy, currentPrefixes);
@@ -652,4 +652,118 @@
 
             // Обновляем SPARQL запрос для выбранного TriG
             updateSparqlQueryForTriG();
+        }
+
+        /**
+         * issue #301: Добавляет TriG в историю навигации
+         * @param {string} trigUri - URI TriG для добавления в историю
+         */
+        function addToNavigationHistory(trigUri) {
+            // Если мы в середине истории, удаляем всё после текущей позиции
+            if (diagramNavigationIndex < diagramNavigationHistory.length - 1) {
+                diagramNavigationHistory = diagramNavigationHistory.slice(0, diagramNavigationIndex + 1);
+            }
+
+            // Добавляем только если это не дубликат последнего элемента
+            if (diagramNavigationHistory.length === 0 ||
+                diagramNavigationHistory[diagramNavigationHistory.length - 1] !== trigUri) {
+                diagramNavigationHistory.push(trigUri);
+                diagramNavigationIndex = diagramNavigationHistory.length - 1;
+            }
+
+            // Обновляем состояние кнопок навигации
+            updateNavigationButtons();
+        }
+
+        /**
+         * issue #301: Обновляет состояние кнопок навигации (активность/неактивность)
+         */
+        function updateNavigationButtons() {
+            const backBtn = document.getElementById('diagram-nav-back');
+            const forwardBtn = document.getElementById('diagram-nav-forward');
+
+            if (backBtn) {
+                backBtn.disabled = diagramNavigationIndex <= 0;
+            }
+            if (forwardBtn) {
+                forwardBtn.disabled = diagramNavigationIndex >= diagramNavigationHistory.length - 1;
+            }
+        }
+
+        /**
+         * issue #301: Навигация назад по истории диаграмм
+         */
+        function navigateDiagramBack() {
+            if (diagramNavigationIndex > 0) {
+                diagramNavigationIndex--;
+                const trigUri = diagramNavigationHistory[diagramNavigationIndex];
+                selectTriG(trigUri, true);  // skipHistoryUpdate = true
+                updateNavigationButtons();
+            }
+        }
+
+        /**
+         * issue #301: Навигация вперёд по истории диаграмм
+         */
+        function navigateDiagramForward() {
+            if (diagramNavigationIndex < diagramNavigationHistory.length - 1) {
+                diagramNavigationIndex++;
+                const trigUri = diagramNavigationHistory[diagramNavigationIndex];
+                selectTriG(trigUri, true);  // skipHistoryUpdate = true
+                updateNavigationButtons();
+            }
+        }
+
+        /**
+         * issue #301: Сбрасывает историю навигации (вызывается при загрузке новых данных)
+         */
+        function resetNavigationHistory() {
+            diagramNavigationHistory = [];
+            diagramNavigationIndex = -1;
+            updateNavigationButtons();
+        }
+
+        /**
+         * issue #301: Подсвечивает элемент в TreeView и раскрывает путь к нему
+         * @param {string} trigUri - URI TriG для подсветки
+         */
+        function highlightAndExpandTreePath(trigUri) {
+            // Обновляем выделение в дереве
+            const treeItems = document.querySelectorAll('.trig-tree-item');
+            treeItems.forEach(item => {
+                if (item.getAttribute('data-trig-uri') === trigUri) {
+                    item.classList.add('selected', 'active');
+
+                    // Раскрываем все родительские узлы до этого элемента
+                    expandParentNodes(item);
+
+                    // Прокручиваем к выбранному элементу
+                    item.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+                } else {
+                    item.classList.remove('selected', 'active');
+                }
+            });
+        }
+
+        /**
+         * issue #301: Раскрывает все родительские узлы до указанного элемента
+         * @param {HTMLElement} element - Элемент дерева
+         */
+        function expandParentNodes(element) {
+            let parent = element.parentElement;
+
+            while (parent) {
+                // Если родитель - это контейнер дочерних элементов (.trig-tree-children), раскрываем его
+                if (parent.classList && parent.classList.contains('trig-tree-children')) {
+                    parent.style.display = 'block';
+
+                    // Также обновляем иконку переключателя (toggle)
+                    const toggleId = parent.id.replace('tree-children-', 'tree-toggle-');
+                    const toggle = document.getElementById(toggleId);
+                    if (toggle) {
+                        toggle.textContent = '\u25BC';  // ▼ (развёрнуто)
+                    }
+                }
+                parent = parent.parentElement;
+            }
         }

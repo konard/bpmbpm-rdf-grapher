@@ -171,6 +171,9 @@ let allPredicates = [];
 let trigHierarchy = {};
 let selectedTrigUri = null;
 let allTrigGraphs = [];
+// issue #301: Navigation history for diagram navigation (back/forward like browser)
+let diagramNavigationHistory = [];
+let diagramNavigationIndex = -1;
 let isNewTrigQuery = false;
 const PTREE_GRAPH_URI = 'http://example.org/vad#ptree';
 const RTREE_GRAPH_URI = 'http://example.org/vad#rtree';

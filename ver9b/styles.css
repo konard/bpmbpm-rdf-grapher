@@ -836,6 +836,48 @@
             font-weight: bold;
             font-size: 14px;
             border-radius: 6px 6px 0 0;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+
+        .diagram-header-text {
+            flex: 1;
+        }
+
+        /* issue #301: Navigation buttons for diagram history (back/forward) */
+        .diagram-nav-buttons {
+            display: flex;
+            gap: 4px;
+            margin-left: 10px;
+        }
+
+        .diagram-nav-btn {
+            width: 28px;
+            height: 24px;
+            padding: 0;
+            border: 1px solid rgba(255, 255, 255, 0.4);
+            border-radius: 4px;
+            background-color: rgba(255, 255, 255, 0.2);
+            color: white;
+            font-size: 14px;
+            font-weight: bold;
+            cursor: pointer;
+            transition: all 0.2s ease;
+        }
+
+        .diagram-nav-btn:hover:not(:disabled) {
+            background-color: rgba(255, 255, 255, 0.3);
+            border-color: rgba(255, 255, 255, 0.6);
+        }
+
+        .diagram-nav-btn:active:not(:disabled) {
+            background-color: rgba(255, 255, 255, 0.4);
+        }
+
+        .diagram-nav-btn:disabled {
+            opacity: 0.4;
+            cursor: not-allowed;
         }
 
         .diagram-panel-content {
