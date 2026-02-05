@@ -129,7 +129,8 @@ https://github.com/bpmbpm/rdf-grapher/blob/main/ver9b/analysis/new_indovid_proce
 
 Occurrence - вхождение, местонахожднение, как частный случай чего-то общего общего (концепта) 
 #### 2.5.2 Problem 
-Когда мы с шаблона \ трафарета в visio (ARIS и т.п.) перетаскиваем фигуры (фигурки, Shape) то каждому новому Shape (копии master из stencil) нужно присвоить id и желательно на основе id master. 
+Когда мы с шаблона \ трафарета в visio (ARIS и т.п.) перетаскиваем фигуры (фигурки, Shape) то каждому новому Shape (копии master из stencil) нужно присвоить id и желательно на основе id master.  
+Одной из подпроблем будет использование символа - разделителя, который "однозначно" понимает N3.Writer библиотеки N3.js https://github.com/bpmbpm/rdf-grapher/blob/main/ver9b/design/store/n3js_serialization_format.md
 
 ---
 
