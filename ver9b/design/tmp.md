@@ -3,3 +3,5 @@
 Размести файл в папке https://github.com/bpmbpm/rdf-grapher/tree/main/ver9b/design/architecture  
 
 funSPARQLvaluesComunicaUpdate https://github.com/bpmbpm/rdf-grapher/issues/293
+
+Скриншоты https://github.com/bpmbpm/rdf-grapher/pull/304
