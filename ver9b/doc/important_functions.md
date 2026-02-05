@@ -1,9 +1,10 @@
-<!-- PR #294 | 2026-02-04 -->
-<!-- Ссылка на issue: https://github.com/bpmbpm/rdf-grapher/issues/293 -->
+<!-- PR #296 | 2026-02-05 -->
+<!-- Ссылка на issue: https://github.com/bpmbpm/rdf-grapher/issues/295 -->
+<!-- История изменений: PR #294 (2026-02-04), PR #296 (2026-02-05) -->
 
 # Наиболее важные функции RDF Grapher ver9b
 
-В данном документе описаны 20 наиболее важных функций проекта, реализующих **SPARQL-driven Programming** и составляющих ядро системы обработки и визуализации RDF данных.
+В данном документе описаны 22 наиболее важных функции проекта, реализующих **SPARQL-driven Programming** и составляющих ядро системы обработки и визуализации RDF данных.
 
 ## Оглавление
 
@@ -12,30 +13,32 @@
 2. [funSPARQLvaluesComunica](#2-funsparqlvaluescomunica) — полная поддержка SPARQL через Comunica
 3. [funSPARQLvaluesDouble](#3-funsparqlvaluesdouble) — справочники с недоступными значениями
 4. [funSPARQLask](#4-funsparqlask) — выполнение SPARQL ASK запросов
+5. [funSPARQLvaluesComunicaUpdate](#5-funsparqlvaluescomunicaupdate) — выполнение SPARQL UPDATE через Comunica
+6. [funSPARQLvaluesDoubleSync](#6-funsparqlvaluesdoublesync) — синхронная версия funSPARQLvaluesDouble
 
 ### Группа 2: Обработка и хранение данных
-5. [parseTriGHierarchy](#5-parsetrighierarchy) — построение иерархии TriG графов
-6. [calculateProcessSubtypes](#6-calculateprocesssubtypes) — вычисление подтипов процессов
-7. [getFilteredQuads](#7-getfilteredquads) — фильтрация квадов по режиму
-8. [applyTripleToRdfInput](#8-applytripletordfinput) — применение SPARQL к quadstore
+7. [parseTriGHierarchy](#7-parsetrighierarchy) — построение иерархии TriG графов
+8. [calculateProcessSubtypes](#8-calculateprocesssubtypes) — вычисление подтипов процессов
+9. [getFilteredQuads](#9-getfilteredquads) — фильтрация квадов по режиму
+10. [applyTripleToRdfInput](#10-applytripletordfinput) — применение SPARQL к quadstore
 
 ### Группа 3: Визуализация
-9. [visualize](#9-visualize) — главная функция визуализации
-10. [rdfToDotVAD](#10-rdftodotvad) — генерация DOT-кода для VAD диаграмм
-11. [serializeStoreToTriG](#11-serializestoretotrig) — сериализация store в TriG формат
+11. [visualize](#11-visualize) — главная функция визуализации
+12. [rdfToDotVAD](#12-rdftodotvad) — генерация DOT-кода для VAD диаграмм
+13. [serializeStoreToTriG](#13-serializestoretotrig) — сериализация store в TriG формат
 
 ### Группа 4: Smart Design
-12. [openNewConceptModal](#12-opennewconceptmodal) — создание нового концепта
-13. [openNewTrigModal](#13-opennewtrigmodal) — создание нового TriG
-14. [openDelConceptModal](#14-opendelconceptmodal) — удаление концепта/индивида
-15. [smartDesignCreate](#15-smartdesigncreate) — генерация SPARQL INSERT/DELETE
+14. [openNewConceptModal](#14-opennewconceptmodal) — создание нового концепта
+15. [openNewTrigModal](#15-opennewtrigmodal) — создание нового TriG
+16. [openDelConceptModal](#16-opendelconceptmodal) — удаление концепта/индивида
+17. [smartDesignCreate](#17-smartdesigncreate) — генерация SPARQL INSERT/DELETE
 
 ### Группа 5: Вспомогательные функции
-16. [getPrefixedName](#16-getprefixedname) — преобразование URI в prefixed форму
-17. [loadTechAppendix](#17-loadtechappendix) — загрузка технологических данных
-18. [isVirtualGraph](#18-isvirtualgraph) — проверка виртуального графа
-19. [getPredicatesFromTechObject](#19-getpredicatesfromtechobject) — получение предикатов из techtree
-20. [refreshQuadstoreFromRdfInput](#20-refreshquadstorefromrdfinput) — синхронизация quadstore
+18. [getPrefixedName](#18-getprefixedname) — преобразование URI в prefixed форму
+19. [loadTechAppendix](#19-loadtechappendix) — загрузка технологических данных
+20. [isVirtualGraph](#20-isvirtualgraph) — проверка виртуального графа
+21. [getPredicatesFromTechObject](#21-getpredicatesfromtechobject) — получение предикатов из techtree
+22. [refreshQuadstoreFromRdfInput](#22-refreshquadstorefromrdfinput) — синхронизация quadstore
 
 ---
 
@@ -230,9 +233,124 @@ const isVirtual = await funSPARQLask(`
 
 ---
 
+### 5. funSPARQLvaluesComunicaUpdate
+
+**Модуль:** `9_vadlib/vadlib_sparql.js`
+
+#### Сигнатура
+
+```javascript
+async function funSPARQLvaluesComunicaUpdate(sparqlUpdateQuery)
+```
+
+#### Описание
+
+Выполняет SPARQL UPDATE запрос (INSERT/DELETE) через Comunica. Предназначена для будущего использования при автоматическом выполнении UPDATE-запросов. В текущей архитектуре запросы генерируются Smart Design, но не выполняются автоматически — пользователь нажимает "Применить" для выполнения.
+
+Функция поддерживает:
+- INSERT DATA — добавление новых триплетов
+- DELETE WHERE — удаление триплетов по паттерну
+- DELETE/INSERT — комбинированные операции
+
+#### Параметры
+
+| Параметр | Тип | Описание |
+|---|---|---|
+| `sparqlUpdateQuery` | `string` | SPARQL UPDATE запрос (INSERT DATA, DELETE WHERE и т.д.) |
+
+#### Возвращаемое значение
+
+`Promise<boolean>` — `true` если запрос выполнен успешно, `false` при ошибке.
+
+#### Пример использования
+
+```javascript
+// Добавление нового триплета через Comunica
+const success = await funSPARQLvaluesComunicaUpdate(`
+    PREFIX vad: <http://example.org/vad#>
+    PREFIX rdf: <http://www.w3.org/1999/02/22-rdf-syntax-ns#>
+
+    INSERT DATA {
+        GRAPH vad:ptree {
+            vad:pNew rdf:type vad:TypeProcess .
+        }
+    }
+`);
+
+if (success) {
+    console.log('Триплет добавлен');
+}
+```
+
+#### Связь с PR #292
+
+Добавлена в рамках issue #291 для поддержки SPARQL UPDATE операций при создании новых TriG контейнеров.
+
+---
+
+### 6. funSPARQLvaluesDoubleSync
+
+**Модуль:** `9_vadlib/vadlib_sparql.js`
+
+#### Сигнатура
+
+```javascript
+function funSPARQLvaluesDoubleSync(sparqlQuery1, variableName1, sparqlQuery2, variableName2)
+```
+
+#### Описание
+
+Синхронная версия `funSPARQLvaluesDouble` для случаев, когда асинхронный вызов неудобен. Использует `funSPARQLvalues` вместо `funSPARQLvaluesComunica` для обоих запросов.
+
+**Применение:** Используется в контекстах, где async/await недоступен (например, в некоторых обработчиках событий или при необходимости синхронного получения данных).
+
+#### Параметры
+
+| Параметр | Тип | По умолчанию | Описание |
+|---|---|---|---|
+| `sparqlQuery1` | `string` | -- | SPARQL запрос для полного списка |
+| `variableName1` | `string` | `'value'` | Имя переменной для первого запроса |
+| `sparqlQuery2` | `string` | -- | SPARQL запрос для списка недоступных |
+| `variableName2` | `string` | `'value'` | Имя переменной для второго запроса |
+
+#### Возвращаемое значение
+
+`Array<{uri: string, label: string, disabled: boolean}>` — массив результатов (синхронно, не Promise).
+
+#### Пример использования
+
+```javascript
+// Синхронное получение процессов с пометкой disabled
+const processes = funSPARQLvaluesDoubleSync(
+    `SELECT ?process ?label WHERE {
+        GRAPH vad:ptree {
+            ?process rdf:type vad:TypeProcess .
+            ?process rdfs:label ?label .
+        }
+    }`,
+    'process',
+    `SELECT ?process WHERE {
+        GRAPH vad:ptree {
+            ?process rdf:type vad:TypeProcess .
+            ?process vad:hasTrig ?trig .
+        }
+    }`,
+    'process'
+);
+
+// Результат сразу доступен (без await)
+processes.forEach(p => console.log(p.label, p.disabled));
+```
+
+#### Связь с PR #292
+
+Добавлена в рамках issue #291 как синхронная альтернатива `funSPARQLvaluesDouble` для совместимости с кодом, где async/await неудобен.
+
+---
+
 ## Группа 2: Обработка и хранение данных
 
-### 5. parseTriGHierarchy
+### 7. parseTriGHierarchy
 
 **Модуль:** `2_triplestore/2_triplestore_logic.js`
 
@@ -270,7 +388,7 @@ function parseTriGHierarchy(quads, prefixes)
 
 ---
 
-### 6. calculateProcessSubtypes
+### 8. calculateProcessSubtypes
 
 **Модуль:** `2_triplestore/2_triplestore_logic.js`
 
@@ -294,7 +412,7 @@ function calculateProcessSubtypes(hierarchy, prefixes)
 
 ---
 
-### 7. getFilteredQuads
+### 9. getFilteredQuads
 
 **Модуль:** `9_vadlib/vadlib.js`
 
@@ -320,7 +438,7 @@ function getFilteredQuads(filterMode = TRIG_FILTER_MODES.OBJECT_TREE_PLUS_VAD)
 
 ---
 
-### 8. applyTripleToRdfInput
+### 10. applyTripleToRdfInput
 
 **Модуль:** `3_sd/3_sd_logic.js`
 
@@ -347,7 +465,7 @@ async function applyTripleToRdfInput(sparqlQuery, mode)
 
 ## Группа 3: Визуализация
 
-### 9. visualize
+### 11. visualize
 
 **Модуль:** `5_publisher/5_publisher_logic.js`
 
@@ -372,7 +490,7 @@ async function visualize()
 
 ---
 
-### 10. rdfToDotVAD
+### 12. rdfToDotVAD
 
 **Модуль:** `5_publisher/5_publisher_logic.js`
 
@@ -394,7 +512,7 @@ function rdfToDotVAD(quads, prefixes = {}, trigUri = null)
 
 ---
 
-### 11. serializeStoreToTriG
+### 13. serializeStoreToTriG
 
 **Модуль:** `3_sd/3_sd_logic.js`
 
@@ -412,7 +530,7 @@ function serializeStoreToTriG(store, prefixes)
 
 ## Группа 4: Smart Design
 
-### 12. openNewConceptModal
+### 14. openNewConceptModal
 
 **Модуль:** `3_sd/3_sd_create_new_concept/3_sd_create_new_concept_logic.js`
 
@@ -434,7 +552,7 @@ function openNewConceptModal()
 
 ---
 
-### 13. openNewTrigModal
+### 15. openNewTrigModal
 
 **Модуль:** `3_sd/3_sd_create_new_trig/3_sd_create_new_trig_logic.js`
 
@@ -458,7 +576,7 @@ async function openNewTrigModal()
 
 ---
 
-### 14. openDelConceptModal
+### 16. openDelConceptModal
 
 **Модуль:** `3_sd/3_sd_del_concept_individ/3_sd_del_concept_individ_logic.js`
 
@@ -483,7 +601,7 @@ function openDelConceptModal()
 
 ---
 
-### 15. smartDesignCreate
+### 17. smartDesignCreate
 
 **Модуль:** `3_sd/3_sd_logic.js`
 
@@ -501,7 +619,7 @@ function smartDesignCreate()
 
 ## Группа 5: Вспомогательные функции
 
-### 16. getPrefixedName
+### 18. getPrefixedName
 
 **Модуль:** `9_vadlib/vadlib.js`
 
@@ -517,7 +635,7 @@ function getPrefixedName(uri, prefixes)
 
 ---
 
-### 17. loadTechAppendix
+### 19. loadTechAppendix
 
 **Модуль:** `9_vadlib/vadlib.js`
 
@@ -533,7 +651,7 @@ async function loadTechAppendix()
 
 ---
 
-### 18. isVirtualGraph
+### 20. isVirtualGraph
 
 **Модуль:** `9_vadlib/vadlib.js`
 
@@ -549,7 +667,7 @@ function isVirtualGraph(graphUri)
 
 ---
 
-### 19. getPredicatesFromTechObject
+### 21. getPredicatesFromTechObject
 
 **Модуль:** `9_vadlib/vadlib.js`
 
@@ -565,7 +683,7 @@ function getPredicatesFromTechObject(techObjectUri)
 
 ---
 
-### 20. refreshQuadstoreFromRdfInput
+### 22. refreshQuadstoreFromRdfInput
 
 **Модуль:** `3_sd/3_sd_logic.js`
 

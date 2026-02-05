@@ -734,6 +734,7 @@ WHERE {
          */
         function initDraggableModals() {
             // Модальные окна и их заголовки
+            // issue #295: Исправлен баг с селекторами - используем полные имена классов
             const modals = [
                 { modal: 'new-concept-modal', header: 'new-concept-modal-header', content: 'new-concept-modal-content' },
                 { modal: 'new-trig-modal', header: 'new-trig-modal-header', content: 'new-trig-modal-content' },
@@ -741,8 +742,9 @@ WHERE {
             ];
 
             modals.forEach(config => {
-                const modalContent = document.querySelector(`#${config.modal} .${config.content.split('-').slice(-2).join('-')}`);
-                const header = document.querySelector(`#${config.modal} .${config.header.split('-').slice(-2).join('-')}`);
+                // issue #295: Используем полные имена классов напрямую вместо string manipulation
+                const modalContent = document.querySelector(`#${config.modal} .${config.content}`);
+                const header = document.querySelector(`#${config.modal} .${config.header}`);
 
                 if (modalContent && header) {
                     makeDraggable(modalContent, header, config.modal);
