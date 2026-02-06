@@ -235,12 +235,46 @@ DELETE WHERE {
     },
 
     /**
-     * Генерирует DELETE SPARQL запрос для удаления индивида процесса
+     * issue #309: Поиск ExecutorGroup для индивида процесса
+     * @param {string} individUri - URI индивида процесса
+     * @param {string} trigUri - URI TriG графа
+     */
+    FIND_EXECUTOR_GROUP_FOR_INDIVID: (individUri, trigUri) => `
+PREFIX vad: <http://example.org/vad#>
+
+SELECT ?executorGroup WHERE {
+    GRAPH <${trigUri}> {
+        <${individUri}> vad:hasExecutor ?executorGroup .
+    }
+}`,
+
+    /**
+     * issue #309: Поиск входящих vad:hasNext связей на удаляемый индивид в TriG
+     * @param {string} individUri - URI индивида процесса
+     * @param {string} trigUri - URI TriG графа
+     */
+    FIND_INCOMING_HAS_NEXT: (individUri, trigUri) => `
+PREFIX vad: <http://example.org/vad#>
+
+SELECT ?sourceIndivid WHERE {
+    GRAPH <${trigUri}> {
+        ?sourceIndivid vad:hasNext <${individUri}> .
+    }
+}`,
+
+    /**
+     * issue #309: Генерирует полный DELETE SPARQL запрос для удаления индивида процесса
+     * Включает:
+     * 1. Удаление всех исходящих триплетов индивида (isSubprocessTrig, hasExecutor, hasNext)
+     * 2. Удаление связанного объекта ExecutorGroup (rdf:type, rdfs:label, vad:includes)
+     * 3. Удаление входящих vad:hasNext от других индивидов
      * @param {string} trigUri - URI TriG графа
      * @param {string} individUri - URI индивида процесса
+     * @param {string|null} executorGroupUri - URI ExecutorGroup (если найдена)
+     * @param {Array<string>} incomingHasNextUris - URI индивидов с входящими vad:hasNext
      * @param {Object} prefixes - Объект префиксов
      */
-    GENERATE_DELETE_PROCESS_INDIVID_QUERY: (trigUri, individUri, prefixes) => {
+    GENERATE_DELETE_PROCESS_INDIVID_QUERY: (trigUri, individUri, prefixes, executorGroupUri = null, incomingHasNextUris = []) => {
         const prefixDeclarations = Object.entries(prefixes)
             .map(([prefix, uri]) => `PREFIX ${prefix}: <${uri}>`)
             .join('\n');
@@ -253,14 +287,47 @@ DELETE WHERE {
             ? getPrefixedName(individUri, currentPrefixes)
             : `<${individUri}>`;
 
-        return `${prefixDeclarations}
+        let parts = [];
 
-# Удаление всех триплетов индивида процесса
+        // 1. Удаление всех исходящих триплетов индивида процесса
+        parts.push(`# issue #309: Удаление всех исходящих триплетов индивида процесса
 DELETE WHERE {
     GRAPH ${trigPrefixed} {
         ${individPrefixed} ?p ?o .
     }
-}`;
+}`);
+
+        // 2. Удаление ExecutorGroup (если найдена)
+        if (executorGroupUri) {
+            const egPrefixed = typeof getPrefixedName === 'function'
+                ? getPrefixedName(executorGroupUri, currentPrefixes)
+                : `<${executorGroupUri}>`;
+
+            parts.push(`# issue #309: Удаление объекта ExecutorGroup
+DELETE WHERE {
+    GRAPH ${trigPrefixed} {
+        ${egPrefixed} ?p ?o .
+    }
+}`);
+        }
+
+        // 3. Удаление входящих vad:hasNext от других индивидов
+        if (incomingHasNextUris && incomingHasNextUris.length > 0) {
+            incomingHasNextUris.forEach(sourceUri => {
+                const sourcePrefixed = typeof getPrefixedName === 'function'
+                    ? getPrefixedName(sourceUri, currentPrefixes)
+                    : `<${sourceUri}>`;
+
+                parts.push(`# issue #309: Удаление входящей связи vad:hasNext от ${sourcePrefixed}
+DELETE DATA {
+    GRAPH ${trigPrefixed} {
+        ${sourcePrefixed} vad:hasNext ${individPrefixed} .
+    }
+}`);
+            });
+        }
+
+        return `${prefixDeclarations}\n\n` + parts.join('\n;\n\n');
     },
 
     /**
