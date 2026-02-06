@@ -2503,3 +2503,340 @@
         .test-result-close-btn:hover {
             background-color: #757575;
         }
+
+        /* ============================================================================= */
+        /* issue #309: Стили для кнопки и модального окна New Individ                    */
+        /* ============================================================================= */
+
+        .new-individ-btn {
+            background-color: #00897B !important;
+            color: white !important;
+        }
+
+        .new-individ-btn:hover {
+            background-color: #00796B !important;
+        }
+
+        .new-individ-modal {
+            display: none;
+            position: fixed;
+            z-index: 2000;
+            left: 0;
+            top: 0;
+            width: 100%;
+            height: 100%;
+            background-color: rgba(0,0,0,0.5);
+        }
+
+        .new-individ-modal-content {
+            position: absolute;
+            background-color: white;
+            padding: 0;
+            border-radius: 8px;
+            width: 550px;
+            max-height: 85vh;
+            overflow-y: auto;
+            box-shadow: 0 4px 20px rgba(0,0,0,0.3);
+            top: 50px;
+            left: 50%;
+            transform: translateX(-50%);
+        }
+
+        .new-individ-modal-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 15px 20px;
+            background-color: #00897B;
+            color: white;
+            border-radius: 8px 8px 0 0;
+            cursor: move;
+        }
+
+        .new-individ-modal-header h3 {
+            margin: 0;
+            font-size: 16px;
+        }
+
+        .new-individ-modal-header-buttons {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+
+        .new-individ-help-btn {
+            background-color: #2196F3;
+            color: white;
+            border: none;
+            border-radius: 4px;
+            padding: 6px 12px;
+            font-size: 12px;
+            cursor: pointer;
+            font-weight: 500;
+        }
+
+        .new-individ-help-btn:hover {
+            background-color: #1976D2;
+        }
+
+        .new-individ-modal-close {
+            background: none;
+            border: none;
+            color: white;
+            font-size: 24px;
+            cursor: pointer;
+            padding: 0 5px;
+        }
+
+        .new-individ-modal-body {
+            display: flex;
+            flex-direction: column;
+            gap: 15px;
+            padding: 20px;
+        }
+
+        .new-individ-field {
+            display: flex;
+            flex-direction: column;
+            gap: 5px;
+        }
+
+        .new-individ-field label {
+            font-weight: bold;
+            font-size: 14px;
+        }
+
+        .new-individ-field select {
+            padding: 8px;
+            border: 1px solid #ddd;
+            border-radius: 4px;
+            font-size: 14px;
+        }
+
+        .new-individ-hint {
+            color: #666;
+            font-style: italic;
+        }
+
+        .new-individ-message {
+            padding: 10px 20px;
+            margin: 0;
+            font-size: 13px;
+        }
+
+        .new-individ-message.success {
+            background-color: #e8f5e9;
+            color: #2e7d32;
+        }
+
+        .new-individ-message.error {
+            background-color: #ffebee;
+            color: #c62828;
+        }
+
+        .new-individ-modal-buttons {
+            display: flex;
+            justify-content: flex-end;
+            gap: 10px;
+            padding: 15px 20px;
+            border-top: 1px solid #eee;
+        }
+
+        .new-individ-modal-buttons button {
+            padding: 8px 16px;
+            border: none;
+            border-radius: 4px;
+            cursor: pointer;
+            font-size: 13px;
+            font-weight: 500;
+        }
+
+        .new-individ-cancel-btn {
+            background-color: #9e9e9e;
+            color: white;
+        }
+
+        .new-individ-cancel-btn:hover {
+            background-color: #757575;
+        }
+
+        .new-individ-sparql-btn {
+            background-color: #ff9800;
+            color: white;
+        }
+
+        .new-individ-sparql-btn:hover {
+            background-color: #f57c00;
+        }
+
+        .new-individ-create-btn {
+            background-color: #00897B;
+            color: white;
+        }
+
+        .new-individ-create-btn:hover {
+            background-color: #00796B;
+        }
+
+        /* issue #309: Стили для checkbox-контейнера hasNext */
+        .new-individ-checkbox-container {
+            max-height: 200px;
+            overflow-y: auto;
+            border: 1px solid #ddd;
+            border-radius: 4px;
+            padding: 8px;
+        }
+
+        .new-individ-checkbox-item {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            padding: 4px 0;
+        }
+
+        .new-individ-checkbox-item input[type="checkbox"] {
+            margin: 0;
+        }
+
+        .new-individ-checkbox-item label {
+            font-weight: normal;
+            font-size: 13px;
+            cursor: pointer;
+        }
+
+        /* issue #309: Стиль для отображения авто-определённой ExecutorGroup */
+        .new-individ-info-display {
+            padding: 8px 12px;
+            background-color: #f8f9fa;
+            border: 1px solid #dee2e6;
+            border-radius: 4px;
+            font-size: 13px;
+            font-family: monospace;
+        }
+
+        /* ============================================================================= */
+        /* issue #309: Стили для кнопки Help в Del Concept modal                         */
+        /* ============================================================================= */
+
+        .del-concept-modal-header-buttons {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+
+        .del-concept-help-btn {
+            background-color: #2196F3;
+            color: white;
+            border: none;
+            border-radius: 4px;
+            padding: 6px 12px;
+            font-size: 12px;
+            cursor: pointer;
+            font-weight: 500;
+        }
+
+        .del-concept-help-btn:hover {
+            background-color: #1976D2;
+        }
+
+        /* ============================================================================= */
+        /* issue #309: Стили для кнопки и модального окна Virtual TriG                   */
+        /* ============================================================================= */
+
+        .show-virtual-trig-btn {
+            background-color: #0288D1 !important;
+            color: white !important;
+        }
+
+        .show-virtual-trig-btn:hover {
+            background-color: #0277BD !important;
+        }
+
+        .virtual-trig-modal {
+            display: none;
+            position: fixed;
+            z-index: 2000;
+            left: 0;
+            top: 0;
+            width: 100%;
+            height: 100%;
+            background-color: rgba(0,0,0,0.5);
+        }
+
+        .virtual-trig-modal-content {
+            position: absolute;
+            background-color: white;
+            padding: 0;
+            border-radius: 8px;
+            width: 650px;
+            max-height: 85vh;
+            overflow-y: auto;
+            box-shadow: 0 4px 20px rgba(0,0,0,0.3);
+            top: 50px;
+            left: 50%;
+            transform: translateX(-50%);
+        }
+
+        .virtual-trig-modal-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 15px 20px;
+            background-color: #0288D1;
+            color: white;
+            border-radius: 8px 8px 0 0;
+            cursor: move;
+        }
+
+        .virtual-trig-modal-header h3 {
+            margin: 0;
+            font-size: 16px;
+        }
+
+        .virtual-trig-modal-close {
+            background: none;
+            border: none;
+            color: white;
+            font-size: 24px;
+            cursor: pointer;
+            padding: 0 5px;
+        }
+
+        .virtual-trig-modal-body {
+            padding: 20px;
+        }
+
+        .virtual-trig-textarea {
+            width: 100%;
+            box-sizing: border-box;
+            font-family: monospace;
+            font-size: 12px;
+            padding: 10px;
+            border: 1px solid #ddd;
+            border-radius: 4px;
+            resize: vertical;
+            min-height: 300px;
+        }
+
+        .virtual-trig-modal-buttons {
+            display: flex;
+            justify-content: flex-end;
+            gap: 10px;
+            padding: 15px 20px;
+            border-top: 1px solid #eee;
+        }
+
+        .virtual-trig-close-btn {
+            padding: 8px 16px;
+            border: none;
+            border-radius: 4px;
+            cursor: pointer;
+            font-size: 13px;
+            font-weight: 500;
+            background-color: #9e9e9e;
+            color: white;
+        }
+
+        .virtual-trig-close-btn:hover {
+            background-color: #757575;
+        }

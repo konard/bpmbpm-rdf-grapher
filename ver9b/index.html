@@ -179,6 +179,7 @@
                         <h3>Smart Design</h3>
                         <div class="smart-design-header-buttons">
                             <button class="new-concept-btn" onclick="openNewConceptModal()">New Concept</button>
+                            <button class="new-individ-btn" onclick="openNewIndividModal()">New Individ</button>
                             <button class="new-trig-btn" onclick="openNewTrigModal()">New TriG (VADProcessDia)</button>
                             <button class="del-concept-btn" onclick="openDelConceptModal()">Del Concept\Individ</button>
                         </div>
@@ -258,6 +259,7 @@
                 <div class="smart-design-buttons" style="margin-top: 10px;">
                     <button class="apply-btn" onclick="smartDesignApply()">Применить как Simple Triple</button>
                     <button class="apply-btn" onclick="smartDesignApplyShorthand()" style="background-color: #8E24AA;">Применить как Shorthand Triple</button>
+                    <button class="apply-btn show-virtual-trig-btn" onclick="showVirtualTrigAfterApply()">Показать Virtual TriG</button>
                 </div>
                 <div id="result-sparql-message" class="smart-design-message" style="display: none;"></div>
             </div>
@@ -352,7 +354,10 @@
         <div class="del-concept-modal-content">
             <div class="del-concept-modal-header">
                 <h3>Удаление Концепта / Индивида</h3>
-                <button class="del-concept-modal-close" onclick="closeDelConceptModal()">&times;</button>
+                <div class="del-concept-modal-header-buttons">
+                    <button class="del-concept-help-btn" onclick="showDelIndividProcessHelp()" title="Справка по удалению индивида процесса">Help</button>
+                    <button class="del-concept-modal-close" onclick="closeDelConceptModal()">&times;</button>
+                </div>
             </div>
             <div class="del-concept-modal-body">
                 <div class="del-concept-field">
@@ -386,6 +391,64 @@
                 <button id="del-show-individuals-btn" class="del-concept-show-btn" onclick="showIndividuals()" style="display: none;">Показать индивиды</button>
                 <button class="del-concept-sparql-btn" onclick="toggleDelIntermediateSparql()">Промежуточный SPARQL</button>
                 <button class="del-concept-create-btn" onclick="createDeleteSparql()" disabled>Создать запрос на удаление</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- issue #309: Модальное окно для создания нового Индивида (New Individ) -->
+    <div id="new-individ-modal" class="new-individ-modal">
+        <div class="new-individ-modal-content">
+            <div class="new-individ-modal-header">
+                <h3>Создание нового Индивида</h3>
+                <div class="new-individ-modal-header-buttons">
+                    <button class="new-individ-help-btn" onclick="showNewIndividHelp()" title="Справка по созданию индивидов">Help</button>
+                    <button class="new-individ-modal-close" onclick="closeNewIndividModal()">&times;</button>
+                </div>
+            </div>
+            <div class="new-individ-modal-body">
+                <div class="new-individ-field">
+                    <label for="new-individ-type">Тип индивида:</label>
+                    <select id="new-individ-type" onchange="onNewIndividTypeChange()">
+                        <option value="">-- Выберите тип индивида --</option>
+                        <option value="individ-process">Индивид процесса</option>
+                        <option value="individ-executor">Индивид исполнителя</option>
+                    </select>
+                    <small class="field-hint">Выберите тип для отображения формы и промежуточного SPARQL</small>
+                </div>
+                <!-- Контейнер для динамически генерируемых полей -->
+                <div id="new-individ-fields-container">
+                    <p class="new-individ-hint">Выберите тип индивида для отображения полей ввода</p>
+                </div>
+                <!-- Промежуточный SPARQL запрос -->
+                <div id="new-individ-intermediate-sparql" style="display: none;">
+                    <div class="intermediate-sparql-header">
+                        <label>Промежуточный SPARQL:</label>
+                        <button class="toggle-sparql-btn" onclick="toggleNewIndividIntermediateSparql()">Свернуть/Развернуть</button>
+                    </div>
+                    <textarea class="intermediate-sparql-textarea" rows="8" readonly></textarea>
+                </div>
+            </div>
+            <div id="new-individ-message" class="new-individ-message" style="display: none;"></div>
+            <div class="new-individ-modal-buttons">
+                <button class="new-individ-cancel-btn" onclick="closeNewIndividModal()">Отмена</button>
+                <button class="new-individ-sparql-btn" onclick="toggleNewIndividIntermediateSparql()">Промежуточный SPARQL</button>
+                <button class="new-individ-create-btn" onclick="createNewIndividSparql()">Создать запрос New Individ</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- issue #309: Модальное окно для отображения Virtual TriG -->
+    <div id="virtual-trig-modal" class="virtual-trig-modal">
+        <div class="virtual-trig-modal-content">
+            <div class="virtual-trig-modal-header">
+                <h3>Virtual TriG (пересчёт после применения SPARQL)</h3>
+                <button class="virtual-trig-modal-close" onclick="closeVirtualTrigModal()">&times;</button>
+            </div>
+            <div class="virtual-trig-modal-body">
+                <textarea class="virtual-trig-textarea" id="virtual-trig-result" rows="20" readonly></textarea>
+            </div>
+            <div class="virtual-trig-modal-buttons">
+                <button class="virtual-trig-close-btn" onclick="closeVirtualTrigModal()">Закрыть</button>
             </div>
         </div>
     </div>
@@ -587,6 +650,8 @@ WHERE {
     <script src="3_sd/3_sd_create_new_concept/3_sd_create_new_concept_sparql.js"></script>
     <script src="3_sd/3_sd_create_new_concept/3_sd_create_new_concept_logic.js"></script>
     <script src="3_sd/3_sd_create_new_trig/3_sd_create_new_trig_logic.js"></script>
+    <script src="3_sd/3_sd_create_new_individ/3_sd_create_new_individ_sparql.js"></script>
+    <script src="3_sd/3_sd_create_new_individ/3_sd_create_new_individ_logic.js"></script>
     <script src="3_sd/3_sd_del_concept_individ/3_sd_del_concept_individ_sparql.js"></script>
     <script src="3_sd/3_sd_del_concept_individ/3_sd_del_concept_individ_logic.js"></script>
 
@@ -743,8 +808,10 @@ WHERE {
             // issue #295: Исправлен баг с селекторами - используем полные имена классов
             const modals = [
                 { modal: 'new-concept-modal', header: 'new-concept-modal-header', content: 'new-concept-modal-content' },
+                { modal: 'new-individ-modal', header: 'new-individ-modal-header', content: 'new-individ-modal-content' },
                 { modal: 'new-trig-modal', header: 'new-trig-modal-header', content: 'new-trig-modal-content' },
-                { modal: 'del-concept-modal', header: 'del-concept-modal-header', content: 'del-concept-modal-content' }
+                { modal: 'del-concept-modal', header: 'del-concept-modal-header', content: 'del-concept-modal-content' },
+                { modal: 'virtual-trig-modal', header: 'virtual-trig-modal-header', content: 'virtual-trig-modal-content' }
             ];
 
             modals.forEach(config => {
