@@ -1655,28 +1655,30 @@ function showDelIndividProcessHelp() {
    Система автоматически находит все использования данного концепта
    как индивида (подпроцесса) во всех TriG типа VADProcessDia
    по предикату vad:isSubprocessTrig.
+   Отображается список TriG, где обнаружен индивид.
 
 3. Генерация DELETE запроса (по каждому TriG):
-   a) Удаление исходящих триплетов индивида:
-      - vad:isSubprocessTrig (связь с TriG)
-      - vad:hasExecutor (связь с ExecutorGroup)
-      - vad:hasNext (связи со следующими индивидами)
+   a) Удаление ВСЕХ исходящих триплетов индивида:
+      DELETE WHERE { GRAPH <trig> { <individ> ?p ?o . } }
+      Удаляются все предикаты без явного перечисления,
+      что обеспечивает расширяемость при добавлении
+      новых предикатов индивида.
 
-   b) Удаление объекта ExecutorGroup:
-      - rdf:type vad:ExecutorGroup
-      - rdfs:label
-      - vad:includes (ссылки на исполнителей)
+   b) Удаление объекта ExecutorGroup (все триплеты):
+      DELETE WHERE { GRAPH <trig> { <ExecutorGroup> ?p ?o . } }
+      ExecutorGroup автоматически определяется по vad:hasExecutor.
 
    c) Удаление входящих связей vad:hasNext:
-      - Из других индивидов процесса в данном TriG,
-        ссылающихся на удаляемый индивид
+      Из других индивидов процесса в данном TriG,
+      ссылающихся на удаляемый индивид.
 
 4. Применение SPARQL:
    Сгенерированный запрос выводится в "Result in SPARQL"
    для просмотра и применения.
 
 Примечание: После применения SPARQL Virtual TriG пересчитывается
-автоматически.`;
+автоматически. Кнопка "Показать Virtual TriG" в Result in SPARQL
+отображает результат пересчёта.`;
 
     alert(helpText);
 }

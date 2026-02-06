@@ -12,7 +12,7 @@
  * - Индивид процесса (с автоматическим назначением ExecutorGroup)
  * - Индивид исполнителя (добавление vad:includes в ExecutorGroup)
  *
- * Алгоритм создания индивида процесса:
+ * Алгоритм создания индивида:
  * 1. Пользователь выбирает тип: процесс или исполнитель
  * 2. Для процесса:
  *    - Выбирает TriG (схему процесса)
@@ -21,12 +21,12 @@
  *    - Выбирает vad:hasNext (множественный выбор из справочника концептов)
  *    - Автоматически создаётся ExecutorGroup
  *    - Генерируется INSERT SPARQL
- * 3. Для исполнителя:
- *    - Выбирает TriG
- *    - Выбирает ExecutorGroup
- *    - Выбирает концепт исполнителя
- *    - Проверяется наличие хотя бы одного использования (vad:includes)
- *    - Генерируется INSERT SPARQL для vad:includes
+ * 3. Для исполнителя (issue #309: связанные справочники):
+ *    - Выбирает TriG (схему процесса)
+ *    - Выбирает индивид процесса из выбранного TriG (связанный справочник)
+ *    - ExecutorGroup определяется автоматически из выбранного индивида
+ *    - Выбирает концепт исполнителя из rtree
+ *    - Генерируется INSERT SPARQL для vad:includes в ExecutorGroup
  *
  * @file 3_sd_create_new_individ_logic.js
  * @version 1.0
@@ -74,7 +74,8 @@ let newIndividState = {
     selectedTrig: null,
     selectedConcept: null,
     selectedHasNext: [],
-    selectedExecutorGroup: null,
+    selectedProcessIndivid: null,    // issue #309: выбранный индивид процесса (для исполнителя)
+    selectedExecutorGroup: null,     // issue #309: авто-разрешённая ExecutorGroup
     selectedExecutor: null,
     intermediateSparql: ''
 };
@@ -267,38 +268,24 @@ function getProcessConceptsForHasNext() {
 }
 
 /**
- * Получает ExecutorGroups в TriG
+ * issue #309: Находит ExecutorGroup для указанного индивида процесса в TriG
+ * @param {string} processIndividUri - URI индивида процесса
  * @param {string} trigUri - URI TriG
- * @returns {Array<{uri: string, label: string}>}
+ * @returns {string|null} URI ExecutorGroup или null
  */
-function getExecutorGroupsInTrig(trigUri) {
-    const rdfTypeUri = 'http://www.w3.org/1999/02/22-rdf-syntax-ns#type';
-    const executorGroupUri = 'http://example.org/vad#ExecutorGroup';
-    const rdfsLabelUri = 'http://www.w3.org/2000/01/rdf-schema#label';
-    const groups = [];
+function findExecutorGroupForProcessIndivid(processIndividUri, trigUri) {
+    const hasExecutorUri = 'http://example.org/vad#hasExecutor';
 
     if (typeof currentQuads !== 'undefined' && Array.isArray(currentQuads)) {
-        currentQuads.forEach(quad => {
-            if (quad.predicate.value === rdfTypeUri &&
-                quad.object.value === executorGroupUri &&
+        for (const quad of currentQuads) {
+            if (quad.subject.value === processIndividUri &&
+                quad.predicate.value === hasExecutorUri &&
                 quad.graph && quad.graph.value === trigUri) {
-                let label = typeof getPrefixedName === 'function'
-                    ? getPrefixedName(quad.subject.value, currentPrefixes)
-                    : quad.subject.value;
-
-                currentQuads.forEach(q2 => {
-                    if (q2.subject.value === quad.subject.value &&
-                        q2.predicate.value === rdfsLabelUri &&
-                        q2.graph && q2.graph.value === trigUri) {
-                        label = q2.object.value;
-                    }
-                });
-
-                groups.push({ uri: quad.subject.value, label });
+                return quad.object.value;
             }
-        });
+        }
     }
-    return groups;
+    return null;
 }
 
 // ==============================================================================
@@ -323,6 +310,7 @@ function openNewIndividModal() {
         selectedTrig: null,
         selectedConcept: null,
         selectedHasNext: [],
+        selectedProcessIndivid: null,
         selectedExecutorGroup: null,
         selectedExecutor: null,
         intermediateSparql: ''
@@ -401,6 +389,9 @@ function onNewIndividTypeChange() {
     newIndividState.selectedTrig = null;
     newIndividState.selectedConcept = null;
     newIndividState.selectedHasNext = [];
+    newIndividState.selectedProcessIndivid = null;
+    newIndividState.selectedExecutorGroup = null;
+    newIndividState.selectedExecutor = null;
     newIndividIntermediateSparqlQueries = [];
 
     buildNewIndividForm(selectedType);
@@ -452,25 +443,35 @@ function buildNewIndividForm(individType) {
             </div>
         `;
     } else if (individType === NEW_INDIVID_TYPES.EXECUTOR) {
-        // Выбор ExecutorGroup
+        // issue #309: Связанные справочники: TriG → Индивид процесса → (ExecutorGroup авто)
+        // Выбор индивида процесса в выбранном TriG
         html += `
             <div class="new-individ-field">
-                <label for="new-individ-executor-group">ExecutorGroup:</label>
-                <select id="new-individ-executor-group" onchange="onNewIndividExecutorGroupChange()">
-                    <option value="">-- Выберите ExecutorGroup --</option>
+                <label for="new-individ-process-individ">Индивид процесса:</label>
+                <select id="new-individ-process-individ" onchange="onNewIndividProcessIndividChange()">
+                    <option value="">-- Сначала выберите TriG --</option>
                 </select>
-                <small class="field-hint">Выберите группу исполнителей для добавления</small>
+                <small class="field-hint">Выберите индивид процесса из выбранной схемы (TriG). ExecutorGroup определяется автоматически.</small>
             </div>
         `;
 
-        // Выбор исполнителя
+        // Информация о разрешённой ExecutorGroup (только для отображения)
+        html += `
+            <div class="new-individ-field" id="new-individ-executor-group-info" style="display: none;">
+                <label>ExecutorGroup (автоопределение):</label>
+                <div id="new-individ-executor-group-display" class="new-individ-info-display"></div>
+                <small class="field-hint">ExecutorGroup создаётся при создании индивида процесса и определяется автоматически</small>
+            </div>
+        `;
+
+        // Выбор концепта исполнителя из rtree
         html += `
             <div class="new-individ-field">
                 <label for="new-individ-executor">Концепт исполнителя:</label>
                 <select id="new-individ-executor" onchange="onNewIndividExecutorChange()">
                     <option value="">-- Выберите исполнителя --</option>
                 </select>
-                <small class="field-hint">Выберите исполнителя для добавления в группу</small>
+                <small class="field-hint">Выберите концепт исполнителя (из rtree) для добавления в ExecutorGroup через vad:includes</small>
             </div>
         `;
     }
@@ -524,10 +525,15 @@ function onNewIndividTrigChange() {
         // Заполняем справочник hasNext (из концептов процессов)
         fillNewIndividHasNextCheckboxes();
     } else if (individType === NEW_INDIVID_TYPES.EXECUTOR) {
-        // Заполняем ExecutorGroups
-        fillNewIndividExecutorGroupDropdown(trigUri);
-        // Заполняем исполнителей
+        // issue #309: Заполняем связанный справочник индивидов процесса в выбранном TriG
+        fillNewIndividProcessIndividDropdown(trigUri);
+        // Заполняем концепты исполнителей из rtree
         fillNewIndividExecutorDropdown();
+        // Сбрасываем ExecutorGroup info
+        newIndividState.selectedProcessIndivid = null;
+        newIndividState.selectedExecutorGroup = null;
+        const egInfo = document.getElementById('new-individ-executor-group-info');
+        if (egInfo) egInfo.style.display = 'none';
     }
 
     displayNewIndividIntermediateSparql();
@@ -641,30 +647,31 @@ function onNewIndividHasNextChange() {
 }
 
 /**
- * Заполняет dropdown ExecutorGroups
+ * issue #309: Заполняет dropdown индивидов процесса для выбранного TriG
+ * Связанный справочник: при выборе TriG загружаются его индивиды процесса
  * @param {string} trigUri - URI TriG
  */
-function fillNewIndividExecutorGroupDropdown(trigUri) {
-    const select = document.getElementById('new-individ-executor-group');
+function fillNewIndividProcessIndividDropdown(trigUri) {
+    const select = document.getElementById('new-individ-process-individ');
     if (!select) return;
 
-    select.innerHTML = '<option value="">-- Выберите ExecutorGroup --</option>';
+    select.innerHTML = '<option value="">-- Выберите индивид процесса --</option>';
 
-    const groups = getExecutorGroupsInTrig(trigUri);
+    const individs = getIndividsInTrig(trigUri);
 
-    const sparqlQuery = NEW_INDIVID_SPARQL.GET_EXECUTOR_GROUPS_FOR_TRIG(trigUri);
+    const sparqlQuery = NEW_INDIVID_SPARQL.GET_INDIVIDS_IN_TRIG(trigUri);
     newIndividIntermediateSparqlQueries.push({
-        description: 'Получение ExecutorGroups из выбранного TriG',
+        description: 'Получение индивидов процесса из выбранного TriG',
         query: sparqlQuery,
-        result: groups.length > 0
-            ? `Найдено ${groups.length} групп: ${groups.map(g => g.label).join(', ')}`
-            : 'ExecutorGroups не найдены'
+        result: individs.length > 0
+            ? `Найдено ${individs.length} индивидов: ${individs.map(i => i.label).join(', ')}`
+            : 'Индивиды процесса не найдены'
     });
 
-    groups.forEach(group => {
+    individs.forEach(individ => {
         const option = document.createElement('option');
-        option.value = group.uri;
-        option.textContent = group.label || group.uri;
+        option.value = individ.uri;
+        option.textContent = individ.label || individ.uri;
         select.appendChild(option);
     });
 
@@ -712,11 +719,56 @@ function fillNewIndividExecutorDropdown() {
 }
 
 /**
- * Обработчик выбора ExecutorGroup
+ * issue #309: Обработчик выбора индивида процесса (для создания исполнителя)
+ * Автоматически разрешает ExecutorGroup через vad:hasExecutor
  */
-function onNewIndividExecutorGroupChange() {
-    const select = document.getElementById('new-individ-executor-group');
-    newIndividState.selectedExecutorGroup = select ? select.value : null;
+function onNewIndividProcessIndividChange() {
+    const select = document.getElementById('new-individ-process-individ');
+    const processIndividUri = select ? select.value : null;
+
+    newIndividState.selectedProcessIndivid = processIndividUri;
+    newIndividState.selectedExecutorGroup = null;
+
+    const egInfoContainer = document.getElementById('new-individ-executor-group-info');
+    const egDisplay = document.getElementById('new-individ-executor-group-display');
+
+    if (processIndividUri && newIndividState.selectedTrig) {
+        // Авто-разрешаем ExecutorGroup для выбранного индивида процесса
+        const executorGroupUri = findExecutorGroupForProcessIndivid(
+            processIndividUri, newIndividState.selectedTrig
+        );
+
+        if (executorGroupUri) {
+            newIndividState.selectedExecutorGroup = executorGroupUri;
+            const egLabel = typeof getPrefixedName === 'function'
+                ? getPrefixedName(executorGroupUri, currentPrefixes)
+                : executorGroupUri;
+
+            if (egDisplay) {
+                egDisplay.textContent = egLabel;
+                egDisplay.style.color = '#28a745';
+            }
+            if (egInfoContainer) egInfoContainer.style.display = 'block';
+
+            newIndividIntermediateSparqlQueries.push({
+                description: 'Авто-определение ExecutorGroup для индивида процесса',
+                query: NEW_INDIVID_SPARQL.FIND_EXECUTOR_GROUP_FOR_PROCESS_INDIVID(
+                    processIndividUri, newIndividState.selectedTrig
+                ),
+                result: `Найдена ExecutorGroup: ${egLabel}`
+            });
+        } else {
+            if (egDisplay) {
+                egDisplay.textContent = 'ExecutorGroup не найдена для данного индивида процесса';
+                egDisplay.style.color = '#dc3545';
+            }
+            if (egInfoContainer) egInfoContainer.style.display = 'block';
+        }
+    } else {
+        if (egInfoContainer) egInfoContainer.style.display = 'none';
+    }
+
+    displayNewIndividIntermediateSparql();
     updateNewIndividCreateButtonState();
 }
 
@@ -747,7 +799,9 @@ function updateNewIndividCreateButtonState() {
         );
         canCreate = trigSelected && conceptSelected && noConflict;
     } else if (newIndividState.selectedType === NEW_INDIVID_TYPES.EXECUTOR) {
+        // issue #309: Проверяем TriG + индивид процесса + авто-разрешённая ExecutorGroup + исполнитель
         canCreate = newIndividState.selectedTrig != null &&
+                    newIndividState.selectedProcessIndivid != null &&
                     newIndividState.selectedExecutorGroup != null &&
                     newIndividState.selectedExecutor != null;
     }
@@ -823,7 +877,7 @@ function createNewIndividSparql() {
         const executorUri = newIndividState.selectedExecutor;
 
         if (!executorGroupUri || !executorUri) {
-            showNewIndividMessage('Выберите ExecutorGroup и исполнителя', 'error');
+            showNewIndividMessage('Выберите индивид процесса и концепт исполнителя. ExecutorGroup должна определиться автоматически.', 'error');
             return;
         }
 
@@ -932,6 +986,48 @@ function hideNewIndividMessage() {
 }
 
 // ==============================================================================
+// issue #309: HELP BUTTON
+// ==============================================================================
+
+/**
+ * issue #309: Показывает справку по созданию индивидов
+ * По аналогии с showNewConceptHelp() в модуле создания концептов
+ */
+function showNewIndividHelp() {
+    const helpText = `Создание нового Индивида — справка:
+
+=== Индивид процесса ===
+1. Выберите тип: "Индивид процесса"
+2. Выберите TriG (схему процесса), куда будет добавлен индивид
+3. Выберите концепт процесса из справочника ptree
+4. (Опционально) Укажите vad:hasNext — множественный выбор
+   из справочника всех концептов процесса
+5. Нажмите "Создать запрос New Individ"
+
+Автоматически создаётся ExecutorGroup с ID формата
+ExecutorGroup_<id процесса>.
+Предикаты типа vad:includes НЕ заполняются при создании
+индивида процесса.
+
+=== Индивид исполнителя ===
+1. Выберите тип: "Индивид исполнителя"
+2. Выберите TriG (схему процесса)
+3. Выберите индивид процесса из выбранной схемы (связанный справочник)
+   → ExecutorGroup определяется автоматически
+4. Выберите концепт исполнителя из справочника rtree
+5. Нажмите "Создать запрос New Individ"
+
+Новый индивид исполнителя добавляется в ExecutorGroup выбранного
+индивида процесса через vad:includes.
+
+Примечание: ExecutorGroup создаётся автоматически при создании
+индивида процесса. Создание индивида исполнителя лишь добавляет
+исполнителя в существующую ExecutorGroup.`;
+
+    alert(helpText);
+}
+
+// ==============================================================================
 // ЭКСПОРТ ФУНКЦИЙ ДЛЯ ГЛОБАЛЬНОГО ДОСТУПА
 // ==============================================================================
 
@@ -942,11 +1038,12 @@ if (typeof window !== 'undefined') {
     window.onNewIndividTrigChange = onNewIndividTrigChange;
     window.onNewIndividConceptChange = onNewIndividConceptChange;
     window.onNewIndividHasNextChange = onNewIndividHasNextChange;
-    window.onNewIndividExecutorGroupChange = onNewIndividExecutorGroupChange;
+    window.onNewIndividProcessIndividChange = onNewIndividProcessIndividChange;  // issue #309
     window.onNewIndividExecutorChange = onNewIndividExecutorChange;
     window.toggleNewIndividIntermediateSparql = toggleNewIndividIntermediateSparql;
     window.createNewIndividSparql = createNewIndividSparql;
     window.showNewIndividMessage = showNewIndividMessage;
     window.hideNewIndividMessage = hideNewIndividMessage;
+    window.showNewIndividHelp = showNewIndividHelp;  // issue #309
     window.NEW_INDIVID_SPARQL = NEW_INDIVID_SPARQL;
 }

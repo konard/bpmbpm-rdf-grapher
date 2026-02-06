@@ -439,79 +439,66 @@ INSERT DATA {
 
 ## 6. Создание индивида исполнителя
 
-> Новый раздел, добавленный в v4 (issue #309, п.1).
+> Новый раздел, добавленный в v4 (issue #309, п.1). Обновлён: связанные справочники TriG → индивид процесса.
 
-Операция создания индивида исполнителя заключается в добавлении связи `vad:includes` в существующий `ExecutorGroup` внутри конкретного TriG.
+Операция создания индивида исполнителя заключается в добавлении связи `vad:includes` в существующий `ExecutorGroup` внутри конкретного TriG. ExecutorGroup создаётся автоматически при создании индивида процесса, а создание нового индивида исполнителя лишь добавляет исполнителя в эту группу.
 
 ### 6.1 Порядок действий пользователя
 
 1. Пользователь нажимает кнопку **New Individ** и выбирает тип «Индивид исполнителя»
-2. Из выпадающего списка выбирает **TriG** (схему процесса)
-3. Выбирает **ExecutorGroup** из списка доступных в данном TriG
-4. Из дерева исполнителей (**rtree**) выбирает **концепт исполнителя** для добавления
-5. Формируется SPARQL INSERT DATA и отображается в панели «Result in SPARQL»
+2. Из выпадающего списка выбирает **TriG** (схему процесса) — первый связанный справочник
+3. Из списка **индивидов процесса** выбранного TriG выбирает индивид — второй связанный справочник
+4. **ExecutorGroup** определяется **автоматически** по предикату `vad:hasExecutor` выбранного индивида процесса
+5. Из дерева исполнителей (**rtree**) выбирает **концепт исполнителя** для добавления
+6. Формируется SPARQL INSERT DATA и отображается в панели «Result in SPARQL»
+
+> Примечание: связанные справочники означают, что при выборе TriG обновляется список индивидов процесса данного TriG. ExecutorGroup не выбирается пользователем вручную — она определяется автоматически из выбранного индивида процесса.
 
 ### 6.2 Проверки при создании
 
 | № | Проверка | Функция | SPARQL-функция | Описание |
 |---|----------|---------|----------------|----------|
-| 1 | Исполнитель существует в rtree | `checkIdExistsAsk(executorUri, 'vad:rtree')` | `funSPARQLask()` | Проверка существования концепта исполнителя |
-| 2 | Исполнитель ещё не добавлен в данный ExecutorGroup | `checkExecutorInGroup(executorUri, groupUri, trigUri)` | `funSPARQLask()` | Проверка отсутствия дублирования `vad:includes` |
-| 3 | ExecutorGroup существует в TriG | `checkGroupExists(groupUri, trigUri)` | `funSPARQLask()` | Проверка наличия группы исполнителей |
-| 4 | Наличие хотя бы одного использования | `checkExecutorHasUsage(executorUri)` | `funSPARQLvaluesComunica()` | Проверка наличия хотя бы одного `vad:includes` с данным исполнителем хотя бы в одной схеме процесса |
+| 1 | TriG выбран | UI validation | — | Проверка выбора схемы процесса |
+| 2 | Индивид процесса выбран | UI validation | — | Проверка выбора индивида из связанного справочника |
+| 3 | ExecutorGroup определена | `findExecutorGroupForProcessIndivid()` | manual quadstore | Авто-поиск ExecutorGroup через `vad:hasExecutor` |
+| 4 | Концепт исполнителя выбран | UI validation | — | Проверка выбора исполнителя из rtree |
 
-### 6.3 SPARQL-запросы для проверок
+### 6.3 SPARQL-запросы
 
-#### Запрос 1: Проверка, что исполнитель не дублируется в группе
+#### Запрос 1: Получение индивидов процесса в TriG (связанный справочник)
 
 ```sparql
-# Функция: checkExecutorInGroup(executorUri, groupUri, trigUri)
-# Выполняется: funSPARQLask()
-# Результат: boolean (true = уже есть в группе)
+# Функция: getIndividsInTrig(trigUri)
+# Выполняется: manual quadstore search
 
 PREFIX vad: <http://example.org/vad#>
-
-ASK {
-    GRAPH <TRIG_URI> {
-        <GROUP_URI> vad:includes <EXECUTOR_URI> .
-    }
-}
-```
-
-#### Запрос 2: Получение списка ExecutorGroup в TriG
-
-```sparql
-# Функция: getExecutorGroupsInTrig(trigUri)
-# Выполняется: funSPARQLvaluesComunica(sparqlQuery, 'group')
-
-PREFIX rdf: <http://www.w3.org/1999/02/22-rdf-syntax-ns#>
 PREFIX rdfs: <http://www.w3.org/2000/01/rdf-schema#>
-PREFIX vad: <http://example.org/vad#>
 
-SELECT ?group ?label WHERE {
+SELECT ?individ ?label WHERE {
     GRAPH <TRIG_URI> {
-        ?group rdf:type vad:ExecutorGroup .
-        OPTIONAL { ?group rdfs:label ?label }
+        ?individ vad:isSubprocessTrig <TRIG_URI> .
+    }
+    OPTIONAL {
+        GRAPH vad:ptree {
+            ?individ rdfs:label ?label .
+        }
     }
 }
 ```
 
-#### Запрос 3: Проверка наличия хотя бы одного использования исполнителя
+#### Запрос 2: Авто-определение ExecutorGroup для индивида процесса
 
 ```sparql
-# Функция: checkExecutorHasUsage(executorUri)
-# Выполняется: funSPARQLvaluesComunica(sparqlQuery, 'trig')
-# Примечание: проверяет наличие vad:includes в любом TriG
+# Функция: findExecutorGroupForProcessIndivid(processIndividUri, trigUri)
+# Выполняется: manual quadstore search
 
 PREFIX vad: <http://example.org/vad#>
 
-SELECT ?trig ?group WHERE {
-    GRAPH ?trig {
-        ?group vad:includes <EXECUTOR_URI> .
+SELECT ?executorGroup WHERE {
+    GRAPH <TRIG_URI> {
+        <PROCESS_INDIVID_URI> vad:hasExecutor ?executorGroup .
     }
 }
-
-# Если результат пустой — исполнитель нигде не используется (информационное предупреждение)
 ```
 
 ### 6.4 Итоговый INSERT DATA для создания индивида исполнителя
@@ -543,11 +530,13 @@ INSERT DATA {
 
 Для **каждого TriG**, в котором обнаружен удаляемый индивид процесса, выполняются следующие этапы:
 
-| Этап | Описание | Что удаляется |
-|------|----------|---------------|
-| 1 | Удаление исходящих связей индивида | `vad:isSubprocessTrig`, `vad:hasExecutor`, `vad:hasNext` и все триплеты, где индивид является subject |
-| 2 | Удаление связанного ExecutorGroup | `rdf:type`, `rdfs:label`, `vad:includes` — все триплеты группы `ExecutorGroup_{processId}` |
-| 3 | Удаление входящих `vad:hasNext` от других индивидов | Триплеты вида `?otherIndivid vad:hasNext <удаляемый_индивид>` |
+| Этап | Описание | Что удаляется | SPARQL-паттерн |
+|------|----------|---------------|----------------|
+| 1 | Удаление **всех** исходящих связей индивида | Все триплеты, где индивид является subject (без перечисления конкретных предикатов) | `DELETE WHERE { GRAPH ... { <individ> ?p ?o . } }` |
+| 2 | Удаление связанного ExecutorGroup | Все триплеты группы `ExecutorGroup_{processId}` (без перечисления предикатов) | `DELETE WHERE { GRAPH ... { <EG> ?p ?o . } }` |
+| 3 | Удаление входящих `vad:hasNext` от других индивидов | Триплеты вида `?otherIndivid vad:hasNext <удаляемый_индивид>` | `DELETE DATA { ... }` |
+
+> **Важно:** Этапы 1 и 2 используют **обобщённое удаление по subject** (`?p ?o`) без явного перечисления предикатов. Это обеспечивает расширяемость: при добавлении новых предикатов индивида код удаления не требует изменений.
 
 ### 7.2 Предварительные проверки
 
@@ -992,7 +981,7 @@ flowchart TD
 | 3. Удаление концепта процесса | — | + | + | DELETE WHERE |
 | 4. Удаление концепта исполнителя | — | — | + | DELETE WHERE |
 | 5. Создание индивида процесса | + | — | + | INSERT DATA |
-| 6. Создание индивида исполнителя | + | — | + | INSERT DATA |
+| 6. Создание индивида исполнителя | — | + | — | INSERT DATA |
 | 7. Удаление индивида процесса | — | — | + | DELETE WHERE |
 | 8. Удаление индивида исполнителя | — | — | + | DELETE DATA |
 | 9. Создание схемы процесса | + | + | — | INSERT DATA |

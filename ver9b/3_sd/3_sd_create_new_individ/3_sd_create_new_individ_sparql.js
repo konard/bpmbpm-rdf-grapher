@@ -194,18 +194,17 @@ SELECT ?group ?label WHERE {
 }`,
 
     /**
-     * Проверка наличия исполнителя хотя бы в одной схеме процесса
-     * Необходима при создании индивида исполнителя
-     * @param {string} executorUri - URI исполнителя
+     * issue #309: Поиск ExecutorGroup для указанного индивида процесса в TriG
+     * Используется для авто-определения ExecutorGroup при создании индивида исполнителя
+     * @param {string} processIndividUri - URI индивида процесса
+     * @param {string} trigUri - URI TriG графа
      */
-    CHECK_EXECUTOR_HAS_INCLUDES: (executorUri) => `
-PREFIX rdf: <http://www.w3.org/1999/02/22-rdf-syntax-ns#>
+    FIND_EXECUTOR_GROUP_FOR_PROCESS_INDIVID: (processIndividUri, trigUri) => `
 PREFIX vad: <http://example.org/vad#>
 
-SELECT ?trig ?group WHERE {
-    GRAPH ?trig {
-        ?group vad:includes <${executorUri}> .
+SELECT ?executorGroup WHERE {
+    GRAPH <${trigUri}> {
+        <${processIndividUri}> vad:hasExecutor ?executorGroup .
     }
-    ?trig rdf:type vad:VADProcessDia .
 }`
 };
