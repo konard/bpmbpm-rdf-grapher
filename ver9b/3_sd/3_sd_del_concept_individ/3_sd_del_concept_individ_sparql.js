@@ -211,6 +211,46 @@ SELECT ?trig WHERE {
 }`,
 
     /**
+     * issue #311 п.3: Получение индивидов процесса в конкретном TriG
+     * @param {string} trigUri - URI TriG
+     */
+    GET_PROCESS_INDIVIDUALS_IN_TRIG: (trigUri) => `
+PREFIX vad: <http://example.org/vad#>
+PREFIX rdfs: <http://www.w3.org/2000/01/rdf-schema#>
+
+# issue #311: Индивиды процессов в конкретной схеме
+SELECT ?individ ?label WHERE {
+    GRAPH <${trigUri}> {
+        ?individ vad:isSubprocessTrig <${trigUri}> .
+    }
+    OPTIONAL {
+        GRAPH vad:ptree {
+            ?individ rdfs:label ?label .
+        }
+    }
+}`,
+
+    /**
+     * issue #311 п.4: Получение индивидов исполнителей в конкретном TriG
+     * @param {string} trigUri - URI TriG
+     */
+    GET_EXECUTOR_INDIVIDUALS_IN_TRIG: (trigUri) => `
+PREFIX vad: <http://example.org/vad#>
+PREFIX rdfs: <http://www.w3.org/2000/01/rdf-schema#>
+
+# issue #311: Исполнители (через vad:includes) в конкретной схеме
+SELECT DISTINCT ?executor ?label WHERE {
+    GRAPH <${trigUri}> {
+        ?group vad:includes ?executor .
+    }
+    OPTIONAL {
+        GRAPH vad:rtree {
+            ?executor rdfs:label ?label .
+        }
+    }
+}`,
+
+    /**
      * Генерирует DELETE SPARQL запрос для удаления концепта
      * @param {string} graphUri - URI графа (ptree или rtree)
      * @param {string} conceptUri - URI концепта для удаления

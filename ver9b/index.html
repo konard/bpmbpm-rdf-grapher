@@ -181,7 +181,7 @@
                             <button class="new-concept-btn" onclick="openNewConceptModal()">New Concept</button>
                             <button class="new-individ-btn" onclick="openNewIndividModal()">New Individ</button>
                             <button class="new-trig-btn" onclick="openNewTrigModal()">New TriG (VADProcessDia)</button>
-                            <button class="del-concept-btn" onclick="openDelConceptModal()">Del Concept\Individ</button>
+                            <button class="del-concept-btn" onclick="openDelConceptModal()">Del Concept\Individ\Schema</button>
                         </div>
                     </div>
                     <!-- Верхний ряд: TriG -->
@@ -349,11 +349,11 @@
         </div>
     </div>
 
-    <!-- Модальное окно для удаления Концепта/Индивида (Del Concept\Individ) -->
+    <!-- Модальное окно для удаления Концепта/Индивида/Схемы (Del Concept\Individ) -->
     <div id="del-concept-modal" class="del-concept-modal">
         <div class="del-concept-modal-content">
             <div class="del-concept-modal-header">
-                <h3>Удаление Концепта / Индивида</h3>
+                <h3>Удаление Концепта / Индивида / Схемы</h3>
                 <div class="del-concept-modal-header-buttons">
                     <button class="del-concept-help-btn" onclick="showDelIndividProcessHelp()" title="Справка по удалению индивида процесса">Help</button>
                     <button class="del-concept-modal-close" onclick="closeDelConceptModal()">&times;</button>
@@ -366,9 +366,11 @@
                         <option value="">-- Выберите тип операции --</option>
                         <option value="concept-process">Удалить концепт процесса</option>
                         <option value="concept-executor">Удалить концепт исполнителя</option>
-                        <option value="individ-process">Удалить индивид процесса</option>
-                        <option value="individ-executor">Удалить индивид исполнителя</option>
+                        <option value="individ-process">Удалить индивид процесса во всех схемах</option>
+                        <option value="individ-executor">Удалить индивид исполнителя во всех схемах</option>
                         <option value="trig-schema">Удалить схему процесса (TriG)</option>
+                        <option value="individ-process-in-schema">Удалить индивид процесса в схеме</option>
+                        <option value="individ-executor-in-schema">Удалить индивид исполнителя в схеме</option>
                     </select>
                     <small class="field-hint">Выберите тип операции для отображения доступных элементов</small>
                 </div>
