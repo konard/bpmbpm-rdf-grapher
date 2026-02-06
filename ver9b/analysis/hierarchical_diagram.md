@@ -8,8 +8,9 @@
 1. [Постановка задачи](#1-постановка-задачи)
 2. [Анализ типов схем](#2-анализ-типов-схем)
    - [2.1 Иерархические схемы (дерево)](#21-иерархические-схемы-дерево)
-   - [2.2 Структурные схемы (произвольные связи)](#22-структурные-схемы-произвольные-связи)
-   - [2.3 Существующий тип vad:VADProcessDia](#23-существующий-тип-vadvadprocessdia)
+   - [2.2 Верхнеуровневые процессы (vad:HiLevelProcessDia)](#22-верхнеуровневые-процессы-vadhilevelprocessdia)
+   - [2.3 Структурные схемы (произвольные связи)](#23-структурные-схемы-произвольные-связи)
+   - [2.4 Существующий тип vad:VADProcessDia](#24-существующий-тип-vadvadprocessdia)
 3. [Анализ ARIS ToolSet и аналогов](#3-анализ-aris-toolset-и-аналогов)
    - [3.1 ARIS Function Tree](#31-aris-function-tree)
    - [3.2 ARIS Organizational Chart](#32-aris-organizational-chart)
@@ -30,25 +31,36 @@
 7. [Возможные проблемы](#7-возможные-проблемы)
 8. [Вопросы для уточнения](#8-вопросы-для-уточнения)
 9. [Рекомендации](#9-рекомендации)
-10. [Ссылки](#10-ссылки)
+10. [Графическая нотация (легенда)](#10-графическая-нотация-легенда)
+    - [10.1 Легенда новых объектов](#101-легенда-новых-объектов)
+    - [10.2 Примеры в нотации DOT](#102-примеры-в-нотации-dot)
+11. [Ссылки](#11-ссылки)
 
 ---
 
 ## 1. Постановка задачи
 
-Требуется добавить в проект RDF Grapher возможность формировать два новых типа схем:
+Требуется добавить в проект RDF Grapher возможность формировать **три новых типа схем**:
 
-1. **Структурные схемы** — не иерархические, с произвольными соединениями между объектами
-2. **Иерархические схемы** — древовидные структуры (дерево), например:
-   - Орг-штатная структура (`vad:TypeExecutor`)
-   - Иерархия процессов на верхнем уровне
+1. **Типовое дерево (vad:HierarchicalDia)** — иерархические древовидные структуры:
+   - Орг-штатная структура (`vad:OrgChart`) из `vad:rtree`
+   - Иерархия процессов (`vad:FunctionTree`) из `vad:ptree`
+   - Универсальное дерево (`vad:UniversalTree`) для произвольных иерархий
+
+2. **Верхнеуровневые процессы (vad:HiLevelProcessDia)** — схема на основе `vad:VADProcessDia`, но:
+   - Использует `vad:hasParentObj` вместо `vad:hasNext`
+   - Строится **вертикально** (сверху вниз), а не горизонтально
+   - Основной элемент: `vad:isSubprocessTrig` с `rdf:type vad:ExecutorGroup`
+
+3. **Структурные схемы (vad:StructuralDia)** — не иерархические, с произвольными соединениями между объектами
 
 **Аналог:** ARIS ToolSet
 
 **Отличие от текущей реализации:**
-- `vad:VADProcessDia` — схема процесса в нотации VAD с цепочками `vad:hasNext`
-- Иерархические схемы — отображение связей родитель-потомок (`vad:hasParentObj`)
-- Структурные схемы — произвольные связи между объектами
+- `vad:VADProcessDia` — схема процесса в нотации VAD с цепочками `vad:hasNext` (горизонтальная)
+- `vad:HiLevelProcessDia` — вертикальная иерархия через `vad:hasParentObj` с группами исполнителей
+- `vad:HierarchicalDia` — отображение типовых деревьев (`ptree`, `rtree` или произвольных)
+- `vad:StructuralDia` — произвольные связи между объектами
 
 ---
 
@@ -62,19 +74,58 @@
 - Связь: родитель → потомок (через `vad:hasParentObj`)
 - Визуализация: вертикальное или горизонтальное дерево
 
+**Подтипы иерархических схем:**
+
+| Подтип | Тип объектов | Корень дерева | Описание |
+|--------|--------------|---------------|----------|
+| `vad:FunctionTree` | `vad:TypeProcess` | `vad:ptree` | Иерархия процессов |
+| `vad:OrgChart` | `vad:TypeExecutor` | `vad:rtree` | Орг-штатная структура |
+| `vad:UniversalTree` | Любой | Указывается в схеме | Универсальное дерево |
+
 **Примеры применения:**
 | Пример | Тип объектов | Предикат связи | Корень дерева |
 |--------|--------------|----------------|---------------|
 | Орг-штатная структура | `vad:TypeExecutor` | `vad:hasParentObj` | `vad:rtree` |
 | Иерархия процессов | `vad:TypeProcess` | `vad:hasParentObj` | `vad:ptree` |
 | Дерево документов | `vad:DataObject` (новый) | `vad:hasParentObj` | `vad:dtree` (новый) |
+| Произвольная иерархия | Любой тип | `vad:hasParentObj` | Указывается явно |
 
 **Текущая поддержка в коде:**
 - Иерархия TriG уже строится через `parseTriGHierarchy()` в `2_triplestore_logic.js`
 - Окно "Дерево TriG" отображает иерархию через `vad:hasParentObj`
 - **Нет визуализации** иерархии концептов в формате диаграммы
 
-### 2.2 Структурные схемы (произвольные связи)
+### 2.2 Верхнеуровневые процессы (vad:HiLevelProcessDia)
+
+**Характеристики:**
+- Основан на `vad:VADProcessDia`, но с ключевыми отличиями
+- Использует `vad:hasParentObj` вместо `vad:hasNext` для связей
+- Визуализация: **вертикальная** (сверху вниз), а не горизонтальная
+- Основной тип элемента: `vad:isSubprocessTrig`
+- Привязка к группе исполнителей: `rdf:type vad:ExecutorGroup`
+
+**Сравнение с VADProcessDia:**
+
+| Аспект | vad:VADProcessDia | vad:HiLevelProcessDia |
+|--------|-------------------|----------------------|
+| Направление визуализации | Горизонтальное (LR) | Вертикальное (TB) |
+| Предикат связи | `vad:hasNext` | `vad:hasParentObj` |
+| Тип структуры | Последовательность (цепочка) | Иерархия (дерево) |
+| Уровень детализации | Детальный процесс | Верхний уровень |
+| Группы исполнителей | Да (`vad:ExecutorGroup`) | Да (`vad:ExecutorGroup`) |
+
+**Пример использования:**
+```
+Верхнеуровневый процесс "Управление продажами"
+├── Процесс "Привлечение клиентов"
+│   └── ExecutorGroup: Отдел маркетинга
+├── Процесс "Оформление заказа"
+│   └── ExecutorGroup: Отдел продаж
+└── Процесс "Доставка"
+    └── ExecutorGroup: Логистика
+```
+
+### 2.3 Структурные схемы (произвольные связи)
 
 **Характеристики:**
 - Граф (graph), не дерево
@@ -93,7 +144,7 @@
 - VAD: цепочка процессов с `vad:hasNext` (последовательность)
 - Структурная схема: произвольные связи между объектами
 
-### 2.3 Существующий тип vad:VADProcessDia
+### 2.4 Существующий тип vad:VADProcessDia
 
 **Текущая онтология:**
 ```turtle
@@ -361,11 +412,13 @@ vad:dependsOn
 
 ```
 vad:Diagram (базовый)
-├── vad:VADProcessDia    — схема процесса VAD
-├── vad:HierarchicalDia  — иерархическая схема
-│   ├── vad:FunctionTree — дерево функций (процессов)
-│   └── vad:OrgChart     — организационная структура
-└── vad:StructuralDia    — структурная схема
+├── vad:VADProcessDia    — существующая схема процесса VAD (горизонтальная, vad:hasNext)
+├── vad:HierarchicalDia  — иерархическая схема (типовое дерево)
+│   ├── vad:FunctionTree — дерево функций/процессов (из vad:ptree)
+│   ├── vad:OrgChart     — организационная структура (из vad:rtree)
+│   └── vad:UniversalTree — универсальное дерево (произвольная иерархия)
+├── vad:StructuralDia    — структурная схема (произвольные связи, не древовидные)
+└── vad:HiLevelProcessDia — верхнеуровневые процессы (вертикальная, vad:hasParentObj)
 ```
 
 **Онтология подклассов:**
@@ -400,6 +453,42 @@ vad:OrgChart
         - vad:hierarchyRoot — корневой исполнитель (или vad:rtree)
     """ ;
     dcterms:description "Организационная структура" .
+
+vad:UniversalTree
+    rdf:type rdfs:Class, owl:Class ;
+    rdfs:subClassOf vad:HierarchicalDia ;
+    rdfs:label "UniversalTree" ;
+    rdfs:comment """
+        Универсальное дерево — иерархия произвольных объектов.
+
+        Позволяет формировать древовидные структуры
+        из объектов любого типа, не ограничиваясь
+        vad:TypeProcess или vad:TypeExecutor.
+
+        Специфичные свойства:
+        - vad:hierarchyRoot — корневой объект иерархии
+        - vad:hierarchyType — тип объектов (опционально)
+    """ ;
+    dcterms:description "Универсальное дерево произвольных объектов" .
+
+vad:HiLevelProcessDia
+    rdf:type rdfs:Class, owl:Class ;
+    rdfs:subClassOf vad:Diagram ;
+    rdfs:label "HiLevelProcessDia" ;
+    rdfs:comment """
+        Схема верхнеуровневых процессов.
+
+        Основана на vad:VADProcessDia, но с ключевыми отличиями:
+        - Использует vad:hasParentObj вместо vad:hasNext
+        - Визуализируется вертикально (сверху вниз)
+        - Отображает иерархию процессов верхнего уровня
+
+        Основной тип элемента: vad:isSubprocessTrig
+        Привязка к исполнителям: rdf:type vad:ExecutorGroup
+
+        Пример: иерархия бизнес-процессов организации.
+    """ ;
+    dcterms:description "Схема верхнеуровневых процессов (вертикальная иерархия)" .
 ```
 
 ### 5.3 Архитектура наследования
@@ -409,20 +498,28 @@ vad:TriG
 └── vad:Diagram
     ├── vad:VADProcessDia
     │   Предикаты: isSubprocessTrig, hasExecutor, hasNext, processSubtype
-    │   Визуализация: горизонтальная цепочка с swim lanes
+    │   Визуализация: горизонтальная цепочка с swim lanes (LR)
     │
     ├── vad:HierarchicalDia
     │   ├── vad:FunctionTree
     │   │   Предикаты: hierarchyRoot (→ ptree/process)
-    │   │   Визуализация: вертикальное дерево
+    │   │   Визуализация: вертикальное дерево (TB)
     │   │
-    │   └── vad:OrgChart
-    │       Предикаты: hierarchyRoot (→ rtree/executor)
-    │       Визуализация: вертикальное/горизонтальное дерево
+    │   ├── vad:OrgChart
+    │   │   Предикаты: hierarchyRoot (→ rtree/executor)
+    │   │   Визуализация: вертикальное/горизонтальное дерево
+    │   │
+    │   └── vad:UniversalTree
+    │       Предикаты: hierarchyRoot (→ любой объект), hierarchyType (опционально)
+    │       Визуализация: вертикальное дерево (TB)
     │
-    └── vad:StructuralDia
-        Предикаты: relatesTo, uses, dependsOn
-        Визуализация: граф с произвольной компоновкой
+    ├── vad:StructuralDia
+    │   Предикаты: relatesTo, uses, dependsOn
+    │   Визуализация: граф с произвольной компоновкой (neato/fdp)
+    │
+    └── vad:HiLevelProcessDia
+        Предикаты: isSubprocessTrig, hasExecutor, hasParentObj (вместо hasNext!)
+        Визуализация: вертикальная иерархия процессов (TB) с группами исполнителей
 ```
 
 ---
@@ -674,6 +771,7 @@ function rdfToDotHierarchy(quads, prefixes, trigUri) {
 1. Добавить в онтологию:
    - `vad:FunctionTree` как подкласс `vad:HierarchicalDia`
    - `vad:OrgChart` как подкласс `vad:HierarchicalDia`
+   - `vad:UniversalTree` как подкласс `vad:HierarchicalDia`
 
 2. Улучшить визуализацию:
    - Разные стили для разных подтипов
@@ -683,7 +781,23 @@ function rdfToDotHierarchy(quads, prefixes, trigUri) {
    - Добавить кнопку "New Hierarchy" в модальное окно
    - Выбор типа иерархии
 
-### 9.3 Этап 3: Структурные схемы
+### 9.3 Этап 3: Верхнеуровневые процессы
+
+**Цель:** Добавить поддержку `vad:HiLevelProcessDia`
+
+1. Добавить в онтологию:
+   - `vad:HiLevelProcessDia` как подкласс `vad:Diagram`
+
+2. Визуализация:
+   - Функция `rdfToDotHiLevel()` — вертикальная иерархия
+   - Использование `vad:hasParentObj` вместо `vad:hasNext`
+   - Группы исполнителей (`vad:ExecutorGroup`) как в VAD
+
+3. Smart Design:
+   - Добавить кнопку "New HiLevel Process"
+   - Автоматическое определение направления визуализации
+
+### 9.5 Этап 5: Структурные схемы
 
 **Цель:** Добавить поддержку произвольных связей
 
@@ -699,7 +813,7 @@ function rdfToDotHierarchy(quads, prefixes, trigUri) {
    - Добавить кнопку "New Structural"
    - Редактор связей
 
-### 9.4 Этап 4: Унификация
+### 9.6 Этап 6: Унификация
 
 **Цель:** Единый базовый класс и обработка
 
@@ -713,27 +827,228 @@ function rdfToDotHierarchy(quads, prefixes, trigUri) {
 
 ---
 
-## 10. Ссылки
+## 10. Графическая нотация (легенда)
 
-### 10.1 Документация проекта
+### 10.1 Легенда новых объектов
+
+В основе нотации новых элементов лежит существующая визуальная система:
+- **Executor (исполнитель)**: желтоватые тона (`#FFFFCC`, `#E1BEE7`)
+- **Process (процесс)**: зеленоватые или синеватые тона
+  - Не детализированный: зелёный (`#A5D6A7`, `#C8E6C9`)
+  - Детализированный (имеет схему): голубой/синий (`#90CAF9`, `#64B5F6`)
+
+#### 10.1.1 Стили для иерархических схем (vad:HierarchicalDia)
+
+| Объект | Форма | Цвет заливки | Цвет рамки | Описание |
+|--------|-------|--------------|------------|----------|
+| **Процесс (TypeProcess)** | cds (chevron) | `#A5D6A7` (зелёный) | `#2E7D32` | Не детализированный процесс |
+| **Процесс детализ.** | cds (chevron) | `#90CAF9` (голубой) | `#1565C0` | Детализированный процесс |
+| **Исполнитель (TypeExecutor)** | ellipse | `#FFFFCC` (желтый) | `#B8860B` | Организационная единица |
+| **Корень дерева** | box | `#E3F2FD` (голубой) | `#1976D2` | ptree, rtree или явный корень |
+| **Связь hasParentObj** | стрелка | `#999999` (серый) | — | Пунктирная, empty arrowhead |
+
+#### 10.1.2 Стили для верхнеуровневых процессов (vad:HiLevelProcessDia)
+
+| Объект | Форма | Цвет заливки | Цвет рамки | Описание |
+|--------|-------|--------------|------------|----------|
+| **HiLevel процесс** | box | `#BBDEFB` (светло-синий) | `#1565C0` | Верхнеуровневый процесс |
+| **ExecutorGroup** | ellipse | `#FFFFCC` (желтый) | `#B8860B` | Группа исполнителей |
+| **Связь hasParentObj** | стрелка | `#2E7D32` (зелёный) | — | Иерархия процессов |
+
+#### 10.1.3 Стили для структурных схем (vad:StructuralDia)
+
+| Объект | Форма | Цвет заливки | Цвет рамки | Описание |
+|--------|-------|--------------|------------|----------|
+| **Узел (любой тип)** | ellipse | `#CCE5FF` (голубой) | `#1976D2` | По умолчанию |
+| **Связь relatesTo** | стрелка | `#9C27B0` (фиолетовый) | — | Произвольная связь |
+| **Связь uses** | стрелка | `#4CAF50` (зелёный) | — | Использование |
+| **Связь dependsOn** | стрелка | `#FF9800` (оранжевый) | — | Зависимость |
+
+### 10.2 Примеры в нотации DOT
+
+#### 10.2.1 Пример: Дерево функций (vad:FunctionTree)
+
+```dot
+digraph FunctionTree {
+    rankdir=TB;
+    node [fontname="Arial" fontsize="10"];
+
+    // Корень дерева
+    ptree [label="ptree\n(Процессы)" shape="box" style="filled" fillcolor="#E3F2FD" color="#1976D2" penwidth="2"];
+
+    // Процессы верхнего уровня
+    p1 [label="Продажи" shape="cds" style="filled" fillcolor="#90CAF9" color="#1565C0" height="0.8" width="1.5"];
+    p2 [label="Производство" shape="cds" style="filled" fillcolor="#A5D6A7" color="#2E7D32" height="0.8" width="1.5"];
+    p3 [label="Логистика" shape="cds" style="filled" fillcolor="#A5D6A7" color="#2E7D32" height="0.8" width="1.5"];
+
+    // Подпроцессы
+    p1_1 [label="Привлечение\nклиентов" shape="cds" style="filled" fillcolor="#A5D6A7" color="#2E7D32" height="0.8" width="1.5"];
+    p1_2 [label="Оформление\nзаказа" shape="cds" style="filled" fillcolor="#90CAF9" color="#1565C0" height="0.8" width="1.5"];
+
+    // Связи hasParentObj (стрелка от потомка к родителю)
+    p1 -> ptree [color="#999999" style="dashed" arrowhead="empty"];
+    p2 -> ptree [color="#999999" style="dashed" arrowhead="empty"];
+    p3 -> ptree [color="#999999" style="dashed" arrowhead="empty"];
+    p1_1 -> p1 [color="#999999" style="dashed" arrowhead="empty"];
+    p1_2 -> p1 [color="#999999" style="dashed" arrowhead="empty"];
+}
+```
+
+#### 10.2.2 Пример: Организационная структура (vad:OrgChart)
+
+```dot
+digraph OrgChart {
+    rankdir=TB;
+    node [fontname="Arial" fontsize="10"];
+
+    // Корень дерева
+    rtree [label="rtree\n(Исполнители)" shape="box" style="filled" fillcolor="#E3F2FD" color="#1976D2" penwidth="2"];
+
+    // Исполнители
+    ceo [label="Генеральный\nдиректор" shape="ellipse" style="filled" fillcolor="#FFFFCC" color="#B8860B"];
+    sales [label="Директор\nпо продажам" shape="ellipse" style="filled" fillcolor="#FFFFCC" color="#B8860B"];
+    prod [label="Директор\nпроизводства" shape="ellipse" style="filled" fillcolor="#FFFFCC" color="#B8860B"];
+    hr [label="HR-директор" shape="ellipse" style="filled" fillcolor="#FFFFCC" color="#B8860B"];
+
+    // Подчинённые
+    sales_m1 [label="Менеджер 1" shape="ellipse" style="filled" fillcolor="#E1BEE7" color="#6A1B9A"];
+    sales_m2 [label="Менеджер 2" shape="ellipse" style="filled" fillcolor="#E1BEE7" color="#6A1B9A"];
+
+    // Связи hasParentObj
+    ceo -> rtree [color="#999999" style="dashed" arrowhead="empty"];
+    sales -> ceo [color="#999999" style="dashed" arrowhead="empty"];
+    prod -> ceo [color="#999999" style="dashed" arrowhead="empty"];
+    hr -> ceo [color="#999999" style="dashed" arrowhead="empty"];
+    sales_m1 -> sales [color="#999999" style="dashed" arrowhead="empty"];
+    sales_m2 -> sales [color="#999999" style="dashed" arrowhead="empty"];
+}
+```
+
+#### 10.2.3 Пример: Верхнеуровневые процессы (vad:HiLevelProcessDia)
+
+```dot
+digraph HiLevelProcessDia {
+    rankdir=TB;
+    node [fontname="Arial" fontsize="10"];
+    splines=ortho;
+
+    // Верхнеуровневый процесс (корень)
+    main [label="Управление\nпродажами" shape="box" style="filled,bold" fillcolor="#BBDEFB" color="#1565C0" penwidth="2"];
+
+    // Дочерние процессы
+    subgraph cluster_p1 {
+        label="";
+        style="invis";
+        p1 [label="Привлечение\nклиентов" shape="box" style="filled" fillcolor="#BBDEFB" color="#1565C0"];
+        eg1 [label="Отдел\nмаркетинга" shape="ellipse" style="filled" fillcolor="#FFFFCC" color="#B8860B"];
+    }
+
+    subgraph cluster_p2 {
+        label="";
+        style="invis";
+        p2 [label="Оформление\nзаказа" shape="box" style="filled" fillcolor="#BBDEFB" color="#1565C0"];
+        eg2 [label="Отдел\nпродаж" shape="ellipse" style="filled" fillcolor="#FFFFCC" color="#B8860B"];
+    }
+
+    subgraph cluster_p3 {
+        label="";
+        style="invis";
+        p3 [label="Доставка" shape="box" style="filled" fillcolor="#BBDEFB" color="#1565C0"];
+        eg3 [label="Логистика" shape="ellipse" style="filled" fillcolor="#FFFFCC" color="#B8860B"];
+    }
+
+    // Иерархия процессов (вертикальная, hasParentObj)
+    p1 -> main [color="#2E7D32" penwidth="2" arrowhead="vee"];
+    p2 -> main [color="#2E7D32" penwidth="2" arrowhead="vee"];
+    p3 -> main [color="#2E7D32" penwidth="2" arrowhead="vee"];
+
+    // Связи с группами исполнителей (hasExecutor)
+    p1 -> eg1 [color="#1565C0" style="dashed" arrowhead="none"];
+    p2 -> eg2 [color="#1565C0" style="dashed" arrowhead="none"];
+    p3 -> eg3 [color="#1565C0" style="dashed" arrowhead="none"];
+}
+```
+
+#### 10.2.4 Пример: Структурная схема (vad:StructuralDia)
+
+```dot
+digraph StructuralDia {
+    layout=neato;
+    overlap=false;
+    node [fontname="Arial" fontsize="10" shape="ellipse" style="filled" fillcolor="#CCE5FF" color="#1976D2"];
+
+    // Узлы
+    sys1 [label="CRM\nсистема"];
+    sys2 [label="ERP\nсистема"];
+    sys3 [label="Склад"];
+    sys4 [label="Бухгалтерия"];
+    ext [label="Внешний\nсервис" fillcolor="#FFF3E0" color="#E65100"];
+
+    // Связи relatesTo (фиолетовые)
+    sys1 -> sys2 [color="#9C27B0" penwidth="1.5" label="relatesTo"];
+
+    // Связи uses (зелёные)
+    sys1 -> ext [color="#4CAF50" penwidth="1.5" label="uses"];
+    sys2 -> sys3 [color="#4CAF50" penwidth="1.5" label="uses"];
+
+    // Связи dependsOn (оранжевые)
+    sys4 -> sys2 [color="#FF9800" penwidth="1.5" label="dependsOn"];
+    sys4 -> sys1 [color="#FF9800" penwidth="1.5" label="dependsOn"];
+}
+```
+
+#### 10.2.5 Пример: Универсальное дерево (vad:UniversalTree)
+
+```dot
+digraph UniversalTree {
+    rankdir=TB;
+    node [fontname="Arial" fontsize="10"];
+
+    // Корень (явно указанный)
+    root [label="Проект\nАльфа" shape="box" style="filled,bold" fillcolor="#E8F5E9" color="#2E7D32" penwidth="2"];
+
+    // Элементы иерархии (произвольный тип)
+    phase1 [label="Фаза 1:\nАнализ" shape="box" style="filled" fillcolor="#E3F2FD" color="#1976D2"];
+    phase2 [label="Фаза 2:\nРазработка" shape="box" style="filled" fillcolor="#E3F2FD" color="#1976D2"];
+    phase3 [label="Фаза 3:\nТестирование" shape="box" style="filled" fillcolor="#E3F2FD" color="#1976D2"];
+
+    task1 [label="Сбор\nтребований" shape="ellipse" style="filled" fillcolor="#FFF3E0" color="#E65100"];
+    task2 [label="Интервью" shape="ellipse" style="filled" fillcolor="#FFF3E0" color="#E65100"];
+    task3 [label="Кодирование" shape="ellipse" style="filled" fillcolor="#FFF3E0" color="#E65100"];
+
+    // Связи hasParentObj
+    phase1 -> root [color="#999999" style="dashed" arrowhead="empty"];
+    phase2 -> root [color="#999999" style="dashed" arrowhead="empty"];
+    phase3 -> root [color="#999999" style="dashed" arrowhead="empty"];
+    task1 -> phase1 [color="#999999" style="dashed" arrowhead="empty"];
+    task2 -> phase1 [color="#999999" style="dashed" arrowhead="empty"];
+    task3 -> phase2 [color="#999999" style="dashed" arrowhead="empty"];
+}
+```
+
+---
+
+## 11. Ссылки
+
+### 11.1 Документация проекта
 
 - [Онтология VAD](https://github.com/bpmbpm/rdf-grapher/blob/main/ver9b/ontology/vad-basic-ontology.ttl)
 - [Терминология](https://github.com/bpmbpm/rdf-grapher/blob/main/ver9b/ontology/term.md)
 - [Важные функции](https://github.com/bpmbpm/rdf-grapher/blob/main/ver9b/doc/important_functions.md)
 - [Предложения по ARIS](https://github.com/bpmbpm/rdf-grapher/blob/main/ver8tree/doc/aris-alignment-proposals.md)
 
-### 10.2 ARIS ToolSet
+### 11.2 ARIS ToolSet
 
 - [ARIS Method Manual](https://docs.aris.com/10.0.27.0/yaa-method-guide/en/Method-Manual.pdf)
 - [ARIS Organizational Chart](https://ariscommunity.com/organizational-chart)
 - [ARIS Architecture and Reference Models](https://www.researchgate.net/publication/221585916_ARIS_Architecture_and_Reference_Models_for_Business_Process_Management)
 
-### 10.3 ArchiMate
+### 11.3 ArchiMate
 
 - [Archi - Open Source ArchiMate Modelling](https://www.archimatetool.com/)
 - [ArchiMate Exchange File Format Guide](https://pubs.opengroup.org/architecture/archimate31-exchange-file-format-guide/)
 
-### 10.4 Визуализация
+### 11.4 Визуализация
 
 - [Graphviz Documentation](https://graphviz.org/documentation/)
 - [DOT Language](https://graphviz.org/doc/info/lang.html)
@@ -742,18 +1057,24 @@ function rdfToDotHierarchy(quads, prefixes, trigUri) {
 
 ## Резюме
 
-Добавление иерархических и структурных схем в RDF Grapher требует:
+Добавление **трёх новых типов схем** в RDF Grapher требует:
 
 1. **Расширения онтологии:**
    - Базовый класс `vad:Diagram`
-   - Подклассы `vad:HierarchicalDia`, `vad:StructuralDia`
-   - Специализации `vad:FunctionTree`, `vad:OrgChart`
+   - Подклассы:
+     - `vad:HierarchicalDia` — типовые деревья
+       - `vad:FunctionTree` — дерево функций/процессов
+       - `vad:OrgChart` — организационная структура
+       - `vad:UniversalTree` — универсальное дерево
+     - `vad:StructuralDia` — структурные схемы (произвольные связи)
+     - `vad:HiLevelProcessDia` — верхнеуровневые процессы (вертикальная иерархия)
    - Новые предикаты `vad:hierarchyRoot`, `vad:relatesTo`, `vad:uses`, `vad:dependsOn`
 
 2. **Изменений в коде:**
    - Новые функции визуализации для каждого типа схем
    - Определение типа схемы перед визуализацией
    - Расширение Smart Design для создания новых типов схем
+   - Для `vad:HiLevelProcessDia`: вертикальная визуализация с `vad:hasParentObj` вместо `vad:hasNext`
 
 3. **Унификации обработки:**
    - `vad:VADProcessDia` становится подклассом `vad:Diagram`
@@ -766,3 +1087,12 @@ function rdfToDotHierarchy(quads, prefixes, trigUri) {
 - Рекурсивные запросы для иерархий (решается через Comunica property paths)
 - Компоновка структурных схем (решается через Graphviz neato/fdp)
 - Обратная совместимость (решается через наследование классов)
+
+**Ключевые отличия новых типов:**
+
+| Тип схемы | Направление | Предикат связи | Визуализация |
+|-----------|-------------|----------------|--------------|
+| `vad:VADProcessDia` | Горизонтальное (LR) | `vad:hasNext` | Цепочка с swim lanes |
+| `vad:HiLevelProcessDia` | Вертикальное (TB) | `vad:hasParentObj` | Иерархия с ExecutorGroup |
+| `vad:HierarchicalDia` | Вертикальное (TB) | `vad:hasParentObj` | Дерево |
+| `vad:StructuralDia` | Произвольное | `relatesTo`, `uses`, `dependsOn` | Граф (neato/fdp) |
