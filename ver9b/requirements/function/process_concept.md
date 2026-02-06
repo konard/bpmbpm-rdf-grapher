@@ -63,6 +63,14 @@
 vad:processSubtype
 vad:DetailedExternal
 ```
+#### D4 Del individ process / implementation
+Реазизация см https://github.com/bpmbpm/rdf-grapher/pull/310  
+Реализовать удаление всего subject без указания предикатов? Т.е. удаление в заданном TriG любого предиката и RDFobject по известному subject? Это важно для дальнейшего увеличения номенклатуры предикатов индивида без изменения кода.  
+Код уже использовал обобщённый паттерн DELETE WHERE { GRAPH <trig> { <subject> ?p ?o . } } для этапов 1 и 2 удаления (см. GENERATE_DELETE_PROCESS_INDIVID_QUERY в sparql.js, строки 293-298 и 307-311).
+- Удалить все исходящие тройки отдельных элементов ( vad:isSubprocessTrig, vad:hasExecutor, vad:hasNext)
+- Удалить связанный ExecutorGroupобъект (со всеми его rdf:type, rdfs:label, vad:includes).
+
+
 
 ### D5 Del individ Executor 
 Просто.  Удалить все   
