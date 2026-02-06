@@ -423,3 +423,68 @@ function showResultSparqlMessage(message, type) {
         messageDiv.style.display = 'block';
     }
 }
+
+// ==============================================================================
+// issue #309: VIRTUAL TRIG MODAL
+// ==============================================================================
+
+/**
+ * issue #309: Показывает Virtual TriG после применения SPARQL
+ * Пересчитывает Virtual TriG на основе текущих данных store и показывает в модальном окне
+ */
+function showVirtualTrigAfterApply() {
+    // Проверяем, что данные загружены
+    if (typeof currentQuads === 'undefined' || currentQuads.length === 0) {
+        showResultSparqlMessage('Данные quadstore пусты. Сначала загрузите данные.', 'error');
+        return;
+    }
+
+    // issue #309: Пересчитываем trigHierarchy если нужно
+    if (typeof trigHierarchy === 'undefined' || !trigHierarchy || Object.keys(trigHierarchy).length === 0) {
+        if (typeof parseTriGHierarchy === 'function') {
+            const hierarchyResult = parseTriGHierarchy(currentQuads, currentPrefixes);
+            if (hierarchyResult && hierarchyResult.valid) {
+                trigHierarchy = hierarchyResult.hierarchy;
+            }
+        }
+    }
+
+    // issue #309: Пересчитываем virtualRDFdata
+    let virtualData = {};
+    if (typeof calculateProcessSubtypes === 'function' && typeof trigHierarchy !== 'undefined') {
+        virtualData = calculateProcessSubtypes(trigHierarchy, currentPrefixes);
+    }
+
+    // issue #309: Форматируем Virtual TriG
+    let virtualTrigText = '';
+    if (typeof formatVirtualRDFdata === 'function' && Object.keys(virtualData).length > 0) {
+        virtualTrigText = formatVirtualRDFdata(virtualData, currentPrefixes);
+    } else {
+        virtualTrigText = '# Virtual TriG пуст.\n# Убедитесь, что данные загружены и содержат TriG типа VADProcessDia.';
+    }
+
+    // Отображаем в модальном окне
+    const textarea = document.getElementById('virtual-trig-result');
+    if (textarea) {
+        textarea.value = virtualTrigText;
+    }
+
+    const modal = document.getElementById('virtual-trig-modal');
+    if (modal) {
+        // issue #309: Сбрасываем позицию модального окна
+        if (typeof resetModalPosition === 'function') {
+            resetModalPosition('virtual-trig-modal');
+        }
+        modal.style.display = 'block';
+    }
+}
+
+/**
+ * issue #309: Закрывает модальное окно Virtual TriG
+ */
+function closeVirtualTrigModal() {
+    const modal = document.getElementById('virtual-trig-modal');
+    if (modal) {
+        modal.style.display = 'none';
+    }
+}
