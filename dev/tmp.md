@@ -1,2 +1,4 @@
 ### tmp.md
 
+ver9a_str_1e  https://github.com/bpmbpm/rdf-grapher/issues/243  
+Скопируй весь проект https://bpmbpm.github.io/rdf-grapher/ver9a/ в https://bpmbpm.github.io/rdf-grapher/ver9b/ c учетом замены упоминания в файлах ver9a на ver9b
