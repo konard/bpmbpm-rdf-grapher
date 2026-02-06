@@ -1027,15 +1027,30 @@
             }
             dot += '\n';
 
-            // Фильтруем процессы - показываем только те, которые не являются материнскими
-            // (Process0 скрыт, потому что он не имеет hasNext и является родителем)
+            // issue #311 п.2: Фильтруем процессы — показываем индивидов процесса в данном TriG.
+            // Процесс виден, если он является индивидом текущей схемы (имеет isSubprocessTrig),
+            // ИЛИ если он участвует в hasNext-связях.
+            // Схемы должны отображаться даже если у объектов нет ни одного предиката vad:hasNext.
+            const isSubprocessTrigUri = 'http://example.org/vad#isSubprocessTrig';
+            const individualsInCurrentTrig = new Set();
+            quads.forEach(quad => {
+                const predUri = quad.predicate.value;
+                if (predUri === isSubprocessTrigUri || predUri.endsWith('#isSubprocessTrig')) {
+                    individualsInCurrentTrig.add(quad.subject.value);
+                }
+            });
+
             const visibleProcesses = new Map();
             processes.forEach((processInfo, uri) => {
-                // Показываем процесс, если он имеет hasNext или на него ссылается hasNext
+                // Показываем процесс, если он:
+                // 1) является индивидом текущей схемы (vad:isSubprocessTrig), ИЛИ
+                // 2) имеет исходящие hasNext, ИЛИ
+                // 3) имеет входящие hasNext
+                const isIndividualInTrig = individualsInCurrentTrig.has(uri);
                 const hasOutgoingNext = processInfo.hasNext.length > 0;
                 const hasIncomingNext = [...processes.values()].some(p => p.hasNext.includes(uri));
 
-                if (hasOutgoingNext || hasIncomingNext) {
+                if (isIndividualInTrig || hasOutgoingNext || hasIncomingNext) {
                     visibleProcesses.set(uri, processInfo);
                 }
             });
