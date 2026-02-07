@@ -74,6 +74,7 @@ let newIndividState = {
     selectedTrig: null,
     selectedConcept: null,
     selectedHasNext: [],
+    hasNextMode: 'existing',         // issue #313: 'existing' (индивиды в TriG) или 'any' (все концепты из ptree)
     selectedProcessIndivid: null,    // issue #309: выбранный индивид процесса (для исполнителя)
     selectedExecutorGroup: null,     // issue #309: авто-разрешённая ExecutorGroup
     selectedExecutor: null,
@@ -310,6 +311,7 @@ function openNewIndividModal() {
         selectedTrig: null,
         selectedConcept: null,
         selectedHasNext: [],
+        hasNextMode: 'existing',     // issue #313: по умолчанию "vad:hasNext на существующий"
         selectedProcessIndivid: null,
         selectedExecutorGroup: null,
         selectedExecutor: null,
@@ -389,6 +391,7 @@ function onNewIndividTypeChange() {
     newIndividState.selectedTrig = null;
     newIndividState.selectedConcept = null;
     newIndividState.selectedHasNext = [];
+    newIndividState.hasNextMode = 'existing'; // issue #313: сброс на значение по умолчанию
     newIndividState.selectedProcessIndivid = null;
     newIndividState.selectedExecutorGroup = null;
     newIndividState.selectedExecutor = null;
@@ -432,14 +435,31 @@ function buildNewIndividForm(individType) {
             </div>
         `;
 
-        // Множественный выбор hasNext (из справочника концептов)
+        // issue #313: Режим выбора hasNext — "на существующий" или "на любой"
+        html += `
+            <div class="new-individ-field">
+                <label>Режим vad:hasNext:</label>
+                <div class="new-individ-hasnext-mode-options">
+                    <label class="new-concept-radio">
+                        <input type="radio" name="hasnext-mode" value="existing" checked onchange="onHasNextModeChange()">
+                        vad:hasNext на существующий (индивиды в TriG)
+                    </label>
+                    <label class="new-concept-radio">
+                        <input type="radio" name="hasnext-mode" value="any" onchange="onHasNextModeChange()">
+                        vad:hasNext на любой (все концепты из ptree)
+                    </label>
+                </div>
+            </div>
+        `;
+
+        // Множественный выбор hasNext (справочник зависит от выбранного режима)
         html += `
             <div class="new-individ-field">
                 <label>vad:hasNext (выберите следующие элементы):</label>
                 <div id="new-individ-hasnext-container" class="new-individ-checkbox-container">
                     <p class="new-individ-hint">Сначала выберите TriG</p>
                 </div>
-                <small class="field-hint">Множественный выбор из справочника концептов процесса. Предикаты типа vad:includes не заполняются при создании индивида процесса.</small>
+                <small class="field-hint">Множественный выбор. Предикаты типа vad:includes не заполняются при создании индивида процесса.</small>
             </div>
         `;
     } else if (individType === NEW_INDIVID_TYPES.EXECUTOR) {
@@ -511,6 +531,7 @@ function onNewIndividTrigChange() {
     newIndividState.selectedTrig = trigUri;
     newIndividState.selectedConcept = null;
     newIndividState.selectedHasNext = [];
+    // issue #313: не сбрасываем hasNextMode при смене TriG — режим сохраняется
 
     if (!trigUri) {
         updateNewIndividCreateButtonState();
@@ -581,28 +602,56 @@ function fillNewIndividConceptDropdown() {
 }
 
 /**
- * Заполняет checkboxes для hasNext (из справочника всех концептов процесса)
+ * Заполняет checkboxes для hasNext
+ * issue #313: Поддержка двух режимов:
+ * - 'existing': индивиды процесса из выбранного TriG
+ * - 'any': все концепты процессов из ptree
  */
 function fillNewIndividHasNextCheckboxes() {
     const container = document.getElementById('new-individ-hasnext-container');
     if (!container) return;
 
-    const concepts = getProcessConceptsForHasNext();
+    const mode = newIndividState.hasNextMode || 'existing';
+    let items = [];
 
-    if (concepts.length === 0) {
-        container.innerHTML = '<p class="new-individ-hint">Концепты процессов не найдены</p>';
+    if (mode === 'existing') {
+        // issue #313: Режим "vad:hasNext на существующий" — индивиды процесса в TriG
+        const trigUri = newIndividState.selectedTrig;
+        if (!trigUri) {
+            container.innerHTML = '<p class="new-individ-hint">Сначала выберите TriG</p>';
+            return;
+        }
+        items = getIndividsInTrig(trigUri);
+
+        newIndividIntermediateSparqlQueries.push({
+            description: 'issue #313: Получение индивидов процесса из TriG для hasNext (режим "на существующий")',
+            query: NEW_INDIVID_SPARQL.GET_INDIVIDS_IN_TRIG(trigUri),
+            result: items.length > 0
+                ? `Найдено ${items.length} индивидов: ${items.map(i => i.label).join(', ')}`
+                : 'Индивиды не найдены'
+        });
+    } else {
+        // Режим "vad:hasNext на любой" — все концепты процессов из ptree
+        items = getProcessConceptsForHasNext();
+    }
+
+    if (items.length === 0) {
+        const emptyMsg = mode === 'existing'
+            ? 'Индивиды процессов в выбранном TriG не найдены'
+            : 'Концепты процессов не найдены';
+        container.innerHTML = `<p class="new-individ-hint">${emptyMsg}</p>`;
         return;
     }
 
     let html = '';
-    concepts.forEach(concept => {
+    items.forEach(item => {
         const prefixedName = typeof getPrefixedName === 'function'
-            ? getPrefixedName(concept.uri, currentPrefixes) : concept.uri;
-        const displayLabel = concept.label || prefixedName;
+            ? getPrefixedName(item.uri, currentPrefixes) : item.uri;
+        const displayLabel = item.label || prefixedName;
 
         html += `
             <label class="new-individ-checkbox-label">
-                <input type="checkbox" value="${concept.uri}" onchange="onNewIndividHasNextChange()">
+                <input type="checkbox" value="${item.uri}" onchange="onNewIndividHasNextChange()">
                 ${displayLabel}
             </label>
         `;
@@ -643,6 +692,20 @@ function onNewIndividConceptChange() {
 function onNewIndividHasNextChange() {
     const checkboxes = document.querySelectorAll('#new-individ-hasnext-container input[type="checkbox"]:checked');
     newIndividState.selectedHasNext = Array.from(checkboxes).map(cb => cb.value);
+    updateNewIndividCreateButtonState();
+}
+
+/**
+ * issue #313: Обработчик переключения режима vad:hasNext
+ * Переключает между "на существующий" (индивиды в TriG) и "на любой" (концепты из ptree)
+ */
+function onHasNextModeChange() {
+    const modeRadio = document.querySelector('input[name="hasnext-mode"]:checked');
+    newIndividState.hasNextMode = modeRadio ? modeRadio.value : 'existing';
+    newIndividState.selectedHasNext = [];
+
+    // Перезаполняем checkboxes с учётом нового режима
+    fillNewIndividHasNextCheckboxes();
     updateNewIndividCreateButtonState();
 }
 
@@ -1001,7 +1064,9 @@ function showNewIndividHelp() {
 2. Выберите TriG (схему процесса), куда будет добавлен индивид
 3. Выберите концепт процесса из справочника ptree
 4. (Опционально) Укажите vad:hasNext — множественный выбор
-   из справочника всех концептов процесса
+   Два режима (issue #313):
+   - "на существующий" (по умолчанию): из индивидов в TriG
+   - "на любой": из всех концептов процесса (ptree)
 5. Нажмите "Создать запрос New Individ"
 
 Автоматически создаётся ExecutorGroup с ID формата
@@ -1038,6 +1103,7 @@ if (typeof window !== 'undefined') {
     window.onNewIndividTrigChange = onNewIndividTrigChange;
     window.onNewIndividConceptChange = onNewIndividConceptChange;
     window.onNewIndividHasNextChange = onNewIndividHasNextChange;
+    window.onHasNextModeChange = onHasNextModeChange;                           // issue #313
     window.onNewIndividProcessIndividChange = onNewIndividProcessIndividChange;  // issue #309
     window.onNewIndividExecutorChange = onNewIndividExecutorChange;
     window.toggleNewIndividIntermediateSparql = toggleNewIndividIntermediateSparql;

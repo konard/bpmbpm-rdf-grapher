@@ -102,7 +102,7 @@ let newConceptState = {
     autoPredicates: [],
     fieldValues: {},
     intermediateSparql: '',
-    idGenerationMode: 'auto' // 'auto' или 'manual'
+    idGenerationMode: 'manual' // issue #313: по умолчанию 'manual' (ввести вручную)
 };
 
 /**
@@ -553,7 +553,7 @@ function openNewConceptModal() {
         autoPredicates: [],
         fieldValues: {},
         intermediateSparql: '',
-        idGenerationMode: 'auto'
+        idGenerationMode: 'manual' // issue #313: по умолчанию 'manual' (ввести вручную)
     };
     intermediateSparqlQueries = [];
 
@@ -669,20 +669,21 @@ function buildNewConceptForm(config, predicates, autoPredicates) {
     let html = '';
 
     // Поле ID с выбором режима генерации
+    // issue #313: по умолчанию выбран режим "Ввести вручную"
     html += `
         <div class="new-concept-field new-concept-field-id">
             <label>ID нового концепта:</label>
             <div class="new-concept-id-options">
                 <label class="new-concept-radio">
-                    <input type="radio" name="id-generation-mode" value="auto" checked onchange="onIdGenerationModeChange()">
+                    <input type="radio" name="id-generation-mode" value="auto" onchange="onIdGenerationModeChange()">
                     Автоматически из label (замена пробелов на _)
                 </label>
                 <label class="new-concept-radio">
-                    <input type="radio" name="id-generation-mode" value="manual" onchange="onIdGenerationModeChange()">
+                    <input type="radio" name="id-generation-mode" value="manual" checked onchange="onIdGenerationModeChange()">
                     Ввести вручную
                 </label>
             </div>
-            <input type="text" id="new-concept-id" placeholder="ID будет сгенерирован из label" readonly>
+            <input type="text" id="new-concept-id" placeholder="Введите ID вручную">
             <small class="field-hint">URI: vad:{ID}</small>
         </div>
     `;
