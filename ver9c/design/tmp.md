@@ -1,0 +1,10 @@
+### tmp
+Создай в файле architecture.md архитектуру rdf-grapher ver9c, включающую все основные архитектурные элементы, в том числе, все основные окна (девять модулей), quadstore c указанием типов TriG. Кроме текстового описания добавь схемы в mermaid c указанием основных связей и информационных потоков между элементами архитектуры.
+Размести файл в папке https://github.com/bpmbpm/rdf-grapher/tree/main/ver9c/design/architecture  
+
+funSPARQLvaluesComunicaUpdate https://github.com/bpmbpm/rdf-grapher/issues/293
+
+Скриншоты https://github.com/bpmbpm/rdf-grapher/pull/304
+
+## 2
+Реализацию reasoner в папке 10_reasoner

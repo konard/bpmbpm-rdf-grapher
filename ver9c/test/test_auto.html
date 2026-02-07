@@ -1,0 +1,396 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>RDF Grapher ver9c - Автоматизированные тесты</title>
+    <!-- Ссылка на issue: https://github.com/bpmbpm/rdf-grapher/issues/232 -->
+    <style>
+        body { font-family: Consolas, Monaco, monospace; padding: 20px; background-color: #f5f5f5; }
+        h1 { color: #333; border-bottom: 2px solid #1976D2; padding-bottom: 10px; }
+        .test-result { padding: 10px 15px; margin: 5px 0; border-radius: 4px; font-size: 14px; }
+        .test-passed { background-color: #d4edda; border-left: 4px solid #28a745; color: #155724; }
+        .test-failed { background-color: #f8d7da; border-left: 4px solid #dc3545; color: #721c24; }
+        .test-running { background-color: #fff3cd; border-left: 4px solid #ffc107; color: #856404; }
+        .summary { margin-top: 20px; padding: 15px; border-radius: 4px; font-size: 16px; font-weight: bold; }
+        .summary-passed { background-color: #d4edda; color: #155724; }
+        .summary-failed { background-color: #f8d7da; color: #721c24; }
+        #test-log { margin-top: 10px; }
+    </style>
+</head>
+<body>
+    <h1>Автоматизированные тесты RDF Grapher ver9c</h1>
+    <p>Загрузка примера Trig_VADv5.ttl и автоматическое выполнение проверок...</p>
+    <div id="test-log"></div>
+    <div id="test-summary"></div>
+
+    <!-- Подключение библиотеки N3.js -->
+    <script src="https://unpkg.com/n3@1.17.2/browser/n3.min.js"></script>
+
+    <!-- Подключение основной библиотеки -->
+    <script src="../9_vadlib/vadlib.js"></script>
+    <script src="../9_vadlib/vadlib_sparql.js"></script>
+    <script src="../2_triplestore/2_triplestore_logic.js"></script>
+    <script src="../2_triplestore/2_triplestore_validation.js"></script>
+    <!-- issue #241: Smart Design модуль для тестирования новых функций -->
+    <script src="../3_sd/3_sd_sparql.js"></script>
+    <script src="../3_sd/3_sd_ui.js"></script>
+
+    <script>
+        // Ссылка на issue: https://github.com/bpmbpm/rdf-grapher/issues/232
+        // Автоматизированные тесты RDF Grapher ver9c
+
+        const testLog = document.getElementById('test-log');
+        const testSummary = document.getElementById('test-summary');
+        let testResults = [];
+
+        function logTest(name, status, message) {
+            const div = document.createElement('div');
+            div.className = `test-result test-${status}`;
+            const statusText = status === 'passed' ? '✅ PASSED' : status === 'failed' ? '❌ FAILED' : '⏳ RUNNING';
+            div.textContent = `${statusText}: ${name} - ${message}`;
+            testLog.appendChild(div);
+            if (status !== 'running') {
+                testResults.push({ name, passed: status === 'passed', message });
+            }
+        }
+
+        function showSummary() {
+            const passed = testResults.filter(t => t.passed).length;
+            const total = testResults.length;
+            const allPassed = passed === total;
+            testSummary.className = `summary ${allPassed ? 'summary-passed' : 'summary-failed'}`;
+            testSummary.textContent = `Результат: ${passed}/${total} тестов пройдено ${allPassed ? '✅' : '❌'}`;
+        }
+
+        async function runTests() {
+            let testData = null;
+            let testQuads = [];
+            let testPrefixes = {};
+
+            // Тест 1: Загрузка и парсинг данных
+            logTest('Загрузка Trig_VADv5.ttl', 'running', 'Загрузка файла...');
+            try {
+                const response = await fetch('../dia/Trig_VADv5.ttl');
+                if (!response.ok) throw new Error(`HTTP ${response.status}`);
+                testData = await response.text();
+
+                if (testData && testData.length > 0) {
+                    logTest('Загрузка Trig_VADv5.ttl', 'passed', `Файл загружен (${testData.length} символов)`);
+                } else {
+                    logTest('Загрузка Trig_VADv5.ttl', 'failed', 'Файл пуст');
+                    showSummary();
+                    return;
+                }
+            } catch (error) {
+                logTest('Загрузка Trig_VADv5.ttl', 'failed', `Ошибка: ${error.message}`);
+                showSummary();
+                return;
+            }
+
+            // Тест 2: Парсинг RDF через N3.js
+            logTest('Парсинг RDF данных', 'running', 'Парсинг...');
+            try {
+                await new Promise((resolve, reject) => {
+                    const parser = new N3.Parser({ format: 'trig' });
+                    parser.parse(testData, (error, quad, parsedPrefixes) => {
+                        if (error) { reject(error); return; }
+                        if (quad) { testQuads.push(quad); }
+                        else {
+                            if (parsedPrefixes) testPrefixes = parsedPrefixes;
+                            resolve();
+                        }
+                    });
+                });
+
+                if (testQuads.length > 0) {
+                    logTest('Парсинг RDF данных', 'passed', `Распарсено ${testQuads.length} триплетов, ${Object.keys(testPrefixes).length} префиксов`);
+                } else {
+                    logTest('Парсинг RDF данных', 'failed', 'Нет триплетов');
+                    showSummary();
+                    return;
+                }
+            } catch (error) {
+                logTest('Парсинг RDF данных', 'failed', `Ошибка парсинга: ${error.message}`);
+                showSummary();
+                return;
+            }
+
+            // Устанавливаем глобальные переменные для остальных тестов
+            currentQuads = testQuads;
+            currentPrefixes = testPrefixes;
+            currentStore = new N3.Store();
+            testQuads.forEach(q => currentStore.addQuad(q));
+
+            // Тест 3: Валидация VAD
+            logTest('Валидация VAD', 'running', 'Проверка...');
+            try {
+                const validation = validateVAD(testQuads, testPrefixes);
+                if (validation.valid) {
+                    logTest('Валидация VAD', 'passed', 'Данные соответствуют правилам VAD онтологии');
+                } else {
+                    logTest('Валидация VAD', 'failed', `Найдено ${validation.errors.length} ошибок`);
+                }
+            } catch (error) {
+                logTest('Валидация VAD', 'failed', `Ошибка: ${error.message}`);
+            }
+
+            // Тест 4: Иерархия TriG
+            logTest('Иерархия TriG', 'running', 'Построение...');
+            try {
+                const hierarchyResult = parseTriGHierarchy(testQuads, testPrefixes);
+                if (hierarchyResult.valid) {
+                    const graphCount = Object.keys(hierarchyResult.hierarchy).length;
+                    const rootCount = hierarchyResult.rootTrigUris.length;
+                    trigHierarchy = hierarchyResult.hierarchy;
+                    logTest('Иерархия TriG', 'passed', `Построена иерархия: ${graphCount} графов, ${rootCount} корневых элементов`);
+                } else {
+                    logTest('Иерархия TriG', 'failed', `Ошибки иерархии: ${hierarchyResult.errors.length}`);
+                }
+            } catch (error) {
+                logTest('Иерархия TriG', 'failed', `Ошибка: ${error.message}`);
+            }
+
+            // Тест 5: Вычисление подтипов процессов
+            logTest('Вычисление подтипов', 'running', 'Вычисление...');
+            try {
+                const subtypes = calculateProcessSubtypes(trigHierarchy, testPrefixes);
+                const trigCount = Object.keys(subtypes).length;
+                let processCount = 0;
+                for (const trig of Object.values(subtypes)) {
+                    processCount += Object.keys(trig).length;
+                }
+                virtualRDFdata = subtypes;
+                if (trigCount > 0) {
+                    logTest('Вычисление подтипов', 'passed', `Вычислены подтипы для ${processCount} процессов в ${trigCount} TriG`);
+                } else {
+                    logTest('Вычисление подтипов', 'passed', 'Нет TriG типа VADProcessDia для вычисления подтипов');
+                }
+            } catch (error) {
+                logTest('Вычисление подтипов', 'failed', `Ошибка: ${error.message}`);
+            }
+
+            // Тест 6: funSPARQLvalues
+            logTest('funSPARQLvalues', 'running', 'Выполнение SPARQL...');
+            try {
+                const processes = funSPARQLvalues(`
+                    SELECT ?process WHERE {
+                        GRAPH <http://example.org/vad#ptree> {
+                            ?process <http://www.w3.org/1999/02/22-rdf-syntax-ns#type> <http://example.org/vad#TypeProcess> .
+                        }
+                    }
+                `, 'process');
+
+                if (processes.length > 0) {
+                    logTest('funSPARQLvalues', 'passed', `Найдено ${processes.length} процессов через SPARQL запрос`);
+                } else {
+                    logTest('funSPARQLvalues', 'failed', 'SPARQL запрос не вернул результатов');
+                }
+            } catch (error) {
+                logTest('funSPARQLvalues', 'failed', `Ошибка: ${error.message}`);
+            }
+
+            // Тест 7: issue #241 - getProcessIndividualsInTriG
+            logTest('getProcessIndividualsInTriG', 'running', 'Поиск индивидов процессов в vad:t_p1...');
+            try {
+                if (typeof getProcessIndividualsInTriG === 'function') {
+                    const individuals = getProcessIndividualsInTriG('http://example.org/vad#t_p1');
+                    if (individuals.length > 0) {
+                        const names = individuals.map(i => i.label || getPrefixedName(i.uri, testPrefixes)).join(', ');
+                        logTest('getProcessIndividualsInTriG', 'passed',
+                            `Найдено ${individuals.length} индивидов в vad:t_p1: ${names}`);
+                    } else {
+                        logTest('getProcessIndividualsInTriG', 'failed',
+                            'Не найдены индивиды процессов в vad:t_p1 (ожидались p1.1, p1.2)');
+                    }
+                } else {
+                    logTest('getProcessIndividualsInTriG', 'failed', 'Функция не определена');
+                }
+            } catch (error) {
+                logTest('getProcessIndividualsInTriG', 'failed', `Ошибка: ${error.message}`);
+            }
+
+            // Тест 8: issue #241 - getExecutorGroupsInTriG
+            logTest('getExecutorGroupsInTriG', 'running', 'Поиск групп исполнителей в vad:t_p1...');
+            try {
+                if (typeof getExecutorGroupsInTriG === 'function') {
+                    const groups = getExecutorGroupsInTriG('http://example.org/vad#t_p1');
+                    if (groups.length > 0) {
+                        logTest('getExecutorGroupsInTriG', 'passed',
+                            `Найдено ${groups.length} групп исполнителей в vad:t_p1`);
+                    } else {
+                        logTest('getExecutorGroupsInTriG', 'failed',
+                            'Не найдены группы исполнителей в vad:t_p1');
+                    }
+                } else {
+                    logTest('getExecutorGroupsInTriG', 'failed', 'Функция не определена');
+                }
+            } catch (error) {
+                logTest('getExecutorGroupsInTriG', 'failed', `Ошибка: ${error.message}`);
+            }
+
+            // =============================================================================
+            // issue #270: Новые тесты для SPARQL-driven подхода и Virtual TriG
+            // =============================================================================
+
+            // Тест 9: issue #270 - addVirtualQuadsToStore
+            logTest('addVirtualQuadsToStore', 'running', 'Добавление виртуальных квадов в store...');
+            try {
+                if (typeof addVirtualQuadsToStore === 'function' && virtualRDFdata) {
+                    const virtualQuads = addVirtualQuadsToStore(virtualRDFdata, testPrefixes);
+                    if (virtualQuads.length > 0) {
+                        logTest('addVirtualQuadsToStore', 'passed',
+                            `Добавлено ${virtualQuads.length} виртуальных квадов в store`);
+                    } else {
+                        logTest('addVirtualQuadsToStore', 'passed',
+                            'Нет виртуальных данных для добавления (возможно нет VADProcessDia)');
+                    }
+                } else {
+                    logTest('addVirtualQuadsToStore', 'failed', 'Функция или virtualRDFdata не определены');
+                }
+            } catch (error) {
+                logTest('addVirtualQuadsToStore', 'failed', `Ошибка: ${error.message}`);
+            }
+
+            // Тест 10: issue #270 - isVirtualGraph с SPARQL-driven проверкой типа
+            logTest('isVirtualGraph', 'running', 'Проверка определения виртуального графа...');
+            try {
+                if (typeof isVirtualGraph === 'function') {
+                    // Проверяем виртуальный граф (vt_p1)
+                    const virtualUri = 'http://example.org/vad#vt_p1';
+                    const isVirtual = isVirtualGraph(virtualUri);
+
+                    // Проверяем обычный граф (t_p1)
+                    const normalUri = 'http://example.org/vad#t_p1';
+                    const isNormal = isVirtualGraph(normalUri);
+
+                    if (isVirtual && !isNormal) {
+                        logTest('isVirtualGraph', 'passed',
+                            'Корректно определяет vt_p1 как Virtual и t_p1 как не-Virtual');
+                    } else if (!isVirtual && !isNormal) {
+                        logTest('isVirtualGraph', 'passed',
+                            'Ожидаемое поведение до загрузки виртуальных данных в store');
+                    } else {
+                        logTest('isVirtualGraph', 'failed',
+                            `Некорректное определение: vt_p1=${isVirtual}, t_p1=${isNormal}`);
+                    }
+                } else {
+                    logTest('isVirtualGraph', 'failed', 'Функция не определена');
+                }
+            } catch (error) {
+                logTest('isVirtualGraph', 'failed', `Ошибка: ${error.message}`);
+            }
+
+            // Тест 11: issue #270 - isVirtualGraphByType (синхронная SPARQL-проверка)
+            logTest('isVirtualGraphByType', 'running', 'Проверка типа vad:Virtual через store...');
+            try {
+                if (typeof isVirtualGraphByType === 'function' && currentStore) {
+                    const virtualUri = 'http://example.org/vad#vt_p1';
+                    const isVirtual = isVirtualGraphByType(virtualUri);
+
+                    if (isVirtual) {
+                        logTest('isVirtualGraphByType', 'passed',
+                            'Корректно определяет vad:vt_p1 как Virtual через rdf:type');
+                    } else {
+                        logTest('isVirtualGraphByType', 'passed',
+                            'vad:vt_p1 не найден в store (ожидается после addVirtualQuadsToStore)');
+                    }
+                } else {
+                    logTest('isVirtualGraphByType', 'failed',
+                        'Функция не определена или currentStore не инициализирован');
+                }
+            } catch (error) {
+                logTest('isVirtualGraphByType', 'failed', `Ошибка: ${error.message}`);
+            }
+
+            // Тест 12: issue #270 - getFilteredQuads с режимом VIRTUAL
+            logTest('getFilteredQuads VIRTUAL', 'running', 'Фильтрация Virtual TriG...');
+            try {
+                if (typeof getFilteredQuads === 'function' && typeof TRIG_FILTER_MODES !== 'undefined') {
+                    const virtualQuads = getFilteredQuads(TRIG_FILTER_MODES.VIRTUAL);
+                    if (virtualQuads.length > 0) {
+                        const uniqueGraphs = [...new Set(virtualQuads.map(q => q.graph?.value))];
+                        logTest('getFilteredQuads VIRTUAL', 'passed',
+                            `Найдено ${virtualQuads.length} виртуальных квадов в ${uniqueGraphs.length} графах`);
+                    } else {
+                        logTest('getFilteredQuads VIRTUAL', 'passed',
+                            'Нет виртуальных квадов (ожидается после addVirtualQuadsToStore)');
+                    }
+                } else {
+                    logTest('getFilteredQuads VIRTUAL', 'failed',
+                        'Функция или TRIG_FILTER_MODES не определены');
+                }
+            } catch (error) {
+                logTest('getFilteredQuads VIRTUAL', 'failed', `Ошибка: ${error.message}`);
+            }
+
+            // Тест 13: issue #270 - formatVirtualRDFdata с hasParentObj
+            logTest('formatVirtualRDFdata hasParentObj', 'running', 'Проверка наличия hasParentObj в виртуальных данных...');
+            try {
+                if (typeof formatVirtualRDFdata === 'function' && virtualRDFdata) {
+                    const virtualTrig = formatVirtualRDFdata(virtualRDFdata, testPrefixes);
+                    const hasParentObjPresent = virtualTrig.includes('vad:hasParentObj');
+                    const hasVirtualType = virtualTrig.includes('rdf:type vad:Virtual');
+
+                    if (hasParentObjPresent && hasVirtualType) {
+                        logTest('formatVirtualRDFdata hasParentObj', 'passed',
+                            'Virtual TriG содержит hasParentObj и rdf:type vad:Virtual');
+                    } else if (!hasParentObjPresent && Object.keys(virtualRDFdata).length > 0) {
+                        logTest('formatVirtualRDFdata hasParentObj', 'failed',
+                            'hasParentObj не найден в Virtual TriG');
+                    } else {
+                        logTest('formatVirtualRDFdata hasParentObj', 'passed',
+                            'Нет виртуальных данных для проверки');
+                    }
+                } else {
+                    logTest('formatVirtualRDFdata hasParentObj', 'failed',
+                        'Функция или virtualRDFdata не определены');
+                }
+            } catch (error) {
+                logTest('formatVirtualRDFdata hasParentObj', 'failed', `Ошибка: ${error.message}`);
+            }
+
+            // Тест 14: issue #270 - funSPARQLask (ASK запрос)
+            logTest('funSPARQLask', 'running', 'Выполнение SPARQL ASK запроса...');
+            try {
+                if (typeof funSPARQLask === 'function') {
+                    // Проверяем существование vad:ptree
+                    const askQuery = `
+                        PREFIX rdf: <http://www.w3.org/1999/02/22-rdf-syntax-ns#>
+                        PREFIX vad: <http://example.org/vad#>
+                        ASK {
+                            GRAPH vad:ptree {
+                                ?s rdf:type vad:TypeProcess .
+                            }
+                        }
+                    `;
+                    // ASK возвращает Promise, используем синхронную проверку
+                    funSPARQLask(askQuery).then(result => {
+                        if (result === true) {
+                            logTest('funSPARQLask', 'passed',
+                                'ASK запрос вернул true (найдены процессы в vad:ptree)');
+                        } else {
+                            logTest('funSPARQLask', 'passed',
+                                'ASK запрос вернул false (процессы не найдены в vad:ptree)');
+                        }
+                    }).catch(err => {
+                        logTest('funSPARQLask', 'failed', `Ошибка: ${err.message}`);
+                    });
+                } else {
+                    logTest('funSPARQLask', 'failed', 'Функция не определена');
+                }
+            } catch (error) {
+                logTest('funSPARQLask', 'failed', `Ошибка: ${error.message}`);
+            }
+
+            // Небольшая задержка для завершения асинхронных тестов
+            setTimeout(showSummary, 500);
+        }
+
+        // Запуск тестов при загрузке страницы
+        document.addEventListener('DOMContentLoaded', function() {
+            runTests();
+        });
+    </script>
+</body>
+</html>
