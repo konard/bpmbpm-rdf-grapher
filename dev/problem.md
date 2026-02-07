@@ -14,4 +14,5 @@
 ### github
 - пишет, что Pull request successfully merged and closed, однако изменений в папке проекта нет
 - изменения в папке проекта есть, но на github pages старая версия  
-github долго обновляет измененый файл как ускорить его обновление на github pages
+github долго обновляет измененый файл как ускорить его обновление на github pages  
+[у GitHub снова сбой](https://www.reddit.com/r/github/comments/1b3wbn2/yes_github_is_having_an_outage_again/)
