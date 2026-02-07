@@ -1,0 +1,419 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>RDF Grapher ver9c - Quadstore Сценарий 1: Добавление концепта процесса</title>
+    <!-- Ссылка на issue: https://github.com/bpmbpm/rdf-grapher/issues/252 -->
+    <style>
+        body { font-family: Consolas, Monaco, monospace; padding: 20px; background-color: #f5f5f5; }
+        h1 { color: #333; border-bottom: 2px solid #1976D2; padding-bottom: 10px; }
+        h2 { color: #1976D2; margin-top: 30px; }
+        .step { padding: 10px 15px; margin: 5px 0; border-radius: 4px; font-size: 14px; }
+        .step-passed { background-color: #d4edda; border-left: 4px solid #28a745; color: #155724; }
+        .step-failed { background-color: #f8d7da; border-left: 4px solid #dc3545; color: #721c24; }
+        .step-running { background-color: #fff3cd; border-left: 4px solid #ffc107; color: #856404; }
+        .step-info { background-color: #d1ecf1; border-left: 4px solid #17a2b8; color: #0c5460; }
+        .summary { margin-top: 20px; padding: 15px; border-radius: 4px; font-size: 16px; font-weight: bold; }
+        .summary-passed { background-color: #d4edda; color: #155724; }
+        .summary-failed { background-color: #f8d7da; color: #721c24; }
+        .sparql-block { background-color: #263238; color: #EEFFFF; padding: 15px; border-radius: 4px; margin: 10px 0; font-size: 13px; white-space: pre-wrap; overflow-x: auto; }
+        .data-block { background-color: #FAFAFA; border: 1px solid #E0E0E0; padding: 15px; border-radius: 4px; margin: 10px 0; font-size: 13px; white-space: pre-wrap; overflow-x: auto; max-height: 400px; overflow-y: auto; }
+        #test-log { margin-top: 10px; }
+    </style>
+</head>
+<body>
+    <h1>Сценарий 1: Добавление концепта процесса в quadstore</h1>
+    <p>
+        Загрузка Trig_VADv5.ttl → формирование SPARQL INSERT → применение как Simple Triple → вывод ptree.
+    </p>
+    <div id="test-log"></div>
+    <div id="test-summary"></div>
+
+    <!-- Подключение библиотеки N3.js для парсинга и хранения RDF данных -->
+    <script src="https://unpkg.com/n3@1.17.2/browser/n3.min.js"></script>
+
+    <!-- Подключение основной библиотеки RDF Grapher (глобальные переменные, утилиты) -->
+    <script src="../../9_vadlib/vadlib.js"></script>
+    <!-- Подключение SPARQL-движка (funSPARQLvalues и вспомогательные функции) -->
+    <script src="../../9_vadlib/vadlib_sparql.js"></script>
+    <!-- Подключение логики триплстора (parseTriGHierarchy, validateVAD) -->
+    <script src="../../2_triplestore/2_triplestore_logic.js"></script>
+    <!-- Issue #252: Подключение SPARQL запросов модуля создания концептов -->
+    <script src="../../3_sd/3_sd_create_new_concept/3_sd_create_new_concept_sparql.js"></script>
+
+    <script>
+        // ============================================================================
+        // Сценарий 1: Добавление нового концепта процесса через SPARQL INSERT
+        // Ссылка на issue: https://github.com/bpmbpm/rdf-grapher/issues/252
+        // ============================================================================
+
+        const testLog = document.getElementById('test-log');
+        const testSummary = document.getElementById('test-summary');
+        let stepResults = [];
+
+        /**
+         * Логирует шаг сценария с указанием статуса
+         * @param {string} name - Название шага
+         * @param {string} status - Статус: 'passed', 'failed', 'running', 'info'
+         * @param {string} message - Описание результата
+         */
+        function logStep(name, status, message) {
+            const div = document.createElement('div');
+            div.className = `step step-${status}`;
+            const icons = { passed: '✅', failed: '❌', running: '⏳', info: 'ℹ️' };
+            div.textContent = `${icons[status] || ''} ${name}: ${message}`;
+            testLog.appendChild(div);
+            if (status === 'passed' || status === 'failed') {
+                stepResults.push({ name, passed: status === 'passed', message });
+            }
+        }
+
+        /**
+         * Выводит блок с SPARQL-запросом или данными в лог
+         * @param {string} title - Заголовок блока
+         * @param {string} content - Содержимое
+         * @param {string} type - Тип: 'sparql' или 'data'
+         */
+        function logBlock(title, content, type = 'data') {
+            const h = document.createElement('h2');
+            h.textContent = title;
+            testLog.appendChild(h);
+
+            const div = document.createElement('div');
+            div.className = type === 'sparql' ? 'sparql-block' : 'data-block';
+            div.textContent = content;
+            testLog.appendChild(div);
+        }
+
+        /**
+         * Показывает итоговую сводку по всем шагам
+         */
+        function showSummary() {
+            const passed = stepResults.filter(s => s.passed).length;
+            const total = stepResults.length;
+            const allPassed = passed === total;
+            testSummary.className = `summary ${allPassed ? 'summary-passed' : 'summary-failed'}`;
+            testSummary.textContent = `Результат сценария 1: ${passed}/${total} шагов пройдено ${allPassed ? '✅' : '❌'}`;
+        }
+
+        /**
+         * Извлекает содержимое конкретного графа (TriG) из массива квадов
+         * и возвращает текстовое представление в формате Simple Triple
+         * @param {string} graphUri - URI графа для извлечения
+         * @param {Array} quads - Массив RDF-квадов
+         * @param {Object} prefixes - Словарь префиксов
+         * @returns {string} - Текстовое представление содержимого графа
+         */
+        function getGraphContent(graphUri, quads, prefixes) {
+            // Фильтруем квады по указанному графу
+            const graphQuads = quads.filter(q => q.graph && q.graph.value === graphUri);
+            if (graphQuads.length === 0) return '(граф пуст)';
+
+            const graphLabel = getPrefixedName(graphUri, prefixes);
+            let output = `${graphLabel} {\n`;
+
+            // Выводим каждый триплет в формате Simple Triple (полная запись)
+            graphQuads.forEach(q => {
+                const s = getPrefixedName(q.subject.value, prefixes);
+                const p = getPrefixedName(q.predicate.value, prefixes);
+                // Литералы выводим в кавычках, URI — как prefixed name
+                const o = q.object.termType === 'Literal'
+                    ? `"${q.object.value}"`
+                    : getPrefixedName(q.object.value, prefixes);
+                output += `    ${s} ${p} ${o} .\n`;
+            });
+
+            output += '}';
+            return output;
+        }
+
+        /**
+         * Основная функция запуска сценария 1
+         * Последовательно выполняет 5 шагов:
+         * 1.1 Загрузка Trig_VADv5.ttl в quadstore
+         * 1.2 Формирование SPARQL INSERT DATA запроса
+         * 1.3 Вывод запроса в окно Result in SPARQL
+         * 1.4 Применение запроса (добавление квадов в store)
+         * 1.5 Вывод содержимого ptree
+         */
+        async function runScenario1() {
+            let testData = null;
+            let testQuads = [];
+            let testPrefixes = {};
+
+            // ================================================================
+            // Шаг 1.1: Загрузка Trig_VADv5.ttl в quadstore (N3.Store)
+            // ================================================================
+            // N3.Parser разбирает TriG-текст в массив квадов (subject, predicate, object, graph)
+            // N3.Store — in-memory quadstore, позволяющий хранить и искать квады
+            logStep('Шаг 1.1 — Загрузка Trig_VADv5.ttl', 'running', 'Загрузка и парсинг...');
+            try {
+                // Загружаем файл Trig_VADv5.ttl из корня проекта ver9c
+                const response = await fetch('../../dia/Trig_VADv5.ttl');
+                if (!response.ok) throw new Error(`HTTP ${response.status}`);
+                testData = await response.text();
+
+                // Парсим TriG с помощью N3.Parser
+                // N3.Parser возвращает квады асинхронно через callback
+                // Каждый квад содержит: subject, predicate, object, graph (NamedNode)
+                await new Promise((resolve, reject) => {
+                    const parser = new N3.Parser({ format: 'trig' });
+                    parser.parse(testData, (error, quad, parsedPrefixes) => {
+                        if (error) { reject(error); return; }
+                        if (quad) {
+                            // Каждый распарсенный квад добавляем в массив
+                            testQuads.push(quad);
+                        } else {
+                            // quad === null означает конец парсинга
+                            // parsedPrefixes содержит словарь {prefix: namespace}
+                            if (parsedPrefixes) testPrefixes = parsedPrefixes;
+                            resolve();
+                        }
+                    });
+                });
+
+                // Устанавливаем глобальные переменные приложения
+                // currentQuads — массив всех квадов, используется funSPARQLvalues
+                currentQuads = testQuads;
+                // currentPrefixes — словарь префиксов {rdf: 'http://...', vad: 'http://...'}
+                currentPrefixes = testPrefixes;
+                // currentStore — N3.Store, in-memory quadstore
+                // addQuad() добавляет квад в store для последующего поиска
+                currentStore = new N3.Store();
+                testQuads.forEach(q => currentStore.addQuad(q));
+
+                logStep('Шаг 1.1 — Загрузка Trig_VADv5.ttl', 'passed',
+                    `Загружено ${testQuads.length} квадов, ${Object.keys(testPrefixes).length} префиксов в quadstore (N3.Store)`);
+            } catch (error) {
+                logStep('Шаг 1.1 — Загрузка Trig_VADv5.ttl', 'failed', `Ошибка: ${error.message}`);
+                showSummary();
+                return;
+            }
+
+            // ================================================================
+            // Шаг 1.2: Формирование SPARQL INSERT DATA запроса
+            // ================================================================
+            // Создаём SPARQL запрос на добавление нового концепта процесса в vad:ptree
+            // Параметры нового концепта:
+            //   Id = vad:prosess_test
+            //   Label = «Тестовый процесс»
+            //   Родительский элемент = vad:p1
+            logStep('Шаг 1.2 — Формирование SPARQL INSERT', 'running', 'Создание запроса...');
+
+            // Формируем блок PREFIX — объявления пространств имён для SPARQL
+            const prefixLines = Object.entries(testPrefixes)
+                .map(([prefix, uri]) => `PREFIX ${prefix}: <${uri}>`)
+                .join('\n');
+
+            // SPARQL INSERT DATA — добавляет триплеты напрямую в указанный граф
+            // GRAPH vad:ptree — целевой именованный граф (Дерево Процессов)
+            // Каждая строка — отдельный триплет в формате Simple Triple:
+            //   subject predicate object .
+            const sparqlInsertQuery = `${prefixLines}
+
+INSERT DATA {
+    GRAPH vad:ptree {
+        vad:prosess_test rdf:type vad:TypeProcess .
+        vad:prosess_test rdfs:label "Тестовый процесс" .
+        vad:prosess_test dcterms:description "Тестовый процесс для проверки quadstore" .
+        vad:prosess_test vad:hasParentObj vad:p1 .
+    }
+}`;
+
+            logStep('Шаг 1.2 — Формирование SPARQL INSERT', 'passed',
+                'SPARQL INSERT DATA запрос сформирован для vad:prosess_test в vad:ptree');
+
+            // ================================================================
+            // Шаг 1.3: Вывод запроса в окно Result in SPARQL
+            // ================================================================
+            // В реальном приложении запрос отображается в textarea #result-sparql-query
+            // В тестовом сценарии выводим его в HTML-страницу
+            logBlock('Шаг 1.3 — Result in SPARQL (SPARQL-запрос)', sparqlInsertQuery, 'sparql');
+            logStep('Шаг 1.3 — Вывод SPARQL', 'passed', 'SPARQL запрос выведен в окно Result in SPARQL');
+
+            // ================================================================
+            // Шаг 1.4: Применение SPARQL INSERT запроса (как Simple Triple)
+            // ================================================================
+            // В реальном приложении кнопка «Применить как Simple Triple» вызывает
+            // smartDesignApply() → applyTripleToRdfInput(), которая вставляет
+            // триплеты в текстовое поле «RDF-данные».
+            //
+            // В тестовом сценарии мы применяем запрос программно:
+            // 1. Извлекаем триплеты из SPARQL запроса
+            // 2. Создаём квады через N3.DataFactory
+            // 3. Добавляем квады в quadstore (N3.Store) через store.addQuad()
+            // 4. Обновляем глобальный массив currentQuads
+            logStep('Шаг 1.4 — Применение SPARQL INSERT', 'running', 'Добавление триплетов в quadstore...');
+            try {
+                const quadsBefore = currentQuads.length;
+
+                // Целевой граф: vad:ptree (Дерево Процессов)
+                const ptreeGraphNode = N3.DataFactory.namedNode('http://example.org/vad#ptree');
+
+                // Создаём именованные узлы (NamedNode) для субъекта и объектов
+                const subjectNode = N3.DataFactory.namedNode('http://example.org/vad#prosess_test');
+                const parentNode = N3.DataFactory.namedNode('http://example.org/vad#p1');
+
+                // N3.DataFactory.namedNode() — создаёт RDF NamedNode (URI)
+                // N3.DataFactory.literal() — создаёт RDF Literal (строковое значение)
+
+                // Триплет 1: vad:prosess_test rdf:type vad:TypeProcess
+                // Определяет тип нового объекта — концепт процесса
+                const quad1 = N3.DataFactory.quad(
+                    subjectNode,
+                    N3.DataFactory.namedNode('http://www.w3.org/1999/02/22-rdf-syntax-ns#type'),
+                    N3.DataFactory.namedNode('http://example.org/vad#TypeProcess'),
+                    ptreeGraphNode
+                );
+
+                // Триплет 2: vad:prosess_test rdfs:label "Тестовый процесс"
+                // Человекочитаемая метка процесса
+                const quad2 = N3.DataFactory.quad(
+                    subjectNode,
+                    N3.DataFactory.namedNode('http://www.w3.org/2000/01/rdf-schema#label'),
+                    N3.DataFactory.literal('Тестовый процесс'),
+                    ptreeGraphNode
+                );
+
+                // Триплет 3: vad:prosess_test dcterms:description "Тестовый процесс для проверки quadstore"
+                // Описание процесса
+                const quad3 = N3.DataFactory.quad(
+                    subjectNode,
+                    N3.DataFactory.namedNode('http://purl.org/dc/terms/description'),
+                    N3.DataFactory.literal('Тестовый процесс для проверки quadstore'),
+                    ptreeGraphNode
+                );
+
+                // Триплет 4: vad:prosess_test vad:hasParentObj vad:p1
+                // Указывает родительский элемент в иерархии процессов
+                const quad4 = N3.DataFactory.quad(
+                    subjectNode,
+                    N3.DataFactory.namedNode('http://example.org/vad#hasParentObj'),
+                    parentNode,
+                    ptreeGraphNode
+                );
+
+                // Добавляем все 4 квада в quadstore (N3.Store)
+                // store.addQuad() — метод N3.Store для добавления квада в хранилище
+                const newQuads = [quad1, quad2, quad3, quad4];
+                newQuads.forEach(q => {
+                    currentStore.addQuad(q);  // Добавляем в N3.Store
+                    currentQuads.push(q);     // Добавляем в глобальный массив
+                });
+
+                const quadsAfter = currentQuads.length;
+
+                logStep('Шаг 1.4 — Применение SPARQL INSERT', 'passed',
+                    `Добавлено ${quadsAfter - quadsBefore} квадов в quadstore. Всего квадов: ${quadsAfter}`);
+            } catch (error) {
+                logStep('Шаг 1.4 — Применение SPARQL INSERT', 'failed', `Ошибка: ${error.message}`);
+                showSummary();
+                return;
+            }
+
+            // ================================================================
+            // Шаг 1.5: Вывод содержимого ptree
+            // ================================================================
+            // Проверяем, что новый концепт vad:prosess_test успешно добавлен в ptree
+            // Используем funSPARQLvalues() для выполнения SELECT-запроса
+            logStep('Шаг 1.5 — Вывод ptree', 'running', 'Извлечение содержимого ptree...');
+            try {
+                // Выводим полное содержимое графа vad:ptree в формате Simple Triple
+                const ptreeContent = getGraphContent(
+                    'http://example.org/vad#ptree',
+                    currentQuads,
+                    currentPrefixes
+                );
+                logBlock('Шаг 1.5 — Содержимое vad:ptree после INSERT', ptreeContent, 'data');
+
+                // Проверяем наличие нового концепта через N3.Store
+                // store.getQuads(subject, predicate, object, graph) — поиск квадов по шаблону
+                // Параметры null означают «любое значение» (wildcard)
+                const foundQuads = currentStore.getQuads(
+                    N3.DataFactory.namedNode('http://example.org/vad#prosess_test'),
+                    N3.DataFactory.namedNode('http://www.w3.org/2000/01/rdf-schema#label'),
+                    null,
+                    N3.DataFactory.namedNode('http://example.org/vad#ptree')
+                );
+
+                if (foundQuads.length > 0) {
+                    logStep('Шаг 1.5 — Вывод ptree', 'passed',
+                        `Новый концепт vad:prosess_test найден в ptree. Label: "${foundQuads[0].object.value}"`);
+                } else {
+                    logStep('Шаг 1.5 — Вывод ptree', 'failed',
+                        'Новый концепт vad:prosess_test НЕ найден в ptree');
+                }
+
+                // Дополнительно: выводим все процессы в ptree через funSPARQLvalues
+                // Примечание: funSPARQLvalues поддерживает только prefixed names (vad:xxx),
+                // а НЕ полные URI в угловых скобках (<http://...>)
+                const allProcesses = funSPARQLvalues(`
+                    SELECT ?process WHERE {
+                        GRAPH vad:ptree {
+                            ?process rdf:type vad:TypeProcess .
+                        }
+                    }
+                `, 'process');
+
+                const processList = allProcesses.map(p => getPrefixedName(p.uri, currentPrefixes)).join(', ');
+                logStep('Все процессы в ptree', 'info',
+                    `${allProcesses.length} процессов: ${processList}`);
+
+            } catch (error) {
+                logStep('Шаг 1.5 — Вывод ptree', 'failed', `Ошибка: ${error.message}`);
+            }
+
+            // ================================================================
+            // Шаг 1.6: Проверка SPARQL-запросов из NEW_CONCEPT_SPARQL
+            // Issue #252: Тестируем, что SPARQL запросы из отдельного файла доступны
+            // ================================================================
+            logStep('Шаг 1.6 — NEW_CONCEPT_SPARQL', 'running', 'Проверка доступности SPARQL запросов...');
+            try {
+                // Проверяем, что NEW_CONCEPT_SPARQL определён (из 3_sd_create_new_concept_sparql.js)
+                if (typeof NEW_CONCEPT_SPARQL === 'undefined') {
+                    throw new Error('NEW_CONCEPT_SPARQL не определён');
+                }
+
+                // Проверяем наличие основных методов
+                const methods = [
+                    'GET_PREDICATES_FROM_TECH_OBJECT',
+                    'GET_AUTO_GENERATED_PREDICATES',
+                    'GET_OBJECTS_BY_TYPE_IN_GRAPH',
+                    'CHECK_ID_EXISTS',
+                    'GENERATE_INSERT_QUERY'
+                ];
+
+                const missingMethods = methods.filter(m => typeof NEW_CONCEPT_SPARQL[m] === 'undefined');
+                if (missingMethods.length > 0) {
+                    throw new Error(`Отсутствуют методы: ${missingMethods.join(', ')}`);
+                }
+
+                // Тестируем GENERATE_INSERT_QUERY
+                const testQuery = NEW_CONCEPT_SPARQL.GENERATE_INSERT_QUERY(
+                    'vad:ptree',
+                    [{ predicate: 'rdf:type', object: 'vad:TypeProcess', isLiteral: false }],
+                    'vad:test',
+                    { 'rdf': 'http://www.w3.org/1999/02/22-rdf-syntax-ns#', 'vad': 'http://example.org/vad#' }
+                );
+
+                if (!testQuery.includes('INSERT DATA') || !testQuery.includes('vad:ptree')) {
+                    throw new Error('GENERATE_INSERT_QUERY не генерирует корректный запрос');
+                }
+
+                logStep('Шаг 1.6 — NEW_CONCEPT_SPARQL', 'passed',
+                    `Все ${methods.length} методов NEW_CONCEPT_SPARQL доступны и работают`);
+            } catch (error) {
+                logStep('Шаг 1.6 — NEW_CONCEPT_SPARQL', 'failed', `Ошибка: ${error.message}`);
+            }
+
+            showSummary();
+        }
+
+        // Запуск сценария при загрузке страницы
+        document.addEventListener('DOMContentLoaded', function() {
+            runScenario1();
+        });
+    </script>
+</body>
+</html>
