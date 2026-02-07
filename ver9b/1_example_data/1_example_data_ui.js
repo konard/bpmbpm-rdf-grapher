@@ -130,7 +130,7 @@ function loadSelectedExample() {
     }
 
     const filename = selectEl.value;
-    const displayName = filename.replace('.ttl', '');
+    const displayName = filename;
 
     // Все файлы в папке dia/ - это TriG формат с режимом vad-trig
     loadExampleFromFile('dia/' + filename, displayName, 'trig', 'vad-trig');
@@ -169,7 +169,7 @@ async function scanDiaFolder() {
             const option = document.createElement('option');
             const trimmedFilename = filename.trim();
             option.value = trimmedFilename;
-            option.textContent = trimmedFilename.replace('.ttl', '');
+            option.textContent = trimmedFilename;
             selectEl.appendChild(option);
         });
 

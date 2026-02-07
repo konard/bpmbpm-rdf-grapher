@@ -3,7 +3,7 @@
     "_description": "Конфигурация состояния окон при старте программы. Список примеров перенесён в dia/files.txt (issue #284)",
     "windows": {
         "1_example_data": {
-            "title": "Загрузить пример RDF данных",
+            "title": "Загрузить пример RDF-данных (папка /dia)",
             "collapsed": false
         },
         "2_triplestore": {
