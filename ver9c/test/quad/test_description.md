@@ -64,7 +64,51 @@ INSERT DATA {
 
 ---
 
-### 3. test_mixed_triple.html
+### 3. test_individ.html
+
+**Сценарий Individ: 4 фазы**
+
+> Issue #319, PR #320. Два режима hasNext: issue #313, PR #314.
+
+Тестирует полный цикл создания и удаления **индивидов процесса и исполнителя** в соответствии с [io_concept_individ_v4.md](../../doc/algorithm/io_concept_individ_v4.md).
+
+| Фаза | Описание | Операция |
+|------|----------|----------|
+| 1 | Создание индивида процесса в vad:t_p1 | INSERT DATA (с hasNext на существующий) |
+| 2 | Создание индивида исполнителя | INSERT DATA (vad:includes в ExecutorGroup) |
+| 3 | Удаление индивида исполнителя | DELETE DATA (vad:includes) |
+| 4 | Удаление индивида процесса (3 этапа) | DELETE WHERE (исходящие, ExecutorGroup, входящие hasNext) |
+
+**Два режима vad:hasNext (issue #313):**
+- **"vad:hasNext на существующий"** (по умолчанию): справочник содержит только индивиды, уже добавленные в выбранный TriG
+- **"vad:hasNext на любой"**: справочник содержит все концепты процессов из ptree
+
+**Структура индивида процесса (vad:t_p1):**
+```sparql
+INSERT DATA {
+    GRAPH vad:t_p1 {
+        vad:p2.1 vad:isSubprocessTrig vad:t_p1 ;
+            vad:hasExecutor vad:ExecutorGroup_p2.1 ;
+            vad:hasNext vad:p1.1 .  # hasNext на существующий индивид
+
+        vad:ExecutorGroup_p2.1 rdf:type vad:ExecutorGroup ;
+            rdfs:label "Группа исполнителей процесса p2.1" .
+    }
+}
+```
+
+**Структура индивида исполнителя:**
+```sparql
+INSERT DATA {
+    GRAPH vad:t_p1 {
+        vad:ExecutorGroup_p2.1 vad:includes vad:Executor3 .
+    }
+}
+```
+
+---
+
+### 4. test_mixed_triple.html
 
 **Сценарий Mixed Triple: 8 фаз**
 
@@ -120,6 +164,21 @@ SPARQL Query → Comunica.queryVoid() → N3.Store → currentQuads
 - `rdfs:label "Название исполнителя"`
 - `vad:hasParentObj vad:Org-structure` (родительская организация)
 
+### Структура индивидов (io_concept_individ_v4.md)
+
+**Индивид процесса (vad:VADProcessDia TriG):**
+- `vad:isSubprocessTrig <TRIG_URI>` — связь с TriG схемой
+- `vad:hasExecutor <ExecutorGroup_URI>` — связь с группой исполнителей
+- `vad:hasNext <другой_индивид>` — связь со следующим элементом (опционально)
+
+**ExecutorGroup (автоматически создаётся при создании индивида процесса):**
+- `rdf:type vad:ExecutorGroup`
+- `rdfs:label "Группа исполнителей процесса {id}"`
+- `vad:includes <Executor_URI>` — связи с исполнителями (добавляются при создании индивида исполнителя)
+
+**Индивид исполнителя:**
+- Добавляет `vad:includes` связь в существующий ExecutorGroup
+
 ---
 
 ## Папка old/
@@ -140,6 +199,11 @@ SPARQL Query → Comunica.queryVoid() → N3.Store → currentQuads
 ## Ссылки
 
 - [Issue #256 - ver9c_1alg4test](https://github.com/bpmbpm/rdf-grapher/issues/256)
+- [Issue #313 - hasNext modes](https://github.com/bpmbpm/rdf-grapher/issues/313) — два режима vad:hasNext
+- [Issue #319 - test_individ](https://github.com/bpmbpm/rdf-grapher/issues/319) — тест индивидов
 - [PR #255 - refactor: use Comunica for SPARQL UPDATE](https://github.com/bpmbpm/rdf-grapher/pull/255)
+- [PR #314 - hasNext mode toggle](https://github.com/bpmbpm/rdf-grapher/pull/314)
+- [PR #320 - test_individ.html](https://github.com/bpmbpm/rdf-grapher/pull/320)
+- [io_concept_individ_v4.md](../../doc/algorithm/io_concept_individ_v4.md) — алгоритмы создания/удаления индивидов
 - [Документация Comunica](https://comunica.dev/)
 - [Документация N3.js](https://github.com/rdfjs/N3.js)
