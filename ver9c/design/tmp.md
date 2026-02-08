@@ -8,4 +8,6 @@ funSPARQLvaluesComunicaUpdate https://github.com/bpmbpm/rdf-grapher/issues/293
 
 ## 2
 Реализацию reasoner в папке 11_reasoner  
-типы схем - структурные
+типы схем - структурные, комментариии (2 шт), Help в файле, но с привязкой к тематической папке  
+proj вкладка - раобраться
+
