@@ -14,3 +14,6 @@ https://github.com/bpmbpm/rdf-grapher/pull/325
 - Переименован фильтр Quadstore с «Virtual» на «Virtual TriG (виртуальный TriG сохраняемых параметров)».
 - Обновление документации: файл 10_virtualTriG.md с указанием проблемы ver9c_1rea1c  #324
 - Создан файл quadstore_io_v3.md, документирующий завершенную миграцию на единый quadstore.
+
+Пошел в отказ: https://github.com/bpmbpm/rdf-grapher/pull/327
+
