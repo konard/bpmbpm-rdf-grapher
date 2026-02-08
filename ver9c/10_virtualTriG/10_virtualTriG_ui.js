@@ -188,8 +188,8 @@ async function updateVirtualTriGSection(nodeUri) {
         oldSection.remove();
     }
 
-    // Проверяем, является ли узел процессом
-    const types = nodeTypesCache[nodeUri] || [];
+    // issue #334: Используем getNodeTypes() вместо nodeTypesCache
+    const types = getNodeTypes(nodeUri);
     const isProcess = types.some(t =>
         t === 'vad:TypeProcess' ||
         t === 'http://example.org/vad#TypeProcess'

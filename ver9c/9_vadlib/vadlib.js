@@ -150,8 +150,8 @@ const TYPE_PREDICATE_MAP = {
 let currentSvgElement = null;
 let currentScale = 1.0;
 let currentPrefixes = {};
-let nodeTypesCache = {};
-let nodeSubtypesCache = {};
+// issue #334: nodeTypesCache удалён - заменён на getNodeTypes() функцию
+// issue #334: nodeSubtypesCache удалён - заменён на getNodeSubtypes() функцию
 // issue #324: currentQuads удалён - все операции через currentStore (N3.Store)
 let nodeLabelToUri = {};
 let selectedNodeElement = null;
@@ -170,7 +170,7 @@ let activeFilters = [...getFilterConfig(Mode).hiddenPredicates];
 let allPredicates = [];
 let trigHierarchy = {};
 let selectedTrigUri = null;
-let allTrigGraphs = [];
+// issue #334: allTrigGraphs удалён - заменён на getAllTrigGraphs() функцию
 // issue #301: Navigation history for diagram navigation (back/forward like browser)
 let diagramNavigationHistory = [];
 let diagramNavigationIndex = -1;
@@ -325,13 +325,115 @@ function isRtreePredicate(predicateUri) {
     );
 }
 
+// ============================================================================
+// SPARQL-DRIVEN ФУНКЦИИ ДЛЯ РАБОТЫ С ТИПАМИ И ПОДТИПАМИ
+// issue #334: Замена nodeTypesCache, nodeSubtypesCache, allTrigGraphs на SPARQL-запросы
+// ============================================================================
+
+/**
+ * issue #334: Получает типы узла через currentStore.getQuads()
+ * Замена nodeTypesCache[subjectUri] на SPARQL-driven подход
+ *
+ * @param {string} subjectUri - URI субъекта
+ * @returns {Array<string>} - Массив типов (и полные URI, и prefixed names)
+ */
+function getNodeTypes(subjectUri) {
+    if (!currentStore || !subjectUri) return [];
+
+    const RDF_TYPE = 'http://www.w3.org/1999/02/22-rdf-syntax-ns#type';
+
+    // Получаем все rdf:type квады для данного субъекта
+    const quads = currentStore.getQuads(
+        subjectUri,
+        RDF_TYPE,
+        null,
+        null
+    );
+
+    const types = [];
+    quads.forEach(quad => {
+        const typeUri = quad.object.value;
+        // Добавляем полный URI
+        if (!types.includes(typeUri)) {
+            types.push(typeUri);
+        }
+        // Добавляем prefixed name
+        const prefixedType = getPrefixedName(typeUri, currentPrefixes);
+        if (prefixedType !== typeUri && !types.includes(prefixedType)) {
+            types.push(prefixedType);
+        }
+    });
+
+    return types;
+}
+
+/**
+ * issue #334: Получает подтипы процесса через currentStore.getQuads()
+ * Замена nodeSubtypesCache[subjectUri] на SPARQL-driven подход
+ *
+ * @param {string} subjectUri - URI субъекта (процесса)
+ * @returns {Array<string>} - Массив подтипов (и полные URI, и prefixed names)
+ */
+function getNodeSubtypes(subjectUri) {
+    if (!currentStore || !subjectUri) return [];
+
+    const PROCESS_SUBTYPE = 'http://example.org/vad#processSubtype';
+
+    // Получаем все vad:processSubtype квады для данного субъекта
+    const quads = currentStore.getQuads(
+        subjectUri,
+        PROCESS_SUBTYPE,
+        null,
+        null
+    );
+
+    const subtypes = [];
+    quads.forEach(quad => {
+        const subtypeUri = quad.object.value;
+        // Добавляем полный URI
+        if (!subtypes.includes(subtypeUri)) {
+            subtypes.push(subtypeUri);
+        }
+        // Добавляем prefixed name
+        const prefixedSubtype = getPrefixedName(subtypeUri, currentPrefixes);
+        if (prefixedSubtype !== subtypeUri && !subtypes.includes(prefixedSubtype)) {
+            subtypes.push(prefixedSubtype);
+        }
+    });
+
+    return subtypes;
+}
+
+/**
+ * issue #334: Получает все уникальные графы из currentStore
+ * Замена allTrigGraphs на SPARQL-driven подход
+ *
+ * @returns {Array<string>} - Массив URI всех графов
+ */
+function getAllTrigGraphs() {
+    if (!currentStore) return [];
+
+    const quads = currentStore.getQuads(null, null, null, null);
+    const graphSet = new Set();
+
+    quads.forEach(quad => {
+        if (quad.graph && quad.graph.value) {
+            graphSet.add(quad.graph.value);
+        }
+    });
+
+    return Array.from(graphSet);
+}
+
 function isSubjectVadProcess(subjectUri) {
-    const types = nodeTypesCache[subjectUri] || [];
+    // issue #334: Используем getNodeTypes() вместо nodeTypesCache
+    const types = getNodeTypes(subjectUri);
     return types.some(t => t === 'vad:TypeProcess' || t === 'http://example.org/vad#TypeProcess');
 }
 
 function isSubjectVadExecutor(subjectUri) {
-    const types = nodeTypesCache[subjectUri] || [];
+    // issue #334: Используем getNodeTypes() вместо nodeTypesCache
+    const types = getNodeTypes(subjectUri);
     return types.some(t => t === 'vad:TypeExecutor' || t === 'http://example.org/vad#TypeExecutor');
 }
 

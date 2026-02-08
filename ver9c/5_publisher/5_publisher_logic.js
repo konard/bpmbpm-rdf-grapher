@@ -376,9 +376,7 @@
                 const originalMode = currentMode;
                 currentMode = 'vad';  // Используем логику VAD для рендеринга
 
-                // issue #324: Не используем currentQuads, работаем напрямую с графовыми квадами
-                // Передаём trigUri в rdfToDot для правильного обновления кэша подтипов
-                // внутри rdfToDotVAD после вызова buildNodeTypesCache
+                // issue #334: getNodeTypes() и getNodeSubtypes() работают напрямую с currentStore
                 const dotCode = rdfToDot(filteredQuads, currentPrefixes, trigUri);
                 currentDotCode = dotCode;
                 console.log('VAD TriG - Сгенерированный DOT-код:', dotCode);
@@ -747,9 +745,7 @@
                 return rdfToDotVAD(quads, prefixes, trigUri);
             }
 
-            // issue #324: Используем currentStore вместо currentQuads
-            const allQuads = currentStore ? currentStore.getQuads(null, null, null, null) : [];
-            buildNodeTypesCache(allQuads, prefixes);
+            // issue #334: buildNodeTypesCache удалён - используем getNodeTypes() напрямую
             nodeLabelToUri = {};
 
             const nodes = new Map();
@@ -833,15 +829,8 @@
         }
 
         function rdfToDotVAD(quads, prefixes = {}, trigUri = null) {
-            // issue #324: Используем currentStore.getQuads() вместо currentQuads
-            const allQuads = currentStore ? currentStore.getQuads(null, null, null, null) : [];
-            buildNodeTypesCache(allQuads, prefixes);
-
-            // issue #324: Обновляем кэш подтипов из store (вместо virtualRDFdata)
-            // buildNodeTypesCache очищает nodeSubtypesCache, поэтому нужно заново добавить виртуальные данные
-            if (trigUri) {
-                updateSubtypesCacheFromVirtualData(trigUri);
-            }
+            // issue #334: buildNodeTypesCache и updateSubtypesCacheFromVirtualData удалены
+            // Теперь используются getNodeTypes() и getNodeSubtypes() из vadlib.js
 
             nodeLabelToUri = {};
 
@@ -885,8 +874,8 @@
                 const predicateLabel = getPrefixedName(predicateUri, prefixes);
                 const objectValue = quad.object.value;
 
-                // Проверяем типы
-                const subjectTypes = nodeTypesCache[subjectUri] || [];
+                // issue #334: Используем getNodeTypes() вместо nodeTypesCache
+                const subjectTypes = getNodeTypes(subjectUri);
                 const isProcess = subjectTypes.some(t =>
                     t === 'vad:TypeProcess' || t === 'http://example.org/vad#TypeProcess'
                 );
@@ -967,7 +956,8 @@
                 const predicateLabel = getPrefixedName(predicateUri, prefixes);
                 const objectValue = quad.object.value;
 
-                const subjectTypes = nodeTypesCache[subjectUri] || [];
+                // issue #334: Используем getNodeTypes() вместо nodeTypesCache
+                const subjectTypes = getNodeTypes(subjectUri);
                 const isExecutor = subjectTypes.some(t =>
                     t === 'vad:TypeExecutor' || t === 'http://example.org/vad#TypeExecutor'
                 );
@@ -1120,9 +1110,9 @@
                 }
                 htmlLabel += '>';
 
-                // Определяем стиль узла на основе vad:processSubtype из nodeSubtypesCache
+                // issue #334: Используем getNodeSubtypes() вместо nodeSubtypesCache
                 // Стили определяются в VADNodeStyles и загружаются из TTL файла при старте
-                const nodeSubtypes = nodeSubtypesCache[uri] || [];
+                const nodeSubtypes = getNodeSubtypes(uri);
 
                 // Ищем подходящий стиль на основе подтипа процесса
                 let nodeStyle = null;
@@ -1321,9 +1311,7 @@
         }
 
         function rdfToDotAggregation(quads, prefixes = {}) {
-            // issue #324: Используем currentStore вместо currentQuads
-            const allQuads = currentStore ? currentStore.getQuads(null, null, null, null) : [];
-            buildNodeTypesCache(allQuads, prefixes);
+            // issue #334: buildNodeTypesCache удалён - используем getNodeTypes() напрямую
             nodeLabelToUri = {};
 
             const nodes = new Map();
