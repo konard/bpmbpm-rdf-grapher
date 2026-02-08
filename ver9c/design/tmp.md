@@ -12,4 +12,4 @@ funSPARQLvaluesComunicaUpdate https://github.com/bpmbpm/rdf-grapher/issues/293
 proj вкладка - раобраться
 
 В последствии сделать режим без Virtual, только на Reasoner (Virtual - это лишь как кэш)
-
+Правая кнопка мыши на объекте схемы или treeview.
