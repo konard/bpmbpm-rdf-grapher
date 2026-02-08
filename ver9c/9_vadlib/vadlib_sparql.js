@@ -291,12 +291,23 @@
          * Поддерживает UNION, OPTIONAL, FILTER, BIND и другие конструкции SPARQL,
          * которые не поддерживаются в funSPARQLvalues.
          *
+         * issue #328: Исправлено - теперь возвращает полные bindings как объекты
+         * со всеми SELECT-переменными в качестве ключей. Это необходимо для
+         * правильной работы Virtual TriG и Reasoning модулей.
+         *
          * @param {string} sparqlQuery - SPARQL SELECT запрос
-         * @param {string} variableName - Имя переменной для извлечения (без '?')
-         * @returns {Promise<Array<{uri: string, label: string}>>} Массив результатов
+         * @param {string|Object} variableNameOrPrefixes - Имя переменной для дедупликации (без '?') или словарь префиксов
+         * @returns {Promise<Array<Object>>} Массив результатов - объектов со всеми переменными
          */
-        async function funSPARQLvaluesComunica(sparqlQuery, variableName = 'value') {
+        async function funSPARQLvaluesComunica(sparqlQuery, variableNameOrPrefixes = 'value') {
             const results = [];
+
+            // issue #328: Определяем, передан ли словарь префиксов или имя переменной
+            // Если передан объект (не строка), это префиксы - используем 'value' по умолчанию
+            let variableName = 'value';
+            if (typeof variableNameOrPrefixes === 'string') {
+                variableName = variableNameOrPrefixes;
+            }
 
             // issue #322: Используем currentStore как единственный источник данных
             if (!currentStore) {
@@ -332,23 +343,27 @@
 
                 const bindings = await bindingsStream.toArray();
 
-                const seen = new Set();
+                // issue #328: Возвращаем полные bindings как объекты
+                // Каждый binding преобразуем в объект с именами переменных как ключами
                 bindings.forEach(binding => {
-                    // Получаем значение основной переменной
-                    const mainTerm = binding.get(variableName);
-                    if (!mainTerm) return;
+                    const resultObj = {};
 
-                    const value = mainTerm.value;
-                    if (seen.has(value)) return;
-                    seen.add(value);
+                    // Извлекаем все переменные из binding
+                    for (const [variable, term] of binding) {
+                        // variable.value содержит имя переменной без '?'
+                        const varName = variable.value;
+                        resultObj[varName] = term.value;
+                    }
 
-                    // Получаем label если есть
-                    const labelTerm = binding.get('label');
-                    const label = labelTerm
-                        ? labelTerm.value
-                        : getPrefixedName(value, currentPrefixes);
+                    // Для обратной совместимости добавляем uri и label
+                    // если есть основная переменная
+                    if (resultObj[variableName]) {
+                        resultObj.uri = resultObj[variableName];
+                        resultObj.label = resultObj.label ||
+                            getPrefixedName(resultObj[variableName], currentPrefixes);
+                    }
 
-                    results.push({ uri: value, label: label });
+                    results.push(resultObj);
                 });
 
             } catch (error) {

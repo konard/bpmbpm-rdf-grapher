@@ -2231,9 +2231,9 @@
             background-color: #1976D2;
         }
 
-        /* Стили для кнопки "virtualRDFdata" */
+        /* Стили для кнопки "Virtual TriG" - issue #328: унифицированный цвет */
         .virtual-rdf-btn {
-            background-color: #9C27B0;
+            background-color: #0288D1;
             padding: 8px 15px !important;
             font-size: 13px !important;
             margin-left: 5px;
@@ -2241,7 +2241,7 @@
         }
 
         .virtual-rdf-btn:hover {
-            background-color: #7B1FA2;
+            background-color: #0277BD;
         }
 
         /* issue #266: Removed duplicate rdf-input-header styles - see main definition above */
