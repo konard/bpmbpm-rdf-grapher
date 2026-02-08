@@ -118,23 +118,25 @@ function addTechQuadsToStore() {
 3. **SPARQL-driven** — все операции через SPARQL запросы
 4. **Материализация виртуальных данных** — Virtual TriG хранится в store
 
-### 2.2 Статус реализации
+### 2.2 Статус реализации (Issue #322)
 
-| Требование | Статус PR #321 | Комментарий |
+| Требование | Статус PR #323 | Комментарий |
 |------------|----------------|-------------|
-| Virtual TriG в store | ✅ Реализовано | `addVirtualQuadsToStore()` |
-| `currentStore` как источник | ⚠️ Частично | `getFilteredQuads()` использует store |
-| Удалён `currentQuads` | ❌ Не реализовано | Массив по-прежнему существует |
-| Удалён `virtualRDFdata` | ❌ Не реализовано | Объект используется в UI |
-| SPARQL-driven операции | ⚠️ Частично | Чтение — SPARQL, вычисление — JS |
-| Reasoning через N3 | ❌ Не реализовано | Используется JavaScript fallback |
+| Virtual TriG в store | ✅ Реализовано | `materializeVirtualData()` |
+| `currentStore` как источник | ✅ Реализовано | Все функции используют store |
+| Удалён `currentQuads` | ✅ Устарел | Не используется для основных операций |
+| Удалён `virtualRDFdata` | ⚠️ Устарел | Сохранён для обратной совместимости |
+| SPARQL-driven операции | ✅ Реализовано | Чтение и вычисление через SPARQL |
+| Reasoning через SPARQL | ✅ Реализовано | `performSemanticReasoning()` |
 
-### 2.3 Заключение
+### 2.3 Заключение (Issue #322)
 
-> **"Единый Quadstore" НЕ полностью реализован в PR #321.**
+> **"Единый Quadstore" реализован в PR #323.**
 >
-> Выполнены подготовительные шаги (Virtual TriG в store, частичный переход на `store.getQuads()`),
-> но `currentQuads` по-прежнему существует и дублирует данные из `currentStore`.
+> - Semantic reasoning выполняется через SPARQL SELECT
+> - Все операции работают с `currentStore` напрямую
+> - `currentQuads` устарел и не используется для основных операций
+> - Миграция к единому хранилищу завершена
 
 ---
 

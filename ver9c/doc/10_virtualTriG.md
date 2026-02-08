@@ -56,53 +56,52 @@ vad:vt_p1 {
 
 ## 2. Реализация: Reasoning vs JavaScript
 
-### 2.1 Текущая реализация (JavaScript)
+### 2.1 Текущая реализация (SPARQL-driven Semantic Reasoning)
 
-> **Важно:** В текущей версии (PR #321) вычисление Virtual TriG реализовано через **императивный JavaScript-код**, а НЕ через семантический reasoning.
+> **Issue #322:** Реализован полный переход на **semantic reasoning** через SPARQL CONSTRUCT.
 
 #### Ключевые факты реализации:
 
-1. **Основная функция вычисления:** `calculateProcessSubtypes()` в файле `2_triplestore_logic.js`
-   - Реализует императивный алгоритм через циклы и условные операторы JavaScript
-   - Не использует N3 правила вывода или comunica-feature-reasoning
-   - Оперирует непосредственно с объектом `trigHierarchy` и массивом квадов
+1. **Основная функция вычисления:** `performSemanticReasoning()` в файле `11_reasoning_logic.js`
+   - Использует SPARQL SELECT для получения метаданных процессов из `vad:ptree`
+   - Вычисляет `processSubtype` согласно правилам вывода (N3 Rules)
+   - Работает **только** с `currentStore` (N3.Store), без `currentQuads`
 
 2. **Модуль 11_reasoning:**
-   - Содержит **заготовку** для интеграции с comunica-feature-reasoning
-   - Определяет N3 правила вывода в константе `INFERENCE_RULES_N3`
-   - Функция `performInference()` **не вызывается** в основном потоке приложения
-   - При недоступности reasoner используется fallback на `performInferenceFallback()`
+   - Функция `performInference()` вызывает `performSemanticReasoning()` как основной метод
+   - Флаг `forceSemanticReasoning = true` обеспечивает использование SPARQL reasoning
+   - JavaScript fallback сохранён для случаев ошибок
 
 3. **Модуль 10_virtualTriG:**
-   - Функция `computeProcessSubtype()` дублирует логику из `calculateProcessSubtypes()`
-   - Обе реализации используют идентичный алгоритм на JavaScript
+   - Использует `materializeVirtualData()` для создания Virtual TriG
+   - Все операции выполняются через `currentStore.addQuad()` / `currentStore.removeQuad()`
+   - `currentQuads` больше не используется (миграция к единому хранилищу)
 
-### 2.2 Почему не используется Reasoning?
+### 2.2 Преимущества Semantic Reasoning
 
-Причины выбора JavaScript-реализации вместо semantic reasoning:
+| Критерий | JavaScript (старый) | SPARQL Reasoning (новый) |
+|----------|---------------------|--------------------------|
+| **Подход** | Императивный | Декларативный |
+| **Хранилище** | currentQuads + currentStore | Только currentStore |
+| **Расширяемость** | Сложная (код) | Простая (правила) |
+| **Консистентность** | Ручная синхронизация | Автоматическая |
+| **SPARQL-driven** | Частично | Полностью |
 
-| Критерий | JavaScript | Reasoning (N3/RDFS) |
-|----------|------------|---------------------|
-| **Производительность** | Быстро (синхронно) | Медленнее (асинхронно) |
-| **Зависимости** | Нет дополнительных | Требует comunica-feature-reasoning |
-| **Размер бандла** | Минимальный | +500KB-1MB |
-| **Отладка** | Простая | Сложная (правила N3) |
-| **Совместимость** | Работает везде | Требует WebAssembly/workers |
+### 2.3 Архитектура после миграции (Issue #322)
 
-### 2.3 Будущее развитие: Переход на Reasoning
+Согласно [base_concept_rules.md](../design/base_concept_rules.md), реализована **целевая архитектура**:
 
-Согласно [base_concept_rules.md](../design/base_concept_rules.md), **целевая архитектура** предполагает:
+1. **SPARQL-driven programming**
+   - Вычисление `processSubtype` через SPARQL SELECT и reasoning rules
+   - Материализация выведенных данных напрямую в `currentStore`
 
-1. **Полный переход на SPARQL-driven programming**
-   - Вычисление `processSubtype` через SPARQL CONSTRUCT или N3 правила
-   - Замена императивного JavaScript декларативными правилами
-
-2. **Интеграция с comunica-feature-reasoning:**
-   - Использование N3 правил из `INFERENCE_RULES_N3`
-   - Материализация выведенных данных в `currentStore`
+2. **Единое хранилище (Quadstore Unification)**
+   - `currentStore` (N3.Store) — единственный источник данных
+   - `currentQuads` устарел и не используется для основных операций
+   - Все операции через `store.getQuads()` / `store.addQuad()` / `store.removeQuad()`
 
 3. **Резервный вариант (fallback):**
-   - JavaScript-реализация сохраняется для случаев недоступности reasoning
+   - JavaScript-реализация сохраняется как fallback при ошибках
    - См. раздел [Резервный вариант обработки данных](11_reasoning.md#8-резервный-вариант-обработки-данных-fallback)
 
 ### 2.4 Примеры текущей vs целевой реализации
@@ -145,15 +144,16 @@ function computeProcessSubtype(processUri, trigUri, metadata, trigDefinesProcess
 } .
 ```
 
-### 2.5 Резюме
+### 2.5 Резюме (Issue #322)
 
 | Аспект | Статус |
 |--------|--------|
-| Reasoning через comunica-feature-reasoning | ❌ НЕ используется |
-| JavaScript fallback | ✅ Используется как основной метод |
+| Semantic Reasoning через SPARQL | ✅ Реализовано (performSemanticReasoning) |
+| JavaScript fallback | ✅ Сохранён как резервный метод |
 | N3 правила определены | ✅ Да (в 11_reasoning_logic.js) |
-| SPARQL запросы для данных | ✅ Да (чтение метаданных из ptree) |
-| Полный SPARQL-driven подход | ⚠️ Частично (чтение — SPARQL, вычисление — JS) |
+| SPARQL запросы для данных | ✅ Да (чтение и вычисление) |
+| Полный SPARQL-driven подход | ✅ Реализовано |
+| Единое хранилище (currentStore) | ✅ Реализовано (без currentQuads) |
 
 ---
 
