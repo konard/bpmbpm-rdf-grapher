@@ -1,6 +1,6 @@
 ### ver9c
-Smart Design + Ontology + SPARQL   
-на основе ver8tree  
+Ontology + SPARQL + Reasoner   
+на основе ver9b 
 
 ### run
 
