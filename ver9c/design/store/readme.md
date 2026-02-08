@@ -6,3 +6,11 @@
 https://github.com/bpmbpm/rdf-grapher/pull/323
 - Реализован полный semantic reasoning для Virtual TriG
 - Реализован 5-stage migration plan для унификации Quadstore
+
+https://github.com/bpmbpm/rdf-grapher/pull/325
+- Удалён currentQuadsглобальный массив — теперь все операции используют currentStore(N3.Store).
+- Удалён virtualRDFdataглобального объекта — виртуальных данных, хранящихся в vad:Virtualграфах (vt_*).
+- Переименованы метки пользовательского интерфейса с "virtualRDFdata" на "VirtualTriG" в панелях свойств.
+- Переименован фильтр Quadstore с «Virtual» на «Virtual TriG (виртуальный TriG сохраняемых параметров)».
+- Обновление документации: файл 10_virtualTriG.md с указанием проблемы ver9c_1rea1c  #324
+- Создан файл quadstore_io_v3.md, документирующий завершенную миграцию на единый quadstore.
