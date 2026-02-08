@@ -2,6 +2,7 @@
 
 <!-- Ссылка на issue: https://github.com/bpmbpm/rdf-grapher/issues/317 -->
 <!-- Обновлено: https://github.com/bpmbpm/rdf-grapher/issues/322 -->
+<!-- Обновлено: https://github.com/bpmbpm/rdf-grapher/issues/324 -->
 <!-- Дата создания: 2026-02-08 -->
 
 ## Содержание
@@ -32,7 +33,7 @@ Virtual TriG (`vad:vt_*`) — это автоматически вычисляе
 
 Согласно [base_concept_rules.md](../design/base_concept_rules.md):
 
-1. **Нет дублирующих объектов хранения** — Virtual данные хранятся только в TriG типа `vad:Virtual`, глобальный объект `virtualRDFdata` не используется
+1. **Нет дублирующих объектов хранения** — Virtual данные хранятся только в TriG типа `vad:Virtual`, глобальные массивы `virtualRDFdata` и `currentQuads` удалены (issue #324)
 2. **SPARQL-driven подход** — все операции через SPARQL-запросы
 3. **Единственное хранилище** — только `currentStore` (N3.Store)
 
@@ -153,7 +154,8 @@ function computeProcessSubtype(processUri, trigUri, metadata, trigDefinesProcess
 | N3 правила определены | ✅ Да (в 11_reasoning_logic.js) |
 | SPARQL запросы для данных | ✅ Да (чтение и вычисление) |
 | Полный SPARQL-driven подход | ✅ Реализовано |
-| Единое хранилище (currentStore) | ✅ Реализовано (без currentQuads) |
+| Единое хранилище (currentStore) | ✅ Реализовано |
+| Удалены глобальные массивы | ✅ currentQuads и virtualRDFdata удалены (issue #324) |
 
 ---
 
@@ -473,7 +475,7 @@ function onVADProcessDiaDeleted(trigUri) {
 ---
 
 *Документ создан: 2026-02-08*
-*Обновлён: 2026-02-08 (issue #322)*
+*Обновлён: 2026-02-08 (issue #324)*
 *Автор: AI Assistant (Claude Opus 4.5)*
-*Версия: 1.1*
-*Ссылки на issues: #317, #322*
+*Версия: 1.2*
+*Ссылки на issues: #317, #322, #324*

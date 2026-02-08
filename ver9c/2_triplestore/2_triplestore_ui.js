@@ -481,68 +481,14 @@ h1 { color: #333; font-size: 18px; margin-top: 0; border-bottom: 2px solid #2196
 }
 
 /**
- * Открывает окно с виртуальными RDF данными
+ * issue #324: Устаревшая функция - перенаправляет на showVirtualTriGWindow()
+ * @deprecated Используйте showVirtualTriGWindow() из 10_virtualTriG_ui.js
  */
 function showVirtualRDFdataWindow() {
-    const virtualContent = formatVirtualRDFdata(virtualRDFdata, currentPrefixes);
-
-    // Создаем новое окно
-    const newWindow = window.open('', '_blank', 'width=800,height=600,scrollbars=yes,resizable=yes');
-
-    if (newWindow) {
-        // Формируем HTML для нового окна
-        const htmlContent = '<!DOCTYPE html>' +
-            '<html><head><title>virtualRDFdata - Виртуальные данные</title>' +
-            '<style>' +
-            'body { font-family: Consolas, Monaco, monospace; padding: 20px; background-color: #f5f5f5; margin: 0; }' +
-            '.container { background-color: white; padding: 20px; border-radius: 8px; box-shadow: 0 2px 4px rgba(0,0,0,0.1); }' +
-            'h1 { color: #333; font-size: 18px; margin-top: 0; border-bottom: 2px solid #9C27B0; padding-bottom: 10px; }' +
-            '.info { background-color: #F3E5F5; border-left: 4px solid #9C27B0; padding: 10px 15px; margin-bottom: 15px; font-size: 13px; }' +
-            'pre { white-space: pre-wrap; word-wrap: break-word; font-size: 13px; line-height: 1.5; margin: 0; color: #333; background-color: #fafafa; padding: 15px; border-radius: 4px; }' +
-            '.copy-btn { background-color: #9C27B0; color: white; border: none; padding: 8px 16px; border-radius: 4px; cursor: pointer; margin-bottom: 15px; margin-right: 10px; }' +
-            '.copy-btn:hover { background-color: #7B1FA2; }' +
-            '.refresh-btn { background-color: #4CAF50; color: white; border: none; padding: 8px 16px; border-radius: 4px; cursor: pointer; margin-bottom: 15px; }' +
-            '.refresh-btn:hover { background-color: #45a049; }' +
-            '</style></head>' +
-            '<body><div class="container">' +
-            '<h1>virtualRDFdata - Виртуальные вычисляемые данные</h1>' +
-            '<div class="info">' +
-            '<strong>Описание:</strong> Эти данные вычисляются автоматически на основе RDF-данных и ' +
-            'не хранятся в файлах. Значения vad:processSubtype определяются по наличию vad:hasTrig ' +
-            'и положению процесса в иерархии схем.' +
-            '</div>' +
-            '<button class="copy-btn" id="copy-btn">Копировать в буфер</button>' +
-            '<pre id="virtual-content"></pre>' +
-            '</div></body></html>';
-
-        newWindow.document.write(htmlContent);
-        newWindow.document.close();
-
-        // Заполняем содержимое после записи документа
-        const preElement = newWindow.document.getElementById('virtual-content');
-        if (preElement) {
-            preElement.textContent = virtualContent;
-        }
-
-        // Добавляем обработчик для кнопки копирования
-        const copyBtn = newWindow.document.getElementById('copy-btn');
-        if (copyBtn) {
-            copyBtn.onclick = function() {
-                newWindow.navigator.clipboard.writeText(virtualContent).then(function() {
-                    newWindow.alert('Скопировано в буфер обмена');
-                }).catch(function() {
-                    // Fallback для старых браузеров
-                    const textarea = newWindow.document.createElement('textarea');
-                    textarea.value = virtualContent;
-                    newWindow.document.body.appendChild(textarea);
-                    textarea.select();
-                    newWindow.document.execCommand('copy');
-                    newWindow.document.body.removeChild(textarea);
-                    newWindow.alert('Скопировано в буфер обмена');
-                });
-            };
-        }
+    console.warn('showVirtualRDFdataWindow is deprecated. Use showVirtualTriGWindow() instead.');
+    if (typeof showVirtualTriGWindow === 'function') {
+        showVirtualTriGWindow();
     } else {
-        alert('Не удалось открыть новое окно. Проверьте настройки блокировки всплывающих окон.');
+        alert('Функция showVirtualTriGWindow не загружена');
     }
 }
