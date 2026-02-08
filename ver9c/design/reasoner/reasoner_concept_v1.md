@@ -42,7 +42,7 @@
 
 В проекте RDF Grapher ver9c реализован механизм **Virtual RDF Data** — автоматически вычисляемых свойств процессов, которые не хранятся непосредственно в RDF-данных пользователя, а рассчитываются при загрузке на основе структуры данных.
 
-Взаимодействие Virtual TriG и virtualRDFdata с quadstore описано в документе [quadstore_io.md](../doc/quadstore_io.md).
+Взаимодействие Virtual TriG и virtualRDFdata с quadstore описано в документе [quadstore_io.md](https://github.com/bpmbpm/rdf-grapher/blob/main/ver9c/doc/quadstore_io.md)
 
 **Ключевые особенности текущей реализации:**
 - Виртуальные данные вычисляются автоматически при загрузке данных
