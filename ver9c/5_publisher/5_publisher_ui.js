@@ -145,7 +145,8 @@ function getNodeStyle(nodeUri, isLiteral, isBlankNode) {
 
     if (currentMode === 'aggregation') {
         if (isBlankNode) return AggregationNodeStyles['BlankNodeStyle'].dot;
-        const nodeTypes = nodeTypesCache[nodeUri] || [];
+        // issue #334: Используем getNodeTypes() вместо nodeTypesCache
+        const nodeTypes = getNodeTypes(nodeUri);
         for (const [styleName, styleConfig] of Object.entries(AggregationNodeStyles)) {
             if (styleName === 'default') continue;
             for (const type of styleConfig.types) {
@@ -158,8 +159,9 @@ function getNodeStyle(nodeUri, isLiteral, isBlankNode) {
 
     if (currentMode === 'vad' || currentMode === 'vad-trig') {
         if (isBlankNode) return VADNodeStyles['default'].dot;
-        const nodeTypes = nodeTypesCache[nodeUri] || [];
-        const nodeSubtypes = nodeSubtypesCache[nodeUri] || [];
+        // issue #334: Используем getNodeTypes() и getNodeSubtypes() вместо кэшей
+        const nodeTypes = getNodeTypes(nodeUri);
+        const nodeSubtypes = getNodeSubtypes(nodeUri);
 
         // First, check styles that have subtypes defined (DetailedChild, DetailedExternal, notDetailedChild, notDetailedExternal, NotDefinedType, Detailed, notDetailed)
         for (const [styleName, styleConfig] of Object.entries(VADNodeStyles)) {
@@ -201,7 +203,8 @@ function getNodeStyle(nodeUri, isLiteral, isBlankNode) {
     if (isLiteral) return StyleName.nodeStyles['LiteralStyle'].dot;
     if (isBlankNode) return StyleName.nodeStyles['BlankNodeStyle'].dot;
 
-    const nodeTypes = nodeTypesCache[nodeUri] || [];
+    // issue #334: Используем getNodeTypes() вместо nodeTypesCache
+    const nodeTypes = getNodeTypes(nodeUri);
     for (const [styleName, styleConfig] of Object.entries(StyleName.nodeStyles)) {
         if (styleName === 'default') continue;
         for (const type of styleConfig.types) {
@@ -239,121 +242,9 @@ function getEdgeStyle(predicateUri, predicateLabel) {
     return StyleName.edgeStyles['default'].dot;
 }
 
-function buildNodeTypesCache(quads, prefixes) {
-    nodeTypesCache = {};
-    nodeSubtypesCache = {};
-    const typePredicates = [
-        'http://www.w3.org/1999/02/22-rdf-syntax-ns#type',
-        'rdf:type',
-        'a'
-    ];
-    const subtypePredicates = [
-        'http://example.org/vad#processSubtype',
-        'vad:processSubtype'
-    ];
-
-    // Функция для обработки квадов и наполнения кешей
-    function processQuads(quadsToProcess) {
-        quadsToProcess.forEach(quad => {
-            const predicateValue = quad.predicate.value;
-            const predicateLabel = getPrefixedName(predicateValue, prefixes);
-
-            // Build types cache
-            if (typePredicates.includes(predicateValue) ||
-                typePredicates.includes(predicateLabel) ||
-                predicateLabel === 'a') {
-
-                const subjectUri = quad.subject.value;
-                const typeUri = quad.object.value;
-                const typeLabel = getPrefixedName(typeUri, prefixes);
-
-                if (!nodeTypesCache[subjectUri]) {
-                    nodeTypesCache[subjectUri] = [];
-                }
-
-                if (!nodeTypesCache[subjectUri].includes(typeUri)) {
-                    nodeTypesCache[subjectUri].push(typeUri);
-                }
-                if (!nodeTypesCache[subjectUri].includes(typeLabel)) {
-                    nodeTypesCache[subjectUri].push(typeLabel);
-                }
-            }
-
-            // Build subtypes cache for vad:processSubtype
-            if (subtypePredicates.includes(predicateValue) ||
-                subtypePredicates.includes(predicateLabel)) {
-
-                const subjectUri = quad.subject.value;
-                const subtypeUri = quad.object.value;
-                const subtypeLabel = getPrefixedName(subtypeUri, prefixes);
-
-                if (!nodeSubtypesCache[subjectUri]) {
-                    nodeSubtypesCache[subjectUri] = [];
-                }
-
-                if (!nodeSubtypesCache[subjectUri].includes(subtypeUri)) {
-                    nodeSubtypesCache[subjectUri].push(subtypeUri);
-                }
-                if (!nodeSubtypesCache[subjectUri].includes(subtypeLabel)) {
-                    nodeSubtypesCache[subjectUri].push(subtypeLabel);
-                }
-            }
-        });
-    }
-
-    // Обрабатываем переданные квады
-    processQuads(quads);
-
-    // Дополнительно: в режиме VAD TriG также включаем типы из vad:ptree
-    // чтобы rdf:type vad:TypeProcess были доступны для всех TriG графов
-    if (trigHierarchy && trigHierarchy[PTREE_GRAPH_URI]) {
-        const ptreeQuads = trigHierarchy[PTREE_GRAPH_URI].quads;
-        processQuads(ptreeQuads);
-    }
-}
-
-/**
- * issue #324: Обновляет nodeSubtypesCache на основе Virtual TriG из store
- * Это необходимо для правильного отображения стилей на диаграмме,
- * т.к. processSubtype вычисляется автоматически и зависит от контекста TriG.
- *
- * @param {string} trigUri - URI TriG для которого обновляем кэш
- */
-function updateSubtypesCacheFromVirtualData(trigUri) {
-    if (!currentStore || !trigUri) {
-        return;
-    }
-
-    // issue #324: Формируем URI виртуального TriG из родительского
-    const virtualTrigUri = trigUri.replace('#t_', '#vt_');
-
-    // Получаем квады processSubtype из виртуального графа
-    const PROCESS_SUBTYPE_URI = 'http://example.org/vad#processSubtype';
-    const subtypeQuads = currentStore.getQuads(null, PROCESS_SUBTYPE_URI, null, virtualTrigUri);
-
-    subtypeQuads.forEach(quad => {
-        const processUri = quad.subject.value;
-        const subtypeUri = quad.object.value;
-
-        // Формируем значения подтипа в обоих форматах (prefixed и full URI)
-        const subtypeName = subtypeUri.split('#').pop();
-        const subtypePrefixed = 'vad:' + subtypeName;
-        const subtypeFullUri = subtypeUri;
-
-        // Инициализируем массив подтипов если его нет
-        if (!nodeSubtypesCache[processUri]) {
-            nodeSubtypesCache[processUri] = [];
-        }
-
-        // Добавляем подтип если его ещё нет
-        if (!nodeSubtypesCache[processUri].includes(subtypePrefixed)) {
-            nodeSubtypesCache[processUri].push(subtypePrefixed);
-        }
-        if (!nodeSubtypesCache[processUri].includes(subtypeFullUri)) {
-            nodeSubtypesCache[processUri].push(subtypeFullUri);
-        }
-    });
-}
+// issue #334: buildNodeTypesCache удалён - заменён на getNodeTypes() и getNodeSubtypes() в vadlib.js
+// issue #334: updateSubtypesCacheFromVirtualData удалён - более не требуется, т.к. getNodeSubtypes()
+// напрямую получает данные из currentStore
 
 // ============================================================================
 // ФУНКЦИИ МАСШТАБИРОВАНИЯ (перемещено из ui-utils.js, issue #234)
@@ -584,7 +475,8 @@ function showNodeProperties(nodeUri, nodeLabel) {
         });
     }
 
-    const nodeTypes = nodeTypesCache[nodeUri] || [];
+    // issue #334: Используем getNodeTypes() вместо nodeTypesCache
+    const nodeTypes = getNodeTypes(nodeUri);
     if (nodeTypes.length > 0) {
         const prefixedTypes = nodeTypes.filter(t => t.includes(':') && !t.startsWith('http'));
         if (prefixedTypes.length > 0) {

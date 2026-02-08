@@ -50,8 +50,8 @@ function getAllTriGs() {
         }
     }
 
-    // Также проверяем allTrigGraphs (эти всегда являются TriG по определению)
-    for (const trigUri of allTrigGraphs) {
+    // issue #334: Используем getAllTrigGraphs() вместо allTrigGraphs
+    for (const trigUri of getAllTrigGraphs()) {
         if (!seen.has(trigUri)) {
             // Проверяем, есть ли объект в trigHierarchy с isTrig
             const info = trigHierarchy[trigUri];
@@ -561,7 +561,8 @@ function getSubjectsByType(typeValue) {
         const uri = quad.subject.value;
         if (seen.has(uri)) return;
 
-        const subjectTypes = nodeTypesCache[uri] || [];
+        // issue #334: Используем getNodeTypes() вместо nodeTypesCache
+        const subjectTypes = getNodeTypes(uri);
         const hasType = subjectTypes.some(t =>
             t === typeValue || t === typeUri
         );
@@ -908,8 +909,8 @@ function autoDetectSubjectType() {
         return;
     }
 
-    // Получаем типы данного Subject из кэша
-    const types = nodeTypesCache[subjectUri] || [];
+    // issue #334: Используем getNodeTypes() вместо nodeTypesCache
+    const types = getNodeTypes(subjectUri);
 
     // Проверяем каждый известный тип
     for (const type of types) {
