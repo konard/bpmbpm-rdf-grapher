@@ -13,4 +13,5 @@
 Это охватывает аналогичные аспекты, что и SHACL-SPARQL, но с использованием JavaScript в качестве языка выполнения.  
 Тоже JS - подобный 
 - dsl https://github.com/bpmbpm/rdf-grapher/blob/main/ver8tree/requirements/dsl-concepts.md
+- macro-functions https://github.com/bpmbpm/rdf-grapher/blob/main/ver8tree/requirements/macro-functions.md
 - графический?
