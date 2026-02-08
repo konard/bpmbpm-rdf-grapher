@@ -1,6 +1,7 @@
 # Модуль 11_reasoning - Semantic Reasoner
 
 <!-- Ссылка на issue: https://github.com/bpmbpm/rdf-grapher/issues/317 -->
+<!-- Обновлено: https://github.com/bpmbpm/rdf-grapher/issues/322 -->
 <!-- Дата создания: 2026-02-08 -->
 
 ## Содержание
@@ -12,6 +13,7 @@
 5. [Интеграция с единственным хранилищем](#5-интеграция-с-единственным-хранилищем)
 6. [Диаграммы взаимодействия](#6-диаграммы-взаимодействия)
 7. [Примеры использования](#7-примеры-использования)
+8. [Резервный вариант обработки данных (Fallback)](#8-резервный-вариант-обработки-данных-fallback)
 
 ---
 
@@ -367,18 +369,263 @@ if (!isReasonerInitialized()) {
 
 ---
 
+## 8. Резервный вариант обработки данных (Fallback)
+
+<!-- issue #322: Документация причин недоступности comunica-feature-reasoning -->
+
+### 8.1 Причины недоступности comunica-feature-reasoning
+
+Функция `comunica-feature-reasoning` может быть недоступна по следующим причинам:
+
+| # | Причина | Описание | Пример |
+|---|---------|----------|--------|
+| 1 | **Библиотека не загружена** | CDN или локальный файл с comunica-feature-reasoning недоступен | Ошибка сети, отсутствие файла в сборке |
+| 2 | **Браузер не поддерживает WebAssembly** | EYE-JS требует WebAssembly для N3 reasoning | Устаревшие версии IE, некоторые мобильные браузеры |
+| 3 | **Web Workers заблокированы** | Comunica использует Workers для асинхронных операций | Политики безопасности CSP, file:// протокол |
+| 4 | **Недостаточно памяти** | Reasoning на больших датасетах требует много RAM | Датасеты >100k квадов на мобильных устройствах |
+| 5 | **CORS ограничения** | При загрузке внешних правил или данных | Запросы к внешним SPARQL endpoints |
+| 6 | **Тайм-аут выполнения** | Сложные правила могут выполняться слишком долго | Рекурсивные правила, большие цепочки вывода |
+| 7 | **Ошибка парсинга N3 правил** | Синтаксические ошибки в правилах вывода | Неправильный формат N3/Notation3 |
+
+### 8.2 Примеры кода с обработкой недоступности
+
+#### Пример 1: Проверка доступности перед вызовом
+
+```javascript
+// Безопасная инициализация reasoner с fallback
+async function safeInitializeReasoner() {
+    try {
+        // Проверяем доступность Comunica
+        if (typeof Comunica === 'undefined') {
+            console.warn('Comunica не загружена, использую JavaScript fallback');
+            return false;
+        }
+
+        // Проверяем доступность QueryEngine
+        if (!Comunica.QueryEngine) {
+            console.warn('QueryEngine недоступен, использую JavaScript fallback');
+            return false;
+        }
+
+        // Проверяем поддержку WebAssembly (для EYE-JS)
+        if (typeof WebAssembly === 'undefined') {
+            console.warn('WebAssembly не поддерживается, использую JavaScript fallback');
+            return false;
+        }
+
+        // Инициализируем reasoner
+        reasonerEngine = new Comunica.QueryEngine();
+        reasonerInitialized = true;
+        return true;
+
+    } catch (error) {
+        console.error('Ошибка инициализации reasoner:', error.message);
+        return false;
+    }
+}
+```
+
+#### Пример 2: Fallback при ошибке reasoning
+
+```javascript
+// Выполнение inference с автоматическим fallback
+async function performInferenceWithFallback(store) {
+    // Пытаемся использовать reasoner
+    if (isReasonerInitialized()) {
+        try {
+            const inferredQuads = await performInferenceComunica(store);
+            return { method: 'comunica', quads: inferredQuads };
+        } catch (error) {
+            console.warn('Comunica reasoning failed:', error.message);
+            console.warn('Switching to JavaScript fallback...');
+        }
+    }
+
+    // Fallback на JavaScript реализацию
+    const fallbackQuads = performInferenceFallback(store);
+    return { method: 'javascript', quads: fallbackQuads };
+}
+```
+
+#### Пример 3: Логирование причины fallback
+
+```javascript
+// Диагностика причины недоступности
+function diagnoseReasonerUnavailability() {
+    const diagnostics = {
+        comunicaLoaded: typeof Comunica !== 'undefined',
+        queryEngineAvailable: typeof Comunica?.QueryEngine === 'function',
+        webAssemblySupported: typeof WebAssembly !== 'undefined',
+        workersSupported: typeof Worker !== 'undefined',
+        memoryInfo: navigator?.deviceMemory || 'unknown'
+    };
+
+    console.table(diagnostics);
+
+    if (!diagnostics.comunicaLoaded) {
+        return 'COMUNICA_NOT_LOADED';
+    }
+    if (!diagnostics.queryEngineAvailable) {
+        return 'QUERY_ENGINE_UNAVAILABLE';
+    }
+    if (!diagnostics.webAssemblySupported) {
+        return 'WEBASSEMBLY_NOT_SUPPORTED';
+    }
+    if (!diagnostics.workersSupported) {
+        return 'WORKERS_NOT_SUPPORTED';
+    }
+
+    return 'UNKNOWN';
+}
+```
+
+### 8.3 Текущее решение (JavaScript Fallback)
+
+В текущей реализации (PR #321) используется **JavaScript fallback** как основной метод:
+
+```mermaid
+flowchart TD
+    A[Запрос на вычисление processSubtype] --> B{Reasoner инициализирован?}
+    B -->|Нет| C[JavaScript Fallback]
+    B -->|Да| D{performInference успешен?}
+    D -->|Да| E[Использовать выведенные квады]
+    D -->|Нет| C
+    C --> F[calculateProcessSubtypes]
+    F --> G[Императивное вычисление через JS]
+    G --> H[Результат: processSubtype]
+    E --> H
+```
+
+#### Функция fallback (из 11_reasoning_logic.js):
+
+```javascript
+function performInferenceFallback(store) {
+    console.log('Using fallback inference (JavaScript implementation)');
+
+    // Используем существующую функцию calculateProcessSubtypes
+    if (typeof calculateProcessSubtypes === 'function' && typeof trigHierarchy !== 'undefined') {
+        const virtualData = calculateProcessSubtypes(trigHierarchy, currentPrefixes);
+        const inferredQuads = [];
+
+        const factory = N3.DataFactory;
+        const { namedNode } = factory;
+
+        for (const [trigUri, processes] of Object.entries(virtualData)) {
+            for (const [processUri, processInfo] of Object.entries(processes)) {
+                const subtype = processInfo.processSubtype;
+                if (subtype) {
+                    inferredQuads.push(factory.quad(
+                        namedNode(processUri),
+                        namedNode(REASONING_NS.VAD + 'processSubtype'),
+                        namedNode(REASONING_NS.VAD + subtype),
+                        namedNode(trigUri.replace('#t_', '#vt_'))
+                    ));
+                }
+            }
+        }
+
+        return inferredQuads;
+    }
+
+    return [];
+}
+```
+
+### 8.4 Предложения по полному переходу на N3.Store
+
+#### 8.4.1 Текущая архитектура (Dual Storage)
+
+```
+┌─────────────────────────────────────────────────────────────┐
+│                    Текущая архитектура                      │
+├─────────────────────────────────────────────────────────────┤
+│                                                             │
+│  ┌─────────────────┐       ┌─────────────────────────────┐ │
+│  │  currentQuads   │ sync  │     currentStore            │ │
+│  │    (Array)      │◄─────►│     (N3.Store)              │ │
+│  └─────────────────┘       └─────────────────────────────┘ │
+│         │                            │                      │
+│         ▼                            ▼                      │
+│  ┌─────────────────┐       ┌─────────────────────────────┐ │
+│  │ trigHierarchy   │       │  SPARQL через Comunica      │ │
+│  │   (Object)      │       │                             │ │
+│  └─────────────────┘       └─────────────────────────────┘ │
+│         │                            │                      │
+│         ▼                            ▼                      │
+│  ┌─────────────────┐       ┌─────────────────────────────┐ │
+│  │ virtualRDFdata  │       │  isVirtualGraph() SPARQL    │ │
+│  │   (Object)      │       │                             │ │
+│  └─────────────────┘       └─────────────────────────────┘ │
+│                                                             │
+└─────────────────────────────────────────────────────────────┘
+```
+
+#### 8.4.2 Целевая архитектура (Single Storage)
+
+```
+┌─────────────────────────────────────────────────────────────┐
+│                   Целевая архитектура                       │
+├─────────────────────────────────────────────────────────────┤
+│                                                             │
+│            ┌─────────────────────────────┐                  │
+│            │      currentStore           │                  │
+│            │       (N3.Store)            │                  │
+│            │   Единственный источник     │                  │
+│            └─────────────┬───────────────┘                  │
+│                          │                                  │
+│          ┌───────────────┼───────────────┐                  │
+│          ▼               ▼               ▼                  │
+│  ┌───────────────┐ ┌───────────┐ ┌───────────────────────┐ │
+│  │ Чтение через │ │ Reasoning │ │ Запись/Удаление       │ │
+│  │   SPARQL     │ │   через   │ │ через SPARQL UPDATE   │ │
+│  │   SELECT     │ │ N3 Rules  │ │ INSERT/DELETE         │ │
+│  └───────────────┘ └───────────┘ └───────────────────────┘ │
+│                                                             │
+│  ❌ currentQuads (удалён)                                   │
+│  ❌ trigHierarchy (вычисляется из store)                    │
+│  ❌ virtualRDFdata (хранится в store как vad:Virtual)       │
+│                                                             │
+└─────────────────────────────────────────────────────────────┘
+```
+
+#### 8.4.3 План миграции
+
+| Этап | Действие | Статус |
+|------|----------|--------|
+| 1 | Добавить Virtual TriG в `currentStore` | ✅ Реализовано (PR #321) |
+| 2 | Использовать `currentStore.getQuads()` вместо `currentQuads` | ⚠️ Частично |
+| 3 | Вычислять `trigHierarchy` через SPARQL | ❌ Не реализовано |
+| 4 | Удалить глобальный массив `currentQuads` | ❌ Требует рефакторинга |
+| 5 | Заменить `calculateProcessSubtypes()` на N3 reasoning | ❌ Требует comunica-feature-reasoning |
+| 6 | Удалить глобальный объект `virtualRDFdata` | ❌ Требует рефакторинга |
+
+### 8.5 Резюме
+
+| Компонент | Текущий статус | Целевой статус |
+|-----------|----------------|----------------|
+| comunica-feature-reasoning | ⚠️ Подготовлен, не используется | ✅ Основной метод |
+| JavaScript fallback | ✅ Основной метод | ⚠️ Резервный метод |
+| N3 правила вывода | ✅ Определены | ✅ Активно используются |
+| currentQuads дублирование | ⚠️ Существует | ❌ Удалён |
+| SPARQL-driven подход | ⚠️ Частично | ✅ Полностью |
+
+---
+
 ## Источники
 
 - [issue #317: ver9c_1rea1](https://github.com/bpmbpm/rdf-grapher/issues/317)
+- [issue #322: ver9c_1rea1b](https://github.com/bpmbpm/rdf-grapher/issues/322)
 - [base_concept_rules.md](../design/base_concept_rules.md)
 - [reasoner_concept_v1.md](../design/reasoner/reasoner_concept_v1.md)
 - [comunica-feature-reasoning на GitHub](https://github.com/comunica/comunica-feature-reasoning)
 - [EYE-JS на GitHub](https://github.com/eyereasoner/eye-js)
 - [Notation3 Specification](https://w3c.github.io/N3/spec/)
+- [10_virtualTriG.md](./10_virtualTriG.md)
 
 ---
 
 *Документ создан: 2026-02-08*
+*Обновлён: 2026-02-08 (issue #322)*
 *Автор: AI Assistant (Claude Opus 4.5)*
-*Версия: 1.0*
-*Ссылка на issue: https://github.com/bpmbpm/rdf-grapher/issues/317*
+*Версия: 1.1*
+*Ссылки на issues: #317, #322*

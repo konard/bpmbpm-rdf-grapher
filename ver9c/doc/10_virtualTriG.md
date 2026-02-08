@@ -1,17 +1,19 @@
 # Модуль 10_virtualTriG - Обработка Virtual TriG
 
 <!-- Ссылка на issue: https://github.com/bpmbpm/rdf-grapher/issues/317 -->
+<!-- Обновлено: https://github.com/bpmbpm/rdf-grapher/issues/322 -->
 <!-- Дата создания: 2026-02-08 -->
 
 ## Содержание
 
 1. [Введение](#1-введение)
-2. [Структура модуля](#2-структура-модуля)
-3. [Алгоритм формирования Virtual TriG](#3-алгоритм-формирования-virtual-trig)
-4. [Типы изменений, влияющие на Virtual TriG](#4-типы-изменений-влияющие-на-virtual-trig)
-5. [API модуля](#5-api-модуля)
-6. [Интеграция с UI](#6-интеграция-с-ui)
-7. [Примеры использования](#7-примеры-использования)
+2. [Реализация: Reasoning vs JavaScript](#2-реализация-reasoning-vs-javascript)
+3. [Структура модуля](#3-структура-модуля)
+4. [Алгоритм формирования Virtual TriG](#4-алгоритм-формирования-virtual-trig)
+5. [Типы изменений, влияющие на Virtual TriG](#5-типы-изменений-влияющие-на-virtual-trig)
+6. [API модуля](#6-api-модуля)
+7. [Интеграция с UI](#7-интеграция-с-ui)
+8. [Примеры использования](#8-примеры-использования)
 
 ---
 
@@ -52,7 +54,110 @@ vad:vt_p1 {
 
 ---
 
-## 2. Структура модуля
+## 2. Реализация: Reasoning vs JavaScript
+
+### 2.1 Текущая реализация (JavaScript)
+
+> **Важно:** В текущей версии (PR #321) вычисление Virtual TriG реализовано через **императивный JavaScript-код**, а НЕ через семантический reasoning.
+
+#### Ключевые факты реализации:
+
+1. **Основная функция вычисления:** `calculateProcessSubtypes()` в файле `2_triplestore_logic.js`
+   - Реализует императивный алгоритм через циклы и условные операторы JavaScript
+   - Не использует N3 правила вывода или comunica-feature-reasoning
+   - Оперирует непосредственно с объектом `trigHierarchy` и массивом квадов
+
+2. **Модуль 11_reasoning:**
+   - Содержит **заготовку** для интеграции с comunica-feature-reasoning
+   - Определяет N3 правила вывода в константе `INFERENCE_RULES_N3`
+   - Функция `performInference()` **не вызывается** в основном потоке приложения
+   - При недоступности reasoner используется fallback на `performInferenceFallback()`
+
+3. **Модуль 10_virtualTriG:**
+   - Функция `computeProcessSubtype()` дублирует логику из `calculateProcessSubtypes()`
+   - Обе реализации используют идентичный алгоритм на JavaScript
+
+### 2.2 Почему не используется Reasoning?
+
+Причины выбора JavaScript-реализации вместо semantic reasoning:
+
+| Критерий | JavaScript | Reasoning (N3/RDFS) |
+|----------|------------|---------------------|
+| **Производительность** | Быстро (синхронно) | Медленнее (асинхронно) |
+| **Зависимости** | Нет дополнительных | Требует comunica-feature-reasoning |
+| **Размер бандла** | Минимальный | +500KB-1MB |
+| **Отладка** | Простая | Сложная (правила N3) |
+| **Совместимость** | Работает везде | Требует WebAssembly/workers |
+
+### 2.3 Будущее развитие: Переход на Reasoning
+
+Согласно [base_concept_rules.md](../design/base_concept_rules.md), **целевая архитектура** предполагает:
+
+1. **Полный переход на SPARQL-driven programming**
+   - Вычисление `processSubtype` через SPARQL CONSTRUCT или N3 правила
+   - Замена императивного JavaScript декларативными правилами
+
+2. **Интеграция с comunica-feature-reasoning:**
+   - Использование N3 правил из `INFERENCE_RULES_N3`
+   - Материализация выведенных данных в `currentStore`
+
+3. **Резервный вариант (fallback):**
+   - JavaScript-реализация сохраняется для случаев недоступности reasoning
+   - См. раздел [Резервный вариант обработки данных](11_reasoning.md#8-резервный-вариант-обработки-данных-fallback)
+
+### 2.4 Примеры текущей vs целевой реализации
+
+#### Текущая реализация (JavaScript):
+
+```javascript
+// 2_triplestore_logic.js: calculateProcessSubtypes()
+function computeProcessSubtype(processUri, trigUri, metadata, trigDefinesProcess) {
+    const hasParentObj = metadata.hasParentObj;
+    const hasTrig = metadata.hasTrig;
+
+    // Императивная логика через if-else
+    if (hasParentObj && hasParentObj.endsWith('#pNotDefined')) {
+        return 'NotDefinedType';
+    }
+
+    const isChild = trigDefinesProcess && hasParentObj === trigDefinesProcess;
+
+    if (hasTrig) {
+        return isChild ? 'DetailedChild' : 'DetailedExternal';
+    } else {
+        return isChild ? 'notDetailedChild' : 'notDetailedExternal';
+    }
+}
+```
+
+#### Целевая реализация (N3 Reasoning):
+
+```notation3
+# 11_reasoning_logic.js: INFERENCE_RULES_N3
+# Правило 4: DetailedChild
+{
+    ?process vad:isDetailed true .
+    ?process vad:isSubprocessTrig ?trig .
+    ?trig vad:definesProcess ?parent .
+    ?process vad:hasParentObj ?parent .
+} => {
+    ?process vad:processSubtype vad:DetailedChild .
+} .
+```
+
+### 2.5 Резюме
+
+| Аспект | Статус |
+|--------|--------|
+| Reasoning через comunica-feature-reasoning | ❌ НЕ используется |
+| JavaScript fallback | ✅ Используется как основной метод |
+| N3 правила определены | ✅ Да (в 11_reasoning_logic.js) |
+| SPARQL запросы для данных | ✅ Да (чтение метаданных из ptree) |
+| Полный SPARQL-driven подход | ⚠️ Частично (чтение — SPARQL, вычисление — JS) |
+
+---
+
+## 3. Структура модуля
 
 ```
 ver9c/
@@ -76,9 +181,9 @@ ver9c/
 
 ---
 
-## 3. Алгоритм формирования Virtual TriG
+## 4. Алгоритм формирования Virtual TriG
 
-### 3.1 Общий алгоритм
+### 4.1 Общий алгоритм
 
 ```mermaid
 flowchart TD
@@ -95,7 +200,7 @@ flowchart TD
     E --> J[Конец]
 ```
 
-### 3.2 Алгоритм вычисления processSubtype
+### 4.2 Алгоритм вычисления processSubtype
 
 ```mermaid
 flowchart TD
@@ -117,7 +222,7 @@ flowchart TD
     L --> M
 ```
 
-### 3.3 Подтипы процессов
+### 4.3 Подтипы процессов
 
 | Подтип | Условие | Визуализация |
 |--------|---------|--------------|
@@ -127,7 +232,7 @@ flowchart TD
 | `notDetailedExternal` | без hasTrig + во внешней схеме | Светло-зелёная заливка (#C8E6C9) |
 | `NotDefinedType` | hasParentObj = pNotDefined | Серая заливка (#BDBDBD), пунктир |
 
-### 3.4 Определение "в схеме родительского процесса"
+### 4.4 Определение "в схеме родительского процесса"
 
 Процесс является **Child** (в схеме родителя), если:
 - Его `vad:hasParentObj` (из ptree) совпадает с `vad:definesProcess` текущего TriG
@@ -136,9 +241,9 @@ flowchart TD
 
 ---
 
-## 4. Типы изменений, влияющие на Virtual TriG
+## 5. Типы изменений, влияющие на Virtual TriG
 
-### 4.1 Таблица триггеров пересчёта
+### 5.1 Таблица триггеров пересчёта
 
 | Тип изменения | Затронутый граф | Влияние на Virtual TriG |
 |---------------|-----------------|------------------------|
@@ -150,7 +255,7 @@ flowchart TD
 | Добавление нового VADProcessDia | VADProcessDia | Создание нового vt_* |
 | Удаление индивида через `vad:isSubprocessTrig` | VADProcessDia | Удаление vad:processSubtype для этого индивида |
 
-### 4.2 Предикаты-триггеры
+### 5.2 Предикаты-триггеры
 
 ```javascript
 const TRIGGER_PREDICATES = [
@@ -162,7 +267,7 @@ const TRIGGER_PREDICATES = [
 ];
 ```
 
-### 4.3 Стратегия оптимизации (будущее)
+### 5.3 Стратегия оптимизации (будущее)
 
 На текущем этапе при каждом изменении выполняется полный пересчёт всех Virtual TriG.
 
@@ -173,9 +278,9 @@ const TRIGGER_PREDICATES = [
 
 ---
 
-## 5. API модуля
+## 6. API модуля
 
-### 5.1 Основные функции (10_virtualTriG_logic.js)
+### 6.1 Основные функции (10_virtualTriG_logic.js)
 
 #### recalculateAllVirtualTriGs(prefixes)
 
@@ -250,7 +355,7 @@ const isVirtual = await isVirtualGraphSPARQL('http://example.org/vad#vt_p1');
 const trigString = formatVirtualTriGFromStore(currentPrefixes);
 ```
 
-### 5.2 SPARQL запросы (10_virtualTriG_sparql.js)
+### 6.2 SPARQL запросы (10_virtualTriG_sparql.js)
 
 | Запрос | Назначение |
 |--------|------------|
@@ -264,7 +369,7 @@ const trigString = formatVirtualTriGFromStore(currentPrefixes);
 | `INSERT_VIRTUAL_TRIG(uri, parent, subtypes)` | INSERT: создать Virtual TriG |
 | `CHECK_VIRTUAL_TRIG_CONSISTENCY()` | SELECT: проверка консистентности |
 
-### 5.3 UI функции (10_virtualTriG_ui.js)
+### 6.3 UI функции (10_virtualTriG_ui.js)
 
 | Функция | Назначение |
 |---------|------------|
@@ -277,9 +382,9 @@ const trigString = formatVirtualTriGFromStore(currentPrefixes);
 
 ---
 
-## 6. Интеграция с UI
+## 7. Интеграция с UI
 
-### 6.1 Кнопка "Virtual TriG"
+### 7.1 Кнопка "Virtual TriG"
 
 В окне "Result in SPARQL" унифицированы кнопки:
 - ~~"Показать Virtual TriG"~~ → **"Virtual TriG"**
@@ -291,7 +396,7 @@ const trigString = formatVirtualTriGFromStore(currentPrefixes);
 </button>
 ```
 
-### 6.2 Секция в панели свойств
+### 7.2 Секция в панели свойств
 
 При выборе узла-процесса в панели "Карточка объекта" отображается секция Virtual TriG:
 
@@ -303,7 +408,7 @@ const trigString = formatVirtualTriGFromStore(currentPrefixes);
 └─────────────────────────────────────┘
 ```
 
-### 6.3 Модальное окно
+### 7.3 Модальное окно
 
 Модальное окно "Virtual TriG (vad:Virtual)" содержит:
 - Textarea с TriG-представлением всех Virtual данных
@@ -313,16 +418,16 @@ const trigString = formatVirtualTriGFromStore(currentPrefixes);
 
 ---
 
-## 7. Примеры использования
+## 8. Примеры использования
 
-### 7.1 Пересчёт Virtual TriG после загрузки данных
+### 8.1 Пересчёт Virtual TriG после загрузки данных
 
 ```javascript
 // После парсинга RDF данных и добавления в store
 await recalculateAllVirtualTriGs(currentPrefixes);
 ```
 
-### 7.2 Получение подтипа процесса через SPARQL
+### 8.2 Получение подтипа процесса через SPARQL
 
 ```javascript
 const query = VIRTUAL_TRIG_SPARQL.GET_PROCESS_SUBTYPE('http://example.org/vad#p1_1');
@@ -333,7 +438,7 @@ if (results.length > 0) {
 }
 ```
 
-### 7.3 Проверка консистентности Virtual TriG
+### 8.3 Проверка консистентности Virtual TriG
 
 ```javascript
 const query = VIRTUAL_TRIG_SPARQL.CHECK_VIRTUAL_TRIG_CONSISTENCY();
@@ -344,7 +449,7 @@ if (violations.length > 0) {
 }
 ```
 
-### 7.4 Каскадное удаление при удалении VADProcessDia
+### 8.4 Каскадное удаление при удалении VADProcessDia
 
 ```javascript
 // При удалении vad:t_p1 автоматически удаляется vad:vt_p1
@@ -359,13 +464,16 @@ function onVADProcessDiaDeleted(trigUri) {
 ## Источники
 
 - [issue #317: ver9c_1rea1](https://github.com/bpmbpm/rdf-grapher/issues/317)
+- [issue #322: ver9c_1rea1b](https://github.com/bpmbpm/rdf-grapher/issues/322)
 - [base_concept_rules.md](../design/base_concept_rules.md)
 - [reasoner_concept_v1.md](../design/reasoner/reasoner_concept_v1.md)
 - [store_concept_v3.md](../design/store/store_concept_v3.md)
+- [11_reasoning.md](./11_reasoning.md)
 
 ---
 
 *Документ создан: 2026-02-08*
+*Обновлён: 2026-02-08 (issue #322)*
 *Автор: AI Assistant (Claude Opus 4.5)*
-*Версия: 1.0*
-*Ссылка на issue: https://github.com/bpmbpm/rdf-grapher/issues/317*
+*Версия: 1.1*
+*Ссылки на issues: #317, #322*
