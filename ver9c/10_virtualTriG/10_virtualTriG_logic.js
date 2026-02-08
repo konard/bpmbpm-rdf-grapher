@@ -150,7 +150,7 @@ function computeProcessSubtype(processUri, trigUri, processMetadata, trigDefines
  *
  * @returns {Promise<Object>} - { processUri: { hasParentObj, hasTrig, label } }
  */
-async function getProcessMetadataFromPtree() {
+async function getAllProcessMetadataFromPtree() {
     const query = `
         PREFIX rdf: <http://www.w3.org/1999/02/22-rdf-syntax-ns#>
         PREFIX rdfs: <http://www.w3.org/2000/01/rdf-schema#>
@@ -182,7 +182,7 @@ async function getProcessMetadataFromPtree() {
 
         return metadata;
     } catch (error) {
-        console.error('getProcessMetadataFromPtree error:', error);
+        console.error('getAllProcessMetadataFromPtree error:', error);
         return {};
     }
 }
@@ -404,7 +404,7 @@ async function recalculateAllVirtualTriGs(prefixes) {
         stats.removedQuads = removeAllVirtualTriGs();
 
         // 2. Получаем метаданные процессов из ptree
-        const processMetadata = await getProcessMetadataFromPtree();
+        const processMetadata = await getAllProcessMetadataFromPtree();
 
         // 3. Получаем все VADProcessDia
         const vadProcessDias = await getVADProcessDiaGraphs();
