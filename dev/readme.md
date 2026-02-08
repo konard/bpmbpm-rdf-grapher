@@ -1,5 +1,11 @@
 ### issues - PR 
 ```
+/solve https://github.com/bpmbpm/rdf-grapher/issues/143 --model opus-4-5
+/solve https://github.com/bpmbpm/rdf-grapher/pull/318 --model opus-4-5
+
+```
+default
+```
 /solve https://github.com/bpmbpm/rdf-grapher/issues/9 --model opus
 ```
 agent 
