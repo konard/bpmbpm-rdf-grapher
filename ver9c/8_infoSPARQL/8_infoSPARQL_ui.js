@@ -1,10 +1,10 @@
 // Ссылка на issue: https://github.com/bpmbpm/rdf-grapher/issues/232
 // 8_infoSPARQL_ui.js - UI модуль панели SPARQL запросов
 
+        // issue #326: Используем только currentStore (N3.Store), currentQuads удалён
         async function initSparqlEngine() {
             if (!currentStore) {
                 currentStore = new N3.Store();
-                currentQuads.forEach(quad => currentStore.addQuad(quad));
             }
 
             if (!comunicaEngine) {
@@ -28,7 +28,8 @@
                 return;
             }
 
-            if (currentQuads.length === 0) {
+            // issue #326: Проверяем currentStore вместо currentQuads
+            if (!currentStore || currentStore.size === 0) {
                 resultsContent.innerHTML = '<div class="sparql-error">Сначала визуализируйте RDF данные</div>';
                 resultsDiv.style.display = 'block';
                 return;
