@@ -970,5 +970,84 @@ vad:techtree
 # ==============================================================================
 
 # ==============================================================================
+# МЕТОДЫ ОБЪЕКТОВ СХЕМЫ (OBJECT METHODS)
+# ==============================================================================
+# issue #336: Определение методов для типов объектов на схеме процесса
+# Методы доступны через кнопку "Методы" в карточке свойств объекта
+# ==============================================================================
+
+# Класс для методов объектов
+vad:ObjectMethod
+    rdf:type rdfs:Class, owl:Class ;
+    rdfs:subClassOf vad:Tech ;
+    rdfs:label "ObjectMethod" ;
+    rdfs:comment """
+        Класс ObjectMethod определяет методы (действия), которые можно выполнить
+        над объектами определённого типа на схеме процесса.
+
+        Каждый метод связывается с типом объекта через vad:methodForType.
+        При клике на метод в выпадающем списке вызывается соответствующая функция.
+    """ ;
+    dcterms:description "Класс для определения методов объектов на схеме" .
+
+# Предикат для связи метода с типом объекта
+vad:methodForType
+    rdf:type rdf:Property, owl:ObjectProperty ;
+    rdfs:label "methodForType" ;
+    rdfs:domain vad:ObjectMethod ;
+    rdfs:range rdfs:Class ;
+    rdfs:comment """
+        Связывает метод с типом объекта, для которого он доступен.
+        Например: vad:DeleteIndividProcess vad:methodForType vad:isSubprocessTrig .
+    """ ;
+    dcterms:description "Связь метода с типом объекта" .
+
+# Предикат для идентификатора функции метода
+vad:methodFunction
+    rdf:type rdf:Property, owl:DatatypeProperty ;
+    rdfs:label "methodFunction" ;
+    rdfs:domain vad:ObjectMethod ;
+    rdfs:range xsd:string ;
+    rdfs:comment """
+        Идентификатор JavaScript функции, которая вызывается при выполнении метода.
+        Например: "deleteIndividProcess" или "deleteIndividExecutor".
+    """ ;
+    dcterms:description "Идентификатор функции для вызова метода" .
+
+# ------------------------------------------------------------------------------
+# Метод: Delete Individ Process
+# Для объектов с предикатом vad:isSubprocessTrig (процессы на VAD схеме)
+# ------------------------------------------------------------------------------
+
+vad:DeleteIndividProcess
+    rdf:type vad:ObjectMethod ;
+    rdfs:label "Delete Individ Process" ;
+    vad:methodForType vad:isSubprocessTrig ;
+    vad:methodFunction "deleteIndividProcess" ;
+    rdfs:comment """
+        Метод удаления индивида процесса из текущей схемы.
+        Удаляет все триплеты с данным процессом из текущего TriG.
+        Аналогичен функции 'Удалить индивид процесса' из окна Del Concept/Individ/Schema.
+    """ ;
+    dcterms:description "Удаляет индивид процесса из текущей схемы" .
+
+# ------------------------------------------------------------------------------
+# Метод: Delete Individ Executor
+# Для объектов типа vad:ExecutorGroup
+# ------------------------------------------------------------------------------
+
+vad:DeleteIndividExecutor
+    rdf:type vad:ObjectMethod ;
+    rdfs:label "Delete Individ Executor" ;
+    vad:methodForType vad:ExecutorGroup ;
+    vad:methodFunction "deleteIndividExecutor" ;
+    rdfs:comment """
+        Метод удаления исполнителей из группы ExecutorGroup.
+        Удаляет все предикаты vad:includes для выбранной группы исполнителей
+        из текущего TriG.
+    """ ;
+    dcterms:description "Удаляет всех исполнителей из группы ExecutorGroup" .
+
+# ==============================================================================
 # КОНЕЦ ТЕХНОЛОГИЧЕСКОГО ПРИЛОЖЕНИЯ
 # ==============================================================================

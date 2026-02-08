@@ -388,9 +388,22 @@ function showNodeProperties(nodeUri, nodeLabel) {
     const seenTrigProps = new Set();
     const seenConceptProps = new Set();
 
+    // issue #336: Определяем тип объекта для кнопки Методы
+    let objectMethodType = null;  // 'isSubprocessTrig' или 'ExecutorGroup'
+
     properties.forEach(prop => {
         // Создаём уникальный ключ для дедупликации
         const propKey = `${prop.predicateLabel}|${prop.objectLabel}`;
+
+        // issue #336: Определяем тип объекта по предикатам
+        if (prop.predicate === 'http://example.org/vad#isSubprocessTrig' || prop.predicateLabel === 'vad:isSubprocessTrig') {
+            objectMethodType = 'isSubprocessTrig';
+        }
+        if (prop.predicate === 'http://www.w3.org/1999/02/22-rdf-syntax-ns#type') {
+            if (prop.object === 'http://example.org/vad#ExecutorGroup' || prop.objectLabel === 'vad:ExecutorGroup') {
+                objectMethodType = 'ExecutorGroup';
+            }
+        }
 
         if (prop.graphUri === PTREE_GRAPH_URI) {
             // Дедупликация свойств концепта
@@ -490,6 +503,15 @@ function showNodeProperties(nodeUri, nodeLabel) {
     }
 
     const escapedNodeLabel = nodeLabel.replace(/'/g, "\\'").replace(/"/g, '&quot;');
+    const escapedNodeUri = nodeUri.replace(/'/g, "\\'");
+    const escapedTrigUri = selectedTrigUri ? selectedTrigUri.replace(/'/g, "\\'") : '';
+
+    // issue #336: Генерируем кнопку Методы если есть тип объекта и контекст TriG
+    let methodsButtonHtml = '';
+    if (objectMethodType && selectedTrigUri) {
+        methodsButtonHtml = `<button class="methods-btn" onclick="event.stopPropagation(); toggleMethodsDropdown(event, '${escapedNodeUri}', '${escapedTrigUri}', '${objectMethodType}')">Методы</button>`;
+    }
+
     const panelHtml = `
         <div class="properties-panel visible" id="${panelId}" style="right: ${rightOffset}px; top: ${topOffset}px;">
             <div class="properties-header" onmousedown="startDragPanel(event, '${panelId}')">
@@ -498,6 +520,7 @@ function showNodeProperties(nodeUri, nodeLabel) {
                     <div class="properties-header-row">
                         <h3>${nodeLabel}</h3>
                         <button class="properties-copy-btn" onclick="event.stopPropagation(); copyObjectId('${escapedNodeLabel}', this)">Копировать</button>
+                        ${methodsButtonHtml}
                     </div>
                 </div>
                 <button class="properties-close-btn" onclick="closePropertiesPanel('${panelId}')">&times;</button>
