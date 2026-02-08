@@ -517,6 +517,7 @@ function isVirtualGraph(graphUri) {
 | UPDATE (INSERT/DELETE) | `funSPARQLvaluesComunicaUpdate()` | Модификация данных |
 | Быстрый поиск | `currentStore.getQuads()` | Когда известны subject/predicate/object/graph |
 
+ASK - забыли? 
 ### 6.2 Структура SPARQL-запросов
 
 ```javascript
