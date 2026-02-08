@@ -11,3 +11,5 @@ funSPARQLvaluesComunicaUpdate https://github.com/bpmbpm/rdf-grapher/issues/293
 типы схем - структурные, комментариии (2 шт), Help в файле, но с привязкой к тематической папке  
 proj вкладка - раобраться
 
+В последствии сделать режим без Virtual, только на Reasoner (Virtual - это лишь как кэш)
+
