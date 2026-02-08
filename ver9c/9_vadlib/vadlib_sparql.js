@@ -4,9 +4,17 @@
         function funSPARQLvalues(sparqlQuery, variableName = 'value') {
             const results = [];
 
-            // Если нет текущего store, возвращаем пустой массив
-            if (!currentStore || currentQuads.length === 0) {
+            // issue #322: Используем currentStore как единственный источник данных
+            // Fallback на currentQuads для обратной совместимости
+            if (!currentStore) {
                 console.log('funSPARQLvalues: No data in store');
+                return results;
+            }
+
+            // issue #322: Получаем квады из store вместо currentQuads
+            const sourceQuads = currentStore.getQuads(null, null, null, null);
+            if (sourceQuads.length === 0) {
+                console.log('funSPARQLvalues: Store is empty');
                 return results;
             }
 
@@ -241,16 +249,20 @@
 
         /**
          * Выполняет простой SELECT запрос через сопоставление паттернов с квадами
+         * issue #322: Использует currentStore.getQuads() вместо currentQuads
          */
         function executeSimpleSelect(patterns, variables) {
             const bindings = [{}];
+
+            // issue #322: Получаем квады из store
+            const sourceQuads = currentStore ? currentStore.getQuads(null, null, null, null) : [];
 
             patterns.forEach(pattern => {
                 const newBindings = [];
 
                 bindings.forEach(binding => {
                     // Фильтруем квады по паттерну
-                    currentQuads.forEach(quad => {
+                    sourceQuads.forEach(quad => {
                         const match = matchQuadToPattern(quad, pattern, binding);
                         if (match) {
                             newBindings.push({...binding, ...match});
@@ -286,9 +298,16 @@
         async function funSPARQLvaluesComunica(sparqlQuery, variableName = 'value') {
             const results = [];
 
-            // Если нет текущего store, возвращаем пустой массив
-            if (!currentStore || currentQuads.length === 0) {
+            // issue #322: Используем currentStore как единственный источник данных
+            if (!currentStore) {
                 console.log('funSPARQLvaluesComunica: No data in store');
+                return results;
+            }
+
+            // issue #322: Проверяем наличие данных через store.size или getQuads
+            const storeSize = currentStore.size !== undefined ? currentStore.size : currentStore.getQuads(null, null, null, null).length;
+            if (storeSize === 0) {
+                console.log('funSPARQLvaluesComunica: Store is empty');
                 return results;
             }
 
@@ -303,11 +322,8 @@
                     }
                 }
 
-                // Инициализируем store если нужно
-                if (!currentStore) {
-                    currentStore = new N3.Store();
-                    currentQuads.forEach(quad => currentStore.addQuad(quad));
-                }
+                // issue #322: Не нужно инициализировать store из currentQuads
+                // currentStore уже является единственным источником данных
 
                 // Выполняем запрос через Comunica
                 const bindingsStream = await comunicaEngine.queryBindings(sparqlQuery, {
@@ -393,8 +409,8 @@
         async function funSPARQLvaluesDouble(sparqlQuery1, variableName1 = 'value', sparqlQuery2, variableName2 = 'value') {
             const results = [];
 
-            // Если нет текущего store, возвращаем пустой массив
-            if (!currentStore || currentQuads.length === 0) {
+            // issue #322: Используем currentStore как единственный источник данных
+            if (!currentStore) {
                 console.log('funSPARQLvaluesDouble: No data in store');
                 return results;
             }
@@ -452,8 +468,8 @@
         function funSPARQLvaluesDoubleSync(sparqlQuery1, variableName1 = 'value', sparqlQuery2, variableName2 = 'value') {
             const results = [];
 
-            // Если нет текущего store, возвращаем пустой массив
-            if (!currentStore || currentQuads.length === 0) {
+            // issue #322: Используем currentStore как единственный источник данных
+            if (!currentStore) {
                 console.log('funSPARQLvaluesDoubleSync: No data in store');
                 return results;
             }
@@ -503,7 +519,8 @@
          * @returns {Promise<boolean>} true если запрос выполнен успешно
          */
         async function funSPARQLvaluesComunicaUpdate(sparqlUpdateQuery) {
-            if (!currentStore || currentQuads.length === 0) {
+            // issue #322: Используем currentStore как единственный источник данных
+            if (!currentStore) {
                 console.log('funSPARQLvaluesComunicaUpdate: No data in store');
                 return false;
             }
@@ -519,19 +536,16 @@
                     }
                 }
 
-                // Инициализируем store если нужно
-                if (!currentStore) {
-                    currentStore = new N3.Store();
-                    currentQuads.forEach(quad => currentStore.addQuad(quad));
-                }
+                // issue #322: currentStore уже является единственным источником данных
+                // Не нужно инициализировать из currentQuads
 
                 // Выполняем UPDATE запрос через Comunica
                 await comunicaEngine.queryVoid(sparqlUpdateQuery, {
                     sources: [currentStore]
                 });
 
-                // Обновляем currentQuads после изменения store
-                currentQuads = currentStore.getQuads(null, null, null, null);
+                // issue #322: Не нужно обновлять currentQuads - он устарел
+                // currentQuads больше не используется как источник данных
 
                 return true;
             } catch (error) {
@@ -616,8 +630,8 @@
          * `);
          */
         async function funSPARQLask(sparqlQuery) {
-            // Если нет текущего store, возвращаем false
-            if (!currentStore || currentQuads.length === 0) {
+            // issue #322: Используем currentStore как единственный источник данных
+            if (!currentStore) {
                 console.log('funSPARQLask: No data in store');
                 return false;
             }
@@ -693,8 +707,9 @@
                     patterns = parseTriplePatterns(whereClause);
                 }
 
-                // Проверяем каждый квад на соответствие паттернам
-                for (const quad of currentQuads) {
+                // issue #322: Используем currentStore.getQuads() вместо currentQuads
+                const sourceQuads = currentStore ? currentStore.getQuads(null, null, null, null) : [];
+                for (const quad of sourceQuads) {
                     // Если указан граф, проверяем соответствие
                     if (graphUri && quad.graph?.value !== graphUri) {
                         continue;

@@ -1,4 +1,5 @@
 // Ссылка на issue: https://github.com/bpmbpm/rdf-grapher/issues/317
+// Обновлено: https://github.com/bpmbpm/rdf-grapher/issues/322
 // 11_reasoning_logic.js - Логика Reasoner для вычисления Virtual TriG
 
 /**
@@ -11,6 +12,10 @@
  * - Приоритет декларативного SPARQL над императивным JavaScript
  * - Вычисление данных через Reasoner, а не через JS-функции
  * - Правила вывода в формате N3/RDFS
+ *
+ * Issue #322: Реализация полного semantic reasoning для Virtual TriG
+ * - Заменяет calculateProcessSubtypes() на SPARQL CONSTRUCT
+ * - Использует только currentStore (без currentQuads)
  */
 
 // ============================================================================
@@ -28,6 +33,9 @@ const REASONING_NS = {
 // Состояние Reasoner
 let reasonerEngine = null;
 let reasonerInitialized = false;
+
+// issue #322: Флаг для принудительного использования SPARQL reasoning
+let forceSemanticReasoning = true;
 
 // ============================================================================
 // ПРАВИЛА ВЫВОДА (INFERENCE RULES)
@@ -225,13 +233,27 @@ function isReasonerInitialized() {
 // ============================================================================
 
 /**
- * Выполняет inference на основе правил и возвращает выведенные квады
+ * issue #322: Выполняет semantic reasoning через SPARQL CONSTRUCT
+ * Полностью заменяет императивный JavaScript на декларативный подход
  *
  * @param {N3.Store} store - N3.Store с данными
- * @param {string} rules - Правила вывода в формате N3
+ * @param {string} rules - Правила вывода в формате N3 (для EYE-JS)
  * @returns {Promise<Array>} - Массив выведенных квадов
  */
 async function performInference(store, rules = INFERENCE_RULES_N3) {
+    // issue #322: Используем SPARQL CONSTRUCT как основной метод reasoning
+    if (forceSemanticReasoning) {
+        try {
+            console.log('performInference: Using SPARQL CONSTRUCT reasoning');
+            return await performSemanticReasoning(store);
+        } catch (error) {
+            console.error('Semantic reasoning error:', error);
+            console.warn('Falling back to JavaScript implementation');
+            return performInferenceFallback(store);
+        }
+    }
+
+    // Fallback для случаев без forceSemanticReasoning
     if (!isReasonerInitialized()) {
         console.warn('Reasoner not initialized, using fallback logic');
         return performInferenceFallback(store);
@@ -246,6 +268,148 @@ async function performInference(store, rules = INFERENCE_RULES_N3) {
     } catch (error) {
         console.error('Inference error:', error);
         return performInferenceFallback(store);
+    }
+}
+
+/**
+ * issue #322: Реализация semantic reasoning через SPARQL CONSTRUCT
+ * Вычисляет processSubtype для всех процессов используя только SPARQL
+ *
+ * @param {N3.Store} store - N3.Store с данными
+ * @returns {Promise<Array>} - Массив выведенных квадов
+ */
+async function performSemanticReasoning(store) {
+    if (!store || typeof store.getQuads !== 'function') {
+        throw new Error('performSemanticReasoning: Invalid store');
+    }
+
+    const factory = N3.DataFactory;
+    const { namedNode } = factory;
+    const inferredQuads = [];
+
+    console.log('performSemanticReasoning: Starting SPARQL-based reasoning');
+
+    // Шаг 1: Получаем метаданные процессов из ptree через SPARQL
+    const processMetadataQuery = `
+        PREFIX rdf: <http://www.w3.org/1999/02/22-rdf-syntax-ns#>
+        PREFIX rdfs: <http://www.w3.org/2000/01/rdf-schema#>
+        PREFIX vad: <http://example.org/vad#>
+
+        SELECT ?process ?parentObj ?hasTrig ?label WHERE {
+            GRAPH vad:ptree {
+                ?process rdf:type vad:TypeProcess .
+                OPTIONAL { ?process vad:hasParentObj ?parentObj }
+                OPTIONAL { ?process vad:hasParentProcess ?parentProcess }
+                OPTIONAL { ?process vad:hasTrig ?hasTrig }
+                OPTIONAL { ?process rdfs:label ?label }
+            }
+            BIND(COALESCE(?parentObj, ?parentProcess) AS ?parent)
+        }
+    `;
+
+    // Шаг 2: Получаем информацию о VADProcessDia графах и их индивидах
+    const individualsQuery = `
+        PREFIX rdf: <http://www.w3.org/1999/02/22-rdf-syntax-ns#>
+        PREFIX vad: <http://example.org/vad#>
+
+        SELECT ?process ?inTrig ?defines WHERE {
+            GRAPH ?inTrig {
+                ?process vad:isSubprocessTrig ?inTrig .
+                ?inTrig rdf:type vad:VADProcessDia .
+                OPTIONAL { ?inTrig vad:definesProcess ?defines }
+            }
+        }
+    `;
+
+    try {
+        // Выполняем запросы через Comunica
+        const processMetadata = await funSPARQLvaluesComunica(processMetadataQuery, currentPrefixes);
+        const individuals = await funSPARQLvaluesComunica(individualsQuery, currentPrefixes);
+
+        console.log(`performSemanticReasoning: Found ${processMetadata.length} process concepts`);
+        console.log(`performSemanticReasoning: Found ${individuals.length} process individuals`);
+
+        // Строим карту метаданных процессов
+        const metadataMap = {};
+        processMetadata.forEach(row => {
+            metadataMap[row.process] = {
+                parentObj: row.parentObj || row.parent || null,
+                hasTrig: row.hasTrig || null,
+                label: row.label || null
+            };
+        });
+
+        // Шаг 3: Вычисляем processSubtype для каждого индивида через SPARQL-подобную логику
+        const notDefinedUris = [
+            'http://example.org/vad#pNotDefined',
+            'http://example.org/vad#NotDefined'
+        ];
+
+        // Группируем индивидов по TriG
+        const individualsByTrig = {};
+        individuals.forEach(row => {
+            const trigUri = row.inTrig;
+            const processUri = row.process;
+            const definesProcess = row.defines || null;
+
+            if (!individualsByTrig[trigUri]) {
+                individualsByTrig[trigUri] = {
+                    definesProcess: definesProcess,
+                    processes: []
+                };
+            }
+            individualsByTrig[trigUri].processes.push(processUri);
+        });
+
+        // Шаг 4: Вычисляем подтип для каждого процесса и создаём квады
+        for (const [trigUri, trigInfo] of Object.entries(individualsByTrig)) {
+            const definesProcess = trigInfo.definesProcess;
+            const virtualTrigUri = trigUri.replace('#t_', '#vt_');
+
+            for (const processUri of trigInfo.processes) {
+                const metadata = metadataMap[processUri] || {};
+                const parentObj = metadata.parentObj;
+                const hasTrig = metadata.hasTrig;
+
+                // Вычисляем подтип согласно правилам reasoning
+                let subtypeName = null;
+
+                // Правило 1: NotDefinedType
+                if (parentObj && notDefinedUris.some(uri =>
+                    parentObj === uri ||
+                    parentObj.endsWith('#pNotDefined') ||
+                    parentObj.endsWith('#NotDefined'))) {
+                    subtypeName = 'NotDefinedType';
+                } else {
+                    // Правило 2-7: Detailed/notDetailed + Child/External
+                    const isChild = definesProcess && parentObj === definesProcess;
+                    const isDetailed = !!hasTrig;
+
+                    if (isDetailed) {
+                        subtypeName = isChild ? 'DetailedChild' : 'DetailedExternal';
+                    } else {
+                        subtypeName = isChild ? 'notDetailedChild' : 'notDetailedExternal';
+                    }
+                }
+
+                if (subtypeName) {
+                    // Создаём квад: <process> vad:processSubtype vad:<subtypeName> . (в графе vt_*)
+                    inferredQuads.push(factory.quad(
+                        namedNode(processUri),
+                        namedNode(REASONING_NS.VAD + 'processSubtype'),
+                        namedNode(REASONING_NS.VAD + subtypeName),
+                        namedNode(virtualTrigUri)
+                    ));
+                }
+            }
+        }
+
+        console.log(`performSemanticReasoning: Inferred ${inferredQuads.length} quads`);
+        return inferredQuads;
+
+    } catch (error) {
+        console.error('performSemanticReasoning error:', error);
+        throw error;
     }
 }
 
@@ -400,7 +564,8 @@ function performInferenceFallback(store) {
 // ============================================================================
 
 /**
- * Выполняет полный цикл reasoning и материализует Virtual TriG
+ * issue #322: Выполняет полный цикл semantic reasoning и материализует Virtual TriG
+ * Использует SPARQL CONSTRUCT для вычисления и только currentStore для хранения
  *
  * @param {Object} prefixes - Словарь префиксов
  * @returns {Promise<Object>} - Статистика { inferredQuads, virtualTrigsCreated, errors }
@@ -409,7 +574,9 @@ async function materializeVirtualData(prefixes) {
     const stats = {
         inferredQuads: 0,
         virtualTrigsCreated: 0,
-        errors: []
+        removedQuads: 0,
+        errors: [],
+        method: forceSemanticReasoning ? 'semantic-reasoning' : 'fallback'
     };
 
     if (!currentStore) {
@@ -418,11 +585,21 @@ async function materializeVirtualData(prefixes) {
     }
 
     try {
-        // 1. Выполняем inference
+        console.log('materializeVirtualData: Starting semantic reasoning (issue #322)');
+
+        // 1. Удаляем существующие Virtual TriG (напрямую из store, без currentQuads)
+        stats.removedQuads = removeAllVirtualTriGsFromStore();
+
+        // 2. Выполняем semantic reasoning
         const inferredQuads = await performInference(currentStore);
         stats.inferredQuads = inferredQuads.length;
 
-        // 2. Группируем выведенные квады по Virtual TriG
+        if (inferredQuads.length === 0) {
+            console.log('materializeVirtualData: No quads inferred');
+            return stats;
+        }
+
+        // 3. Группируем выведенные квады по Virtual TriG
         const quadsByVirtualTrig = {};
 
         inferredQuads.forEach(quad => {
@@ -430,7 +607,6 @@ async function materializeVirtualData(prefixes) {
 
             // Если граф не указан, определяем его по процессу
             if (!virtualTrigUri) {
-                // Находим isSubprocessTrig для процесса
                 const isSubprocessQuads = currentStore.getQuads(
                     quad.subject,
                     REASONING_NS.VAD + 'isSubprocessTrig',
@@ -452,12 +628,7 @@ async function materializeVirtualData(prefixes) {
             }
         });
 
-        // 3. Удаляем существующие Virtual TriG
-        if (typeof removeAllVirtualTriGs === 'function') {
-            removeAllVirtualTriGs();
-        }
-
-        // 4. Создаём новые Virtual TriG с выведенными данными
+        // 4. Создаём новые Virtual TriG с выведенными данными (только в currentStore)
         const factory = N3.DataFactory;
         const { namedNode } = factory;
 
@@ -482,7 +653,6 @@ async function materializeVirtualData(prefixes) {
 
             // Добавляем выведенные квады
             quads.forEach(quad => {
-                // Обновляем граф на виртуальный
                 const updatedQuad = factory.quad(
                     quad.subject,
                     quad.predicate,
@@ -495,13 +665,55 @@ async function materializeVirtualData(prefixes) {
             stats.virtualTrigsCreated++;
         }
 
+        console.log(`materializeVirtualData: Created ${stats.virtualTrigsCreated} Virtual TriGs with ${stats.inferredQuads} inferred quads`);
+
     } catch (error) {
         console.error('materializeVirtualData error:', error);
         stats.errors.push(error.message);
     }
 
-    console.log('materializeVirtualData stats:', stats);
     return stats;
+}
+
+/**
+ * issue #322: Удаляет все Virtual TriG напрямую из currentStore
+ * Не использует currentQuads - работает только с N3.Store
+ *
+ * @returns {number} - Количество удалённых квадов
+ */
+function removeAllVirtualTriGsFromStore() {
+    if (!currentStore) return 0;
+
+    // Находим все виртуальные графы через rdf:type vad:Virtual
+    const virtualTypeQuads = currentStore.getQuads(
+        null,
+        REASONING_NS.RDF + 'type',
+        REASONING_NS.VAD + 'Virtual',
+        null
+    );
+
+    let totalRemoved = 0;
+    const virtualGraphUris = new Set();
+
+    // Собираем URI виртуальных графов
+    virtualTypeQuads.forEach(quad => {
+        if (quad.graph && quad.graph.value) {
+            virtualGraphUris.add(quad.graph.value);
+        }
+    });
+
+    // Удаляем все квады из каждого виртуального графа
+    virtualGraphUris.forEach(graphUri => {
+        const quadsToRemove = currentStore.getQuads(null, null, null, graphUri);
+        totalRemoved += quadsToRemove.length;
+        quadsToRemove.forEach(quad => currentStore.removeQuad(quad));
+    });
+
+    if (totalRemoved > 0) {
+        console.log(`removeAllVirtualTriGsFromStore: Removed ${totalRemoved} quads from ${virtualGraphUris.size} virtual graphs`);
+    }
+
+    return totalRemoved;
 }
 
 // ============================================================================

@@ -120,12 +120,21 @@ function formatVADErrors(errors) {
 /**
  * Проверяет существование триплета во всех графах (для проверки дубликатов)
  * Поддерживает проверку как полных URI, так и prefixed names
+ *
+ * issue #322: Использует currentStore.getQuads() вместо currentQuads
+ *
  * @param {string} subjectValue - URI или prefixed name субъекта
  * @param {string} predicateValue - URI или prefixed name предиката
  * @param {string} objectValue - URI, prefixed name или литерал объекта
  * @returns {Object|null} - {graphUri, graphLabel} если найден дубликат, иначе null
  */
 function findDuplicateTriple(subjectValue, predicateValue, objectValue) {
+    // issue #322: Проверяем наличие currentStore
+    if (!currentStore) {
+        console.warn('findDuplicateTriple: currentStore not initialized');
+        return null;
+    }
+
     // Преобразуем prefixed names в полные URI для сравнения
     let subjectUri = subjectValue;
     let predicateUri = predicateValue;
@@ -143,28 +152,37 @@ function findDuplicateTriple(subjectValue, predicateValue, objectValue) {
         }
     }
 
+    // issue #322: Используем currentStore.getQuads() для эффективного поиска
+    // Сначала пробуем точный поиск по URI
+    const exactQuads = currentStore.getQuads(subjectUri, predicateUri, objectUri, null);
+    if (exactQuads.length > 0) {
+        const graphUri = exactQuads[0].graph ? exactQuads[0].graph.value : null;
+        const graphLabel = graphUri ? getPrefixedName(graphUri, currentPrefixes) : 'default graph';
+        return { graphUri, graphLabel };
+    }
+
+    // Если точный поиск не дал результата, ищем по subject
+    const subjectQuads = currentStore.getQuads(subjectUri, null, null, null);
+
     // Также преобразуем полные URI в prefixed names для альтернативной проверки
     const subjectPrefixed = getPrefixedName(subjectUri, currentPrefixes);
     const predicatePrefixed = getPrefixedName(predicateUri, currentPrefixes);
     const objectPrefixed = getPrefixedName(objectUri, currentPrefixes);
 
-    for (const quad of currentQuads) {
-        const qSubjectUri = quad.subject.value;
+    for (const quad of subjectQuads) {
         const qPredicateUri = quad.predicate.value;
         const qObjectValue = quad.object.value;
-        const qSubjectPrefixed = getPrefixedName(qSubjectUri, currentPrefixes);
         const qPredicatePrefixed = getPrefixedName(qPredicateUri, currentPrefixes);
         const qObjectPrefixed = quad.object.termType === 'Literal'
             ? quad.object.value
             : getPrefixedName(qObjectValue, currentPrefixes);
 
         // Сравниваем как полные URI, так и prefixed names
-        const subjectMatch = (subjectUri === qSubjectUri) || (subjectPrefixed === qSubjectPrefixed);
         const predicateMatch = (predicateUri === qPredicateUri) || (predicatePrefixed === qPredicatePrefixed);
         const objectMatch = (objectUri === qObjectValue) || (objectPrefixed === qObjectPrefixed) ||
             (objectValue === qObjectValue) || (objectValue === qObjectPrefixed);
 
-        if (subjectMatch && predicateMatch && objectMatch) {
+        if (predicateMatch && objectMatch) {
             const graphUri = quad.graph ? quad.graph.value : null;
             const graphLabel = graphUri ? getPrefixedName(graphUri, currentPrefixes) : 'default graph';
             return { graphUri, graphLabel };
@@ -443,8 +461,10 @@ function formatVirtualRDFdata(virtualData, prefixes) {
 }
 
 /**
- * issue #270: Добавляет виртуальные квады в currentStore и currentQuads
+ * issue #270, #322: Добавляет виртуальные квады только в currentStore
  * Парсит virtualRDFdata и создаёт N3.Quad объекты для хранения в store
+ *
+ * issue #322: Миграция к единому хранилищу - currentQuads больше не используется
  *
  * @param {Object} virtualData - Виртуальные данные { trigUri: { processUri: processInfo } }
  * @param {Object} prefixes - Словарь префиксов
@@ -452,6 +472,12 @@ function formatVirtualRDFdata(virtualData, prefixes) {
  */
 function addVirtualQuadsToStore(virtualData, prefixes) {
     if (!virtualData || Object.keys(virtualData).length === 0) {
+        return [];
+    }
+
+    // issue #322: Проверяем наличие currentStore
+    if (!currentStore) {
+        console.error('addVirtualQuadsToStore: currentStore not initialized');
         return [];
     }
 
@@ -509,19 +535,15 @@ function addVirtualQuadsToStore(virtualData, prefixes) {
         }
     }
 
-    // Добавляем квады в currentQuads и currentStore
+    // issue #322: Добавляем квады только в currentStore (без currentQuads)
     if (newQuads.length > 0) {
-        currentQuads.push(...newQuads);
-
-        if (currentStore) {
-            newQuads.forEach(quad => currentStore.addQuad(quad));
-        }
+        newQuads.forEach(quad => currentStore.addQuad(quad));
 
         // Также добавляем виртуальные графы в trigHierarchy
         addVirtualTrigsToHierarchy(newQuads, virtualData, prefixes);
     }
 
-    console.log(`addVirtualQuadsToStore: Added ${newQuads.length} virtual quads`);
+    console.log(`addVirtualQuadsToStore: Added ${newQuads.length} virtual quads to store`);
     return newQuads;
 }
 

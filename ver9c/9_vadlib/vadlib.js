@@ -639,6 +639,8 @@ function showErrorNotification(message) {
 /**
  * Добавляет технологические квады в общий quadstore (Вариант 2)
  * Вызывается после загрузки пользовательских данных
+ *
+ * issue #322: Миграция к единому хранилищу - используем только currentStore
  */
 function addTechQuadsToStore() {
     if (!techAppendixData.loaded || techAppendixData.quads.length === 0) {
@@ -646,41 +648,51 @@ function addTechQuadsToStore() {
         return;
     }
 
-    // Добавляем квады techtree в общий массив (если их там ещё нет)
+    // issue #322: Проверяем наличие currentStore
+    if (!currentStore) {
+        console.error('addTechQuadsToStore: currentStore not initialized');
+        return;
+    }
+
+    // issue #322: Проверяем дубликаты через currentStore.getQuads()
     const techQuadsToAdd = techAppendixData.quads.filter(techQuad => {
-        // Проверяем, нет ли уже этого квада в currentQuads
-        return !currentQuads.some(existingQuad =>
-            existingQuad.subject.value === techQuad.subject.value &&
-            existingQuad.predicate.value === techQuad.predicate.value &&
-            existingQuad.object.value === techQuad.object.value &&
-            existingQuad.graph?.value === techQuad.graph?.value
+        // Проверяем, нет ли уже этого квада в store
+        const existing = currentStore.getQuads(
+            techQuad.subject,
+            techQuad.predicate,
+            techQuad.object,
+            techQuad.graph
         );
+        return existing.length === 0;
     });
 
     if (techQuadsToAdd.length > 0) {
-        currentQuads.push(...techQuadsToAdd);
-        // Обновляем store
-        if (currentStore) {
-            techQuadsToAdd.forEach(quad => currentStore.addQuad(quad));
-        }
-        console.log(`Added ${techQuadsToAdd.length} tech quads to common quadstore`);
+        // issue #322: Добавляем только в currentStore (без currentQuads)
+        techQuadsToAdd.forEach(quad => currentStore.addQuad(quad));
+        console.log(`Added ${techQuadsToAdd.length} tech quads to store`);
     }
 }
 
 /**
  * Удаляет технологические квады из общего quadstore
  * Используется при очистке данных (сохраняем techtree неизменным)
+ *
+ * issue #322: Миграция к единому хранилищу - работаем напрямую с currentStore
  */
 function removeTechQuadsFromStore() {
-    // Фильтруем currentQuads, оставляя только не-techtree квады
-    currentQuads = currentQuads.filter(quad =>
-        quad.graph?.value !== TECHTREE_GRAPH_URI
-    );
+    // issue #322: Удаляем квады напрямую из currentStore
+    if (!currentStore) {
+        return;
+    }
 
-    // Пересоздаём store без techtree квадов
-    if (currentStore) {
-        currentStore = new N3.Store();
-        currentQuads.forEach(quad => currentStore.addQuad(quad));
+    // Получаем все квады из techtree графа
+    const techQuads = currentStore.getQuads(null, null, null, TECHTREE_GRAPH_URI);
+
+    // Удаляем каждый квад
+    techQuads.forEach(quad => currentStore.removeQuad(quad));
+
+    if (techQuads.length > 0) {
+        console.log(`Removed ${techQuads.length} tech quads from store`);
     }
 }
 
