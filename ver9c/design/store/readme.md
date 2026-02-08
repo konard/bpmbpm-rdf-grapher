@@ -68,4 +68,7 @@ This fix restores backward compatibility by: Это исправление во�
 Fixes bpmbpm/rdf-grapher#326
 
 ---
-## ааа 
+## Пробоемы
+во время миграции с currentQuadsна currentStore(N3.Store) в задаче bpmbpm/rdf-grapher#326  
+Поломался Virtual TriG,  
+востанавливаем https://github.com/bpmbpm/rdf-grapher/pull/329  
