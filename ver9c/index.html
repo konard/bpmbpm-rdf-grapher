@@ -40,6 +40,9 @@
     <link rel="stylesheet" href="6_legend/6_legend.css">
     <link rel="stylesheet" href="7_info/7_info.css">
     <link rel="stylesheet" href="8_infoSPARQL/8_infoSPARQL.css">
+    <!-- issue #317: Модули Virtual TriG и Reasoning -->
+    <link rel="stylesheet" href="10_virtualTriG/10_virtualTriG.css">
+    <link rel="stylesheet" href="11_reasoning/11_reasoning.css">
 </head>
 <body>
     <!-- Контейнер для панелей свойств узлов -->
@@ -86,7 +89,7 @@
                     </select>
                     <!-- issue #258: Переименовано "Показать в окне" в "Edit" для открытия редактора -->
                     <button class="show-in-window-btn" onclick="showRdfEditWindow()">Edit</button>
-                    <button class="virtual-rdf-btn" onclick="showVirtualRDFdataWindow()" title="Показать виртуальные вычисляемые данные (vad:processSubtype)">virtualRDFdata</button>
+                    <button class="virtual-rdf-btn" onclick="showVirtualTriGWindow()" title="Показать виртуальные вычисляемые данные (vad:processSubtype)">Virtual TriG</button>
                     <button class="clear-btn" onclick="clearRdfInput()">Очистить</button>
                     <button class="save-as-btn" onclick="saveAsFile()">Сохранить как</button>
                     <button class="load-btn" onclick="document.getElementById('file-input').click()">Загрузить</button>
@@ -675,6 +678,15 @@ WHERE {
     <!-- Модуль 8: SPARQL панель -->
     <script src="8_infoSPARQL/8_infoSPARQL_sparql.js"></script>
     <script src="8_infoSPARQL/8_infoSPARQL_ui.js"></script>
+
+    <!-- issue #317: Модуль 10: Virtual TriG -->
+    <script src="10_virtualTriG/10_virtualTriG_sparql.js"></script>
+    <script src="10_virtualTriG/10_virtualTriG_logic.js"></script>
+    <script src="10_virtualTriG/10_virtualTriG_ui.js"></script>
+
+    <!-- issue #317: Модуль 11: Reasoning -->
+    <script src="11_reasoning/11_reasoning_sparql.js"></script>
+    <script src="11_reasoning/11_reasoning_logic.js"></script>
 
     <!-- ========================================================================== -->
     <!-- ИНИЦИАЛИЗАЦИЯ                                                              -->

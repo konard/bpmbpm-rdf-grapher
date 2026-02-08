@@ -1,11 +1,12 @@
 <!-- Ссылка на issue: https://github.com/bpmbpm/rdf-grapher/issues/252 -->
 <!-- Обновлено: PR #273 по issue #272, дата 2026-02-04 -->
+<!-- Обновлено: issue #317 - добавлены модули 10_virtualTriG и 11_reasoning, дата 2026-02-08 -->
 
 # Структура папок проекта RDF Grapher ver9c
 
 ## 1. Обзор структуры проекта
 
-Проект RDF Grapher ver9c организован по модульному принципу. Каждый функциональный модуль размещен в отдельной пронумерованной папке (1_ -- 9_), что обеспечивает четкое разделение ответственности и независимость модулей. Нумерация папок отражает логический порядок работы пользователя с приложением: от загрузки данных (1_) до общей библиотеки утилит (9_).
+Проект RDF Grapher ver9c организован по модульному принципу. Каждый функциональный модуль размещен в отдельной пронумерованной папке (1_ -- 11_), что обеспечивает четкое разделение ответственности и независимость модулей. Нумерация папок отражает логический порядок работы пользователя с приложением: от загрузки данных (1_) до общей библиотеки утилит (9_) и специализированных модулей обработки данных (10_, 11_).
 
 Корневой файл `index.html` является минимальной HTML-оболочкой, которая подключает модули и организует общую компоновку интерфейса. Конфигурация состояния окон (свернуто/развернуто) хранится в `config.json`.
 
@@ -68,6 +69,15 @@ ver9c/
 ├── 9_vadlib/                     - Общая библиотека
 │   ├── vadlib.js                 (619 строк)  - Основные утилиты и конфигурация
 │   └── vadlib_sparql.js          (274 строки)  - SPARQL движок (funSPARQLvalues)
+├── 10_virtualTriG/               - Модуль Virtual TriG (issue #317)
+│   ├── 10_virtualTriG_logic.js   - Логика вычисления и управления Virtual TriG
+│   ├── 10_virtualTriG_sparql.js  - SPARQL запросы для Virtual TriG
+│   ├── 10_virtualTriG_ui.js      - UI функции отображения
+│   └── 10_virtualTriG.css        - Стили модуля
+├── 11_reasoning/                 - Модуль Semantic Reasoning (issue #317)
+│   ├── 11_reasoning_logic.js     - Логика reasoning и inference
+│   ├── 11_reasoning_sparql.js    - SPARQL запросы для reasoning
+│   └── 11_reasoning.css          - Стили (резерв)
 ├── doc/                          - Документация
 ├── ontology/                     - Файлы онтологии
 ├── requirements/                 - Требования к проекту
@@ -157,6 +167,29 @@ ver9c/
 **Файлы:**
 - `vadlib.js` (619 строк) -- Конфигурация: `Mode`, `Filter`, `VAD_ALLOWED_TYPES`, `PROCESS_SUBTYPES`; вспомогательные функции: `getPrefixedName()`, `getLocalName()`, `escapeDotString()`, `generateNodeId()` и другие
 - `vadlib_sparql.js` -- SPARQL движок: `funSPARQLvalues()`, `funSPARQLvaluesComunica()`, `parseTriplePatterns()`, `executeSimpleSelect()`, `resolveValue()`, `matchQuadToPattern()`
+
+### 10_virtualTriG/ -- Модуль Virtual TriG (issue #317)
+
+Модуль обработки вычислимых данных (Virtual TriG). Virtual TriG (`vad:vt_*`) — это автоматически вычисляемые данные, которые хранятся в графах типа `vad:Virtual` и связаны с родительским `vad:VADProcessDia` через `vad:hasParentObj`.
+
+**Файлы:**
+- `10_virtualTriG_logic.js` -- Основная логика: `recalculateAllVirtualTriGs()`, `createVirtualTriG()`, `removeVirtualTriG()`, `isVirtualGraphSPARQL()`, `formatVirtualTriGFromStore()`
+- `10_virtualTriG_sparql.js` -- Коллекция SPARQL запросов `VIRTUAL_TRIG_SPARQL`: IS_VIRTUAL_GRAPH, GET_ALL_VIRTUAL_TRIGS, GET_PROCESS_SUBTYPES, DELETE_ALL_VIRTUAL_TRIGS и др.
+- `10_virtualTriG_ui.js` -- UI функции: `showVirtualTriGWindow()`, `closeVirtualTriGModal()`, `recalculateVirtualTriGFromUI()`, `updateVirtualTriGSection()`
+- `10_virtualTriG.css` -- Стили для UI компонентов (секция в панели свойств, кнопки модального окна)
+
+**Документация:** [doc/10_virtualTriG.md](10_virtualTriG.md)
+
+### 11_reasoning/ -- Модуль Semantic Reasoning (issue #317)
+
+Модуль семантического вывода (reasoning) для вычисления Virtual TriG. Реализует механизм inference на базе comunica-feature-reasoning с fallback на JavaScript-реализацию.
+
+**Файлы:**
+- `11_reasoning_logic.js` -- Логика reasoning: `initializeReasoner()`, `performInference()`, `materializeVirtualData()`, `validateInferredData()`, правила вывода в формате N3
+- `11_reasoning_sparql.js` -- Коллекция SPARQL запросов `REASONING_SPARQL`: CONSTRUCT_PROCESS_SUBTYPES, GET_PROCESSES_FOR_REASONING, INSERT_INFERRED_SUBTYPES и др.
+- `11_reasoning.css` -- Стили (резерв для будущих UI компонентов)
+
+**Документация:** [doc/11_reasoning.md](11_reasoning.md)
 
 ## 3. Описание подпапок
 
