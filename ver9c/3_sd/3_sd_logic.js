@@ -188,10 +188,9 @@ async function applyTripleToRdfInput(sparqlQuery, mode) {
     const isDrop = sparqlQuery.includes('DROP');
 
     try {
-        // issue #254: Инициализируем N3.Store если нужно
+        // issue #254, #326: Инициализируем N3.Store если нужно
         if (!currentStore) {
             currentStore = new N3.Store();
-            currentQuads.forEach(q => currentStore.addQuad(q));
         }
 
         // issue #254: Инициализируем Comunica engine если нужно
@@ -209,8 +208,7 @@ async function applyTripleToRdfInput(sparqlQuery, mode) {
             sources: [currentStore]
         });
 
-        // issue #254: Обновляем currentQuads из store после изменения
-        currentQuads = currentStore.getQuads(null, null, null, null);
+        // issue #326: currentQuads удалён - все операции через currentStore
 
         // issue #254: Сериализуем обновлённые данные обратно в TriG через N3.Writer
         const trigText = await serializeStoreToTriG(currentStore, currentPrefixes);
@@ -330,9 +328,10 @@ function replaceFullUrisWithPrefixes(trigText, prefixes) {
 }
 
 /**
- * issue #254: Обновляет quadstore (currentQuads, currentPrefixes, currentStore) из содержимого textarea RDF данных
+ * issue #254, #326: Обновляет quadstore (currentPrefixes, currentStore) из содержимого textarea RDF данных
  * Используется при ручном редактировании textarea или при нажатии кнопки "Показать"
  * Примечание: функция applyTripleToRdfInput теперь использует Comunica напрямую и не вызывает эту функцию
+ * issue #326: currentQuads удалён - все операции через currentStore (N3.Store)
  */
 function refreshQuadstoreFromRdfInput() {
     const rdfInput = document.getElementById('rdf-input');
@@ -365,9 +364,8 @@ function refreshQuadstoreFromRdfInput() {
 
         // Обновляем глобальные переменные
         if (quads.length > 0) {
-            currentQuads = quads;
             currentPrefixes = prefixes;
-            // issue #324: Обновляем currentStore (единственное хранилище)
+            // issue #324, #326: Обновляем currentStore (единственное хранилище)
             currentStore = new N3.Store();
             quads.forEach(q => currentStore.addQuad(q));
 

@@ -74,7 +74,9 @@ function getAllSubjects() {
     const subjects = [];
     const seen = new Set();
 
-    currentQuads.forEach(quad => {
+    // issue #326: Используем currentStore.getQuads() вместо currentQuads
+    const quads = currentStore ? currentStore.getQuads(null, null, null, null) : [];
+    quads.forEach(quad => {
         const uri = quad.subject.value;
         if (!seen.has(uri)) {
             seen.add(uri);
@@ -94,7 +96,9 @@ function getAllPredicates() {
     const predicates = [];
     const seen = new Set();
 
-    currentQuads.forEach(quad => {
+    // issue #326: Используем currentStore.getQuads() вместо currentQuads
+    const quads = currentStore ? currentStore.getQuads(null, null, null, null) : [];
+    quads.forEach(quad => {
         const uri = quad.predicate.value;
         if (!seen.has(uri)) {
             seen.add(uri);
@@ -114,7 +118,9 @@ function getAllObjects() {
     const objects = [];
     const seen = new Set();
 
-    currentQuads.forEach(quad => {
+    // issue #326: Используем currentStore.getQuads() вместо currentQuads
+    const quads = currentStore ? currentStore.getQuads(null, null, null, null) : [];
+    quads.forEach(quad => {
         // Исключаем литералы согласно требованиям
         if (quad.object.termType !== 'Literal') {
             const uri = quad.object.value;
@@ -517,7 +523,9 @@ function getProcessSubjects() {
     const subjects = [];
     const seen = new Set();
 
-    currentQuads.forEach(quad => {
+    // issue #326: Используем currentStore.getQuads() вместо currentQuads
+    const quads = currentStore ? currentStore.getQuads(null, null, null, null) : [];
+    quads.forEach(quad => {
         const uri = quad.subject.value;
         if (!seen.has(uri) && isSubjectVadProcess(uri)) {
             seen.add(uri);
@@ -547,7 +555,9 @@ function getSubjectsByType(typeValue) {
         }
     }
 
-    currentQuads.forEach(quad => {
+    // issue #326: Используем currentStore.getQuads() вместо currentQuads
+    const quads = currentStore ? currentStore.getQuads(null, null, null, null) : [];
+    quads.forEach(quad => {
         const uri = quad.subject.value;
         if (seen.has(uri)) return;
 
@@ -642,7 +652,9 @@ function getPtreePredicates() {
     const seen = new Set();
 
     // Добавляем только предикаты, которые есть в PTREE_PREDICATES и присутствуют в данных
-    currentQuads.forEach(quad => {
+    // issue #326: Используем currentStore.getQuads() вместо currentQuads
+    const quads = currentStore ? currentStore.getQuads(null, null, null, null) : [];
+    quads.forEach(quad => {
         const uri = quad.predicate.value;
         const prefixedName = getPrefixedName(uri, currentPrefixes);
         if (!seen.has(uri) && (isPtreePredicate(uri) || isPtreePredicate(prefixedName))) {
@@ -1045,7 +1057,9 @@ function getProcessIndividualsInTriG(trigUri) {
         const seen = new Set();
         const normalizedTrigUri = normalizeUri(trigUri);
 
-        currentQuads.forEach(quad => {
+        // issue #326: Используем currentStore.getQuads() вместо currentQuads
+        const allQuads = currentStore ? currentStore.getQuads(null, null, null, null) : [];
+        allQuads.forEach(quad => {
             const predUri = quad.predicate.value;
             const isSubprocessTrig = predUri === 'http://example.org/vad#isSubprocessTrig' ||
                                      predUri.endsWith('#isSubprocessTrig');
@@ -1058,7 +1072,7 @@ function getProcessIndividualsInTriG(trigUri) {
                     seen.add(subjectUri);
                     // Пытаемся найти label из ptree
                     let label = getPrefixedName(subjectUri, currentPrefixes);
-                    currentQuads.forEach(q => {
+                    allQuads.forEach(q => {
                         if (q.subject.value === subjectUri &&
                             (q.predicate.value === 'http://www.w3.org/2000/01/rdf-schema#label' ||
                              q.predicate.value.endsWith('#label')) &&
@@ -1093,7 +1107,9 @@ function getExecutorGroupsInTriG(trigUri) {
         const seen = new Set();
         const normalizedTrigUri = normalizeUri(trigUri);
 
-        currentQuads.forEach(quad => {
+        // issue #326: Используем currentStore.getQuads() вместо currentQuads
+        const allQuads = currentStore ? currentStore.getQuads(null, null, null, null) : [];
+        allQuads.forEach(quad => {
             // Ищем субъекты с rdf:type vad:ExecutorGroup в данном графе
             const isTypeTriple = quad.predicate.value === 'http://www.w3.org/1999/02/22-rdf-syntax-ns#type' ||
                                  quad.predicate.value.endsWith('#type');
@@ -1107,7 +1123,7 @@ function getExecutorGroupsInTriG(trigUri) {
                     seen.add(subjectUri);
                     // Ищем label
                     let label = getPrefixedName(subjectUri, currentPrefixes);
-                    currentQuads.forEach(q => {
+                    allQuads.forEach(q => {
                         if (q.subject.value === subjectUri &&
                             (q.predicate.value === 'http://www.w3.org/2000/01/rdf-schema#label' ||
                              q.predicate.value.endsWith('#label'))) {

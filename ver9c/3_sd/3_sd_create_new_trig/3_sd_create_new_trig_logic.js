@@ -112,8 +112,9 @@ let newTrigIntermediateSparqlQueries = [];
  * - Затем открывается окно
  */
 async function openNewTrigModal() {
-    // issue #291: Проверяем, что данные загружены и распарсены (как в New Concept и Del Concept)
-    if (typeof currentQuads === 'undefined' || currentQuads.length === 0) {
+    // issue #291, #326: Проверяем, что данные загружены и распарсены
+    // issue #326: Используем currentStore вместо currentQuads
+    if (!currentStore || currentStore.size === 0) {
         alert('Данные quadstore пусты. Загрузите пример данных (Trig_VADv5 или Trig_VADv6) в разделе "Загрузить пример RDF данных".\n\nQuadstore is empty. Load example data (Trig_VADv5 or Trig_VADv6) in "Load example RDF data" section.');
         return;
     }

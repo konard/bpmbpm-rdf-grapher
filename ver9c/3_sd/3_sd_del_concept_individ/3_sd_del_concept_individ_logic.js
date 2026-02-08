@@ -246,11 +246,13 @@ function getConceptsManual(typeUri, graphUri) {
     const rdfTypeUri = 'http://www.w3.org/1999/02/22-rdf-syntax-ns#type';
     const rdfsLabelUri = 'http://www.w3.org/2000/01/rdf-schema#label';
 
-    if (typeof currentQuads !== 'undefined' && Array.isArray(currentQuads)) {
+    // issue #326: Используем currentStore.getQuads() вместо currentQuads
+    if (currentStore) {
+        const quads = currentStore.getQuads(null, null, null, null);
         const conceptUris = new Set();
 
         // Найти все концепты с указанным типом в указанном графе
-        currentQuads.forEach(quad => {
+        quads.forEach(quad => {
             if (quad.predicate.value === rdfTypeUri &&
                 quad.object.value === typeUri &&
                 quad.graph && quad.graph.value === graphUri) {
@@ -264,7 +266,7 @@ function getConceptsManual(typeUri, graphUri) {
                 : uri;
 
             // Ищем label В ТОМ ЖЕ ГРАФЕ, где находится концепт
-            currentQuads.forEach(quad => {
+            quads.forEach(quad => {
                 if (quad.subject.value === uri &&
                     quad.predicate.value === rdfsLabelUri &&
                     quad.graph && quad.graph.value === graphUri) {
@@ -346,15 +348,17 @@ function findProcessIndividualsManual(conceptUri) {
     // Issue #221 Fix #2: Отладочная информация (отключена по умолчанию)
     const DEBUG_INDIVID_SEARCH = false;
 
-    if (typeof currentQuads !== 'undefined' && Array.isArray(currentQuads)) {
+    // issue #326: Используем currentStore.getQuads() вместо currentQuads
+    if (currentStore) {
+        const quads = currentStore.getQuads(null, null, null, null);
         if (DEBUG_INDIVID_SEARCH) {
             console.log(`[findProcessIndividualsManual] Поиск индивидов для концепта: ${conceptUri}`);
-            console.log(`[findProcessIndividualsManual] Всего квадов: ${currentQuads.length}`);
+            console.log(`[findProcessIndividualsManual] Всего квадов: ${quads.length}`);
         }
 
         // Issue #221 Fix #2: Находим все TriG типа VADProcessDia
         const vadProcessDiaTrigs = new Set();
-        currentQuads.forEach(quad => {
+        quads.forEach(quad => {
             if (quad.predicate.value === rdfTypeUri &&
                 quad.object.value === vadProcessDiaUri) {
                 vadProcessDiaTrigs.add(quad.subject.value);
@@ -370,7 +374,7 @@ function findProcessIndividualsManual(conceptUri) {
 
         // Issue #221 Fix #2: Ищем использования данного концепта как индивида (vad:isSubprocessTrig)
         // во ВСЕХ TriG типа VADProcessDia
-        currentQuads.forEach(quad => {
+        quads.forEach(quad => {
             // Проверяем предикат vad:isSubprocessTrig
             const predicateMatches = quad.predicate.value === isSubprocessTrigUri ||
                 quad.predicate.value.endsWith('#isSubprocessTrig');
@@ -423,14 +427,16 @@ function findConceptAsIndividualInTrigs(conceptUri) {
     // Issue #219 Fix #1: Отладочная информация (отключена по умолчанию)
     const DEBUG_INDIVID_DETECTION = false;
 
-    if (typeof currentQuads !== 'undefined' && Array.isArray(currentQuads)) {
+    // issue #326: Используем currentStore.getQuads() вместо currentQuads
+    if (currentStore) {
+        const quads = currentStore.getQuads(null, null, null, null);
         if (DEBUG_INDIVID_DETECTION) {
             console.log(`[findConceptAsIndividualInTrigs] Поиск для концепта: ${conceptUri}`);
-            console.log(`[findConceptAsIndividualInTrigs] Всего квадов: ${currentQuads.length}`);
+            console.log(`[findConceptAsIndividualInTrigs] Всего квадов: ${quads.length}`);
         }
 
         // Ищем все случаи, где данный концепт используется как индивид (subject с isSubprocessTrig)
-        currentQuads.forEach(quad => {
+        quads.forEach(quad => {
             // Issue #219 Fix #1: Расширенная проверка - также поддерживаем сокращенные URI
             const subjectMatches = quad.subject.value === conceptUri ||
                 (typeof getPrefixedName === 'function' &&
@@ -463,7 +469,7 @@ function findConceptAsIndividualInTrigs(conceptUri) {
         }
     } else {
         if (DEBUG_INDIVID_DETECTION) {
-            console.log(`[findConceptAsIndividualInTrigs] currentQuads не определён или не массив`);
+            console.log(`[findConceptAsIndividualInTrigs] currentStore не определён`);
         }
     }
 
@@ -492,8 +498,10 @@ function checkProcessSchema(conceptUri) {
         const hasTrigUri = 'http://example.org/vad#hasTrig';
         const ptreeUri = 'http://example.org/vad#ptree';
 
-        if (typeof currentQuads !== 'undefined' && Array.isArray(currentQuads)) {
-            currentQuads.forEach(quad => {
+        // issue #326: Используем currentStore.getQuads() вместо currentQuads
+    if (currentStore) {
+        const quads = currentStore.getQuads(null, null, null, null);
+            quads.forEach(quad => {
                 if (quad.subject.value === conceptUri &&
                     quad.predicate.value === hasTrigUri &&
                     quad.graph && quad.graph.value === ptreeUri) {
@@ -544,8 +552,10 @@ function checkChildrenElements(conceptUri, graphUri) {
     if (children.length === 0) {
         const hasParentObjUri = 'http://example.org/vad#hasParentObj';
 
-        if (typeof currentQuads !== 'undefined' && Array.isArray(currentQuads)) {
-            currentQuads.forEach(quad => {
+        // issue #326: Используем currentStore.getQuads() вместо currentQuads
+    if (currentStore) {
+        const quads = currentStore.getQuads(null, null, null, null);
+            quads.forEach(quad => {
                 if (quad.predicate.value === hasParentObjUri &&
                     quad.object.value === conceptUri &&
                     quad.graph && quad.graph.value === graphUri) {
@@ -595,8 +605,10 @@ function checkExecutorUsage(executorUri) {
     if (usages.length === 0) {
         const includesUri = 'http://example.org/vad#includes';
 
-        if (typeof currentQuads !== 'undefined' && Array.isArray(currentQuads)) {
-            currentQuads.forEach(quad => {
+        // issue #326: Используем currentStore.getQuads() вместо currentQuads
+    if (currentStore) {
+        const quads = currentStore.getQuads(null, null, null, null);
+            quads.forEach(quad => {
                 if (quad.predicate.value === includesUri &&
                     quad.object.value === executorUri &&
                     quad.graph) {
@@ -646,8 +658,10 @@ function getAllTrigs() {
         const rdfTypeUri = 'http://www.w3.org/1999/02/22-rdf-syntax-ns#type';
         const vadProcessDiaUri = 'http://example.org/vad#VADProcessDia';
 
-        if (typeof currentQuads !== 'undefined' && Array.isArray(currentQuads)) {
-            currentQuads.forEach(quad => {
+        // issue #326: Используем currentStore.getQuads() вместо currentQuads
+    if (currentStore) {
+        const quads = currentStore.getQuads(null, null, null, null);
+            quads.forEach(quad => {
                 if (quad.predicate.value === rdfTypeUri &&
                     quad.object.value === vadProcessDiaUri) {
                     trigs.push({
@@ -681,8 +695,10 @@ function findConceptForTrig(trigUri) {
     const hasTrigUri = 'http://example.org/vad#hasTrig';
     const ptreeUri = 'http://example.org/vad#ptree';
 
-    if (typeof currentQuads !== 'undefined' && Array.isArray(currentQuads)) {
-        for (const quad of currentQuads) {
+    // issue #326: Используем currentStore.getQuads() вместо currentQuads
+    if (currentStore) {
+        const quads = currentStore.getQuads(null, null, null, null);
+        for (const quad of quads) {
             if (quad.predicate.value === hasTrigUri &&
                 quad.object.value === trigUri &&
                 quad.graph && quad.graph.value === ptreeUri) {
@@ -703,9 +719,10 @@ function findConceptForTrig(trigUri) {
  * Вызывается по клику на кнопку "Del Concept\Individ"
  */
 function openDelConceptModal() {
-    // Issue #223, #282: Проверяем, что данные загружены и распарсены
+    // Issue #223, #282, #326: Проверяем, что данные загружены и распарсены
     // issue #282: Удалено сообщение "нажмите кнопку Показать" - данные загружаются автоматически
-    if (typeof currentQuads === 'undefined' || currentQuads.length === 0) {
+    // issue #326: Используем currentStore вместо currentQuads
+    if (!currentStore || currentStore.size === 0) {
         alert('Данные quadstore пусты. Загрузите пример данных (Trig_VADv5 или Trig_VADv6) в разделе "Загрузить пример RDF данных".\n\nQuadstore is empty. Load example data (Trig_VADv5 or Trig_VADv6) in "Load example RDF data" section.');
         return;
     }
@@ -1094,8 +1111,10 @@ function findProcessIndividualsInTrig(trigUri) {
     const isSubprocessTrigUri = 'http://example.org/vad#isSubprocessTrig';
     const seen = new Set();
 
-    if (typeof currentQuads !== 'undefined' && Array.isArray(currentQuads)) {
-        currentQuads.forEach(quad => {
+    // issue #326: Используем currentStore.getQuads() вместо currentQuads
+    if (currentStore) {
+        const quads = currentStore.getQuads(null, null, null, null);
+        quads.forEach(quad => {
             const predicateMatches = quad.predicate.value === isSubprocessTrigUri ||
                 quad.predicate.value.endsWith('#isSubprocessTrig');
 
@@ -1124,8 +1143,10 @@ function findExecutorIndividualsInTrig(trigUri) {
     const includesUri = 'http://example.org/vad#includes';
     const seen = new Set();
 
-    if (typeof currentQuads !== 'undefined' && Array.isArray(currentQuads)) {
-        currentQuads.forEach(quad => {
+    // issue #326: Используем currentStore.getQuads() вместо currentQuads
+    if (currentStore) {
+        const quads = currentStore.getQuads(null, null, null, null);
+        quads.forEach(quad => {
             const predicateMatches = quad.predicate.value === includesUri ||
                 quad.predicate.value.endsWith('#includes');
 
@@ -1154,8 +1175,10 @@ function findExecutorUsageInTrig(executorUri, trigUri) {
     const usages = [];
     const includesUri = 'http://example.org/vad#includes';
 
-    if (typeof currentQuads !== 'undefined' && Array.isArray(currentQuads)) {
-        currentQuads.forEach(quad => {
+    // issue #326: Используем currentStore.getQuads() вместо currentQuads
+    if (currentStore) {
+        const quads = currentStore.getQuads(null, null, null, null);
+        quads.forEach(quad => {
             const predicateMatches = quad.predicate.value === includesUri ||
                 quad.predicate.value.endsWith('#includes');
 
@@ -1637,8 +1660,10 @@ function findExecutorGroupForIndivid(individUri, trigUri) {
     // issue #309: Отладочная информация (отключена по умолчанию)
     const DEBUG_EG_SEARCH = false;
 
-    if (typeof currentQuads !== 'undefined' && Array.isArray(currentQuads)) {
-        for (const quad of currentQuads) {
+    // issue #326: Используем currentStore.getQuads() вместо currentQuads
+    if (currentStore) {
+        const quads = currentStore.getQuads(null, null, null, null);
+        for (const quad of quads) {
             if (quad.subject.value === individUri &&
                 quad.predicate.value === hasExecutorUri &&
                 quad.graph && quad.graph.value === trigUri) {
@@ -1669,8 +1694,10 @@ function findIncomingHasNext(individUri, trigUri) {
     // issue #309: Отладочная информация (отключена по умолчанию)
     const DEBUG_HN_SEARCH = false;
 
-    if (typeof currentQuads !== 'undefined' && Array.isArray(currentQuads)) {
-        currentQuads.forEach(quad => {
+    // issue #326: Используем currentStore.getQuads() вместо currentQuads
+    if (currentStore) {
+        const quads = currentStore.getQuads(null, null, null, null);
+        quads.forEach(quad => {
             if (quad.predicate.value === hasNextUri &&
                 quad.object.value === individUri &&
                 quad.graph && quad.graph.value === trigUri) {

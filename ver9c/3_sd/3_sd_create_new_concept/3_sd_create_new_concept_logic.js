@@ -213,9 +213,10 @@ function getPredicatesForNewConceptManual(techObjectUri) {
     const predicates = [];
     const includePredicateUri = 'http://example.org/vad#includePredicate';
 
-    // Ищем в currentQuads
-    if (typeof currentQuads !== 'undefined' && Array.isArray(currentQuads)) {
-        currentQuads.forEach(quad => {
+    // issue #326: Используем currentStore.getQuads() вместо currentQuads
+    if (currentStore) {
+        const quads = currentStore.getQuads(null, null, null, null);
+        quads.forEach(quad => {
             if (quad.subject.value === techObjectUri &&
                 quad.predicate.value === includePredicateUri) {
                 predicates.push({
@@ -325,12 +326,14 @@ function getObjectsByTypeManual(typeUri, graphUri) {
 
     console.log(`getObjectsByTypeManual: Searching for type=${typeUri} in graph=${graphUri}`);
 
-    if (typeof currentQuads !== 'undefined' && Array.isArray(currentQuads)) {
-        console.log(`getObjectsByTypeManual: currentQuads count = ${currentQuads.length}`);
+    // issue #326: Используем currentStore.getQuads() вместо currentQuads
+    if (currentStore) {
+        const quads = currentStore.getQuads(null, null, null, null);
+        console.log(`getObjectsByTypeManual: quads count = ${quads.length}`);
 
         // Сначала находим все субъекты нужного типа в нужном графе
         const subjectsOfType = new Set();
-        currentQuads.forEach(quad => {
+        quads.forEach(quad => {
             // Issue #209 Fix #2: Улучшенная проверка графа
             // Проверяем соответствие типа и графа
             const quadGraphValue = quad.graph ? quad.graph.value : null;
@@ -352,7 +355,7 @@ function getObjectsByTypeManual(typeUri, graphUri) {
                 : subjectUri;
 
             // Ищем rdfs:label
-            currentQuads.forEach(quad => {
+            quads.forEach(quad => {
                 if (quad.subject.value === subjectUri &&
                     quad.predicate.value === rdfsLabelUri) {
                     label = quad.object.value;
@@ -364,7 +367,7 @@ function getObjectsByTypeManual(typeUri, graphUri) {
 
         console.log(`getObjectsByTypeManual: Returning ${objects.length} objects`);
     } else {
-        console.log('getObjectsByTypeManual: currentQuads is not available');
+        console.log('getObjectsByTypeManual: currentStore is not available');
     }
 
     return objects;
@@ -372,15 +375,17 @@ function getObjectsByTypeManual(typeUri, graphUri) {
 
 /**
  * Проверяет существование ID в текущих данных.
- * Сохранена для обратной совместимости — использует прямой перебор currentQuads.
+ * issue #326: Использует currentStore.getQuads() вместо currentQuads.
  *
  * @param {string} uri - URI для проверки
  * @returns {boolean} true если ID уже существует
  * @deprecated Используйте checkIdExistsSparql для SPARQL-ориентированного подхода
  */
 function checkIdExists(uri) {
-    if (typeof currentQuads !== 'undefined' && Array.isArray(currentQuads)) {
-        return currentQuads.some(quad =>
+    // issue #326: Используем currentStore.getQuads() вместо currentQuads
+    if (currentStore) {
+        const quads = currentStore.getQuads(null, null, null, null);
+        return quads.some(quad =>
             quad.subject.value === uri || quad.object.value === uri
         );
     }
@@ -538,9 +543,10 @@ function buildConceptUri(id, prefix = 'vad') {
  * Вызывается по клику на кнопку "New Concept"
  */
 function openNewConceptModal() {
-    // Issue #223, #282: Проверяем, что данные загружены и распарсены
+    // Issue #223, #282, #326: Проверяем, что данные загружены и распарсены
     // issue #282: Удалено сообщение "нажмите кнопку Показать" - данные загружаются автоматически
-    if (typeof currentQuads === 'undefined' || currentQuads.length === 0) {
+    // issue #326: Используем currentStore вместо currentQuads
+    if (!currentStore || currentStore.size === 0) {
         alert('Данные quadstore пусты. Загрузите пример данных (Trig_VADv5 или Trig_VADv6) в разделе "Загрузить пример RDF данных".\n\nQuadstore is empty. Load example data (Trig_VADv5 or Trig_VADv6) in "Load example RDF data" section.');
         return;
     }

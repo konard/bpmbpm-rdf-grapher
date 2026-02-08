@@ -30,10 +30,11 @@ function updateQuadstoreDisplay() {
     if (!rdfInput) return;
 
     // Получаем отфильтрованные квады
+    // issue #326: Используем currentStore.getQuads() вместо currentQuads
     const filterMode = currentTrigFilterMode || TRIG_FILTER_MODES.NO_TECH;
     const filteredQuads = typeof getFilteredQuads === 'function'
         ? getFilteredQuads(filterMode)
-        : currentQuads;
+        : (currentStore ? currentStore.getQuads(null, null, null, null) : []);
 
     if (!filteredQuads || filteredQuads.length === 0) {
         rdfInput.value = '';
@@ -75,9 +76,10 @@ function clearRdfInput() {
 function saveAsFile() {
     // issue #262: Получаем квады БЕЗ TechnoTree типов (режим noTech)
     // независимо от текущего фильтра отображения
+    // issue #326: Используем currentStore.getQuads() вместо currentQuads
     const filteredQuads = typeof getFilteredQuads === 'function'
         ? getFilteredQuads(TRIG_FILTER_MODES.NO_TECH)
-        : currentQuads;
+        : (currentStore ? currentStore.getQuads(null, null, null, null) : []);
 
     if (!filteredQuads || filteredQuads.length === 0) {
         alert('Нет данных для сохранения');
