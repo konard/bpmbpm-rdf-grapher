@@ -1,0 +1,542 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>RDF Grapher ver9c - Тест Individ: Создание и удаление индивидов процесса и исполнителя</title>
+    <!-- Ссылка на issue: https://github.com/bpmbpm/rdf-grapher/issues/319 -->
+    <!-- Pull Request: https://github.com/bpmbpm/rdf-grapher/pull/320 -->
+    <!-- Два режима hasNext: issue #313, PR #314 -->
+    <style>
+        body { font-family: Consolas, Monaco, monospace; padding: 20px; background-color: #f5f5f5; }
+        h1 { color: #333; border-bottom: 2px solid #1976D2; padding-bottom: 10px; }
+        h2 { color: #1976D2; margin-top: 30px; }
+        h3 { color: #2196F3; margin-top: 20px; font-size: 16px; }
+        .step { padding: 10px 15px; margin: 5px 0; border-radius: 4px; font-size: 14px; }
+        .step-passed { background-color: #d4edda; border-left: 4px solid #28a745; color: #155724; }
+        .step-failed { background-color: #f8d7da; border-left: 4px solid #dc3545; color: #721c24; }
+        .step-running { background-color: #fff3cd; border-left: 4px solid #ffc107; color: #856404; }
+        .step-info { background-color: #d1ecf1; border-left: 4px solid #17a2b8; color: #0c5460; }
+        .phase-header { background-color: #e3f2fd; border-left: 4px solid #1976D2; color: #0d47a1; font-weight: bold; margin-top: 20px; }
+        .summary { margin-top: 20px; padding: 15px; border-radius: 4px; font-size: 16px; font-weight: bold; }
+        .summary-passed { background-color: #d4edda; color: #155724; }
+        .summary-failed { background-color: #f8d7da; color: #721c24; }
+        .sparql-block { background-color: #263238; color: #EEFFFF; padding: 15px; border-radius: 4px; margin: 10px 0; font-size: 13px; white-space: pre-wrap; overflow-x: auto; }
+        .data-block { background-color: #FAFAFA; border: 1px solid #E0E0E0; padding: 15px; border-radius: 4px; margin: 10px 0; font-size: 13px; white-space: pre-wrap; overflow-x: auto; max-height: 400px; overflow-y: auto; }
+        #test-log { margin-top: 10px; }
+    </style>
+</head>
+<body>
+    <h1>Тест Individ: Создание и удаление индивидов</h1>
+    <p>
+        Сценарий тестирует полный цикл создания и удаления индивидов процесса и исполнителя
+        в соответствии с <a href="../../doc/algorithm/io_concept_individ_v4.md">io_concept_individ_v4.md</a>.<br>
+        <strong>Фаза 1:</strong> Создание индивида процесса в vad:t_p1 (с hasNext на существующий индивид)<br>
+        <strong>Фаза 2:</strong> Создание индивида исполнителя (добавление vad:includes в ExecutorGroup)<br>
+        <strong>Фаза 3:</strong> Удаление индивида исполнителя (удаление vad:includes)<br>
+        <strong>Фаза 4:</strong> Удаление индивида процесса (3 этапа: исходящие связи, ExecutorGroup, входящие hasNext)
+    </p>
+    <p>
+        <strong>issue #313 (PR #314):</strong> Два режима для vad:hasNext:<br>
+        - "vad:hasNext на существующий" (по умолчанию): индивиды в TriG<br>
+        - "vad:hasNext на любой": все концепты из ptree
+    </p>
+    <div id="test-log"></div>
+    <div id="test-summary"></div>
+
+    <!-- Подключение библиотеки N3.js для парсинга и хранения RDF данных -->
+    <script src="https://unpkg.com/n3@1.17.2/browser/n3.min.js"></script>
+
+    <!-- Подключение библиотеки Comunica для SPARQL запросов -->
+    <script src="https://rdf.js.org/comunica-browser/versions/v4/engines/query-sparql-rdfjs/comunica-browser.js"></script>
+
+    <!-- Подключение основной библиотеки RDF Grapher (глобальные переменные, утилиты) -->
+    <script src="../../9_vadlib/vadlib.js"></script>
+    <!-- Подключение SPARQL-движка (funSPARQLvalues и вспомогательные функции) -->
+    <script src="../../9_vadlib/vadlib_sparql.js"></script>
+    <!-- Подключение логики триплстора (parseTriGHierarchy, validateVAD) -->
+    <script src="../../2_triplestore/2_triplestore_logic.js"></script>
+
+    <script>
+        // ============================================================================
+        // Тест Individ: Создание и удаление индивидов процесса и исполнителя
+        // Ссылка на issue: https://github.com/bpmbpm/rdf-grapher/issues/319
+        // Два режима hasNext: issue #313, PR #314
+        // ============================================================================
+
+        const testLog = document.getElementById('test-log');
+        const testSummary = document.getElementById('test-summary');
+        let stepResults = [];
+
+        /**
+         * Логирует шаг сценария с указанием статуса
+         */
+        function logStep(name, status, message) {
+            const div = document.createElement('div');
+            div.className = `step step-${status === 'phase' ? 'phase-header' : status}`;
+            const icons = { passed: '✅', failed: '❌', running: '⏳', info: 'ℹ️', phase: '📋' };
+            div.textContent = `${icons[status] || ''} ${name}: ${message}`;
+            testLog.appendChild(div);
+            if (status === 'passed' || status === 'failed') {
+                stepResults.push({ name, passed: status === 'passed', message });
+            }
+        }
+
+        /**
+         * Выводит блок с SPARQL-запросом или данными в лог
+         */
+        function logBlock(title, content, type = 'data') {
+            const h = document.createElement('h3');
+            h.textContent = title;
+            testLog.appendChild(h);
+
+            const div = document.createElement('div');
+            div.className = type === 'sparql' ? 'sparql-block' : 'data-block';
+            div.textContent = content;
+            testLog.appendChild(div);
+        }
+
+        /**
+         * Показывает итоговую сводку по всем шагам
+         */
+        function showSummary() {
+            const passed = stepResults.filter(s => s.passed).length;
+            const total = stepResults.length;
+            const allPassed = passed === total;
+            testSummary.className = `summary ${allPassed ? 'summary-passed' : 'summary-failed'}`;
+            testSummary.textContent = `Результат теста Individ: ${passed}/${total} шагов пройдено ${allPassed ? '✅' : '❌'}`;
+        }
+
+        /**
+         * Извлекает содержимое конкретного графа (TriG) из массива квадов
+         */
+        function getGraphContent(graphUri, quads, prefixes) {
+            const graphQuads = quads.filter(q => q.graph && q.graph.value === graphUri);
+            if (graphQuads.length === 0) return '(граф пуст)';
+
+            const graphLabel = getPrefixedName(graphUri, prefixes);
+            let output = `${graphLabel} {\n`;
+
+            graphQuads.forEach(q => {
+                const s = getPrefixedName(q.subject.value, prefixes);
+                const p = getPrefixedName(q.predicate.value, prefixes);
+                const o = q.object.termType === 'Literal'
+                    ? `"${q.object.value}"`
+                    : getPrefixedName(q.object.value, prefixes);
+                output += `    ${s} ${p} ${o} .\n`;
+            });
+
+            output += '}';
+            return output;
+        }
+
+        /**
+         * Применяет SPARQL запрос к currentStore через Comunica
+         */
+        async function applySparql(sparqlQuery) {
+            try {
+                if (!comunicaEngine) {
+                    if (typeof Comunica !== 'undefined' && Comunica.QueryEngine) {
+                        comunicaEngine = new Comunica.QueryEngine();
+                    } else {
+                        throw new Error('Comunica не загружена');
+                    }
+                }
+
+                await comunicaEngine.queryVoid(sparqlQuery, {
+                    sources: [currentStore]
+                });
+
+                currentQuads = currentStore.getQuads(null, null, null, null);
+                return true;
+            } catch (error) {
+                console.error('applySparql error:', error);
+                throw error;
+            }
+        }
+
+        /**
+         * Загружает и парсит TriG данные
+         */
+        async function loadTriGData() {
+            const response = await fetch('../../dia/Trig_VADv5.ttl');
+            if (!response.ok) throw new Error(`HTTP ${response.status}`);
+            const data = await response.text();
+
+            const quads = [];
+            let prefixes = {};
+
+            await new Promise((resolve, reject) => {
+                const parser = new N3.Parser({ format: 'trig' });
+                parser.parse(data, (error, quad, parsedPrefixes) => {
+                    if (error) { reject(error); return; }
+                    if (quad) { quads.push(quad); }
+                    else {
+                        if (parsedPrefixes) prefixes = parsedPrefixes;
+                        resolve();
+                    }
+                });
+            });
+
+            return { quads, prefixes };
+        }
+
+        /**
+         * Проверяет наличие индивида в TriG
+         */
+        function checkIndividExists(individUri, trigUri) {
+            const isSubprocessTrigUri = 'http://example.org/vad#isSubprocessTrig';
+            return currentStore.getQuads(
+                N3.DataFactory.namedNode(individUri),
+                N3.DataFactory.namedNode(isSubprocessTrigUri),
+                N3.DataFactory.namedNode(trigUri),
+                N3.DataFactory.namedNode(trigUri)
+            ).length > 0;
+        }
+
+        /**
+         * Проверяет наличие ExecutorGroup в TriG
+         */
+        function checkExecutorGroupExists(groupUri, trigUri) {
+            const rdfTypeUri = 'http://www.w3.org/1999/02/22-rdf-syntax-ns#type';
+            const executorGroupTypeUri = 'http://example.org/vad#ExecutorGroup';
+            return currentStore.getQuads(
+                N3.DataFactory.namedNode(groupUri),
+                N3.DataFactory.namedNode(rdfTypeUri),
+                N3.DataFactory.namedNode(executorGroupTypeUri),
+                N3.DataFactory.namedNode(trigUri)
+            ).length > 0;
+        }
+
+        /**
+         * Проверяет наличие vad:includes связи
+         */
+        function checkIncludesExists(groupUri, executorUri, trigUri) {
+            const includesUri = 'http://example.org/vad#includes';
+            return currentStore.getQuads(
+                N3.DataFactory.namedNode(groupUri),
+                N3.DataFactory.namedNode(includesUri),
+                N3.DataFactory.namedNode(executorUri),
+                N3.DataFactory.namedNode(trigUri)
+            ).length > 0;
+        }
+
+        /**
+         * Получает индивиды процесса в TriG (для режима "на существующий")
+         */
+        function getIndividsInTrig(trigUri) {
+            const isSubprocessTrigUri = 'http://example.org/vad#isSubprocessTrig';
+            const individs = [];
+
+            currentQuads.forEach(quad => {
+                if (quad.predicate.value === isSubprocessTrigUri &&
+                    quad.object.value === trigUri &&
+                    quad.graph && quad.graph.value === trigUri) {
+                    individs.push(quad.subject.value);
+                }
+            });
+            return individs;
+        }
+
+        /**
+         * Основная функция запуска теста
+         */
+        async function runTest() {
+            // ================================================================
+            // Загрузка исходных данных
+            // ================================================================
+            logStep('Подготовка', 'running', 'Загрузка Trig_VADv5.ttl...');
+            try {
+                const { quads, prefixes } = await loadTriGData();
+                currentQuads = quads;
+                currentPrefixes = prefixes;
+                currentStore = new N3.Store();
+                quads.forEach(q => currentStore.addQuad(q));
+
+                logStep('Подготовка', 'passed', `Загружено ${quads.length} квадов, ${Object.keys(prefixes).length} префиксов`);
+            } catch (error) {
+                logStep('Подготовка', 'failed', `Ошибка: ${error.message}`);
+                showSummary();
+                return;
+            }
+
+            // Конфигурация теста
+            const trigUri = 'http://example.org/vad#t_p1';
+            const trigPrefixed = 'vad:t_p1';
+            const newProcessUri = 'http://example.org/vad#p2.1';  // Концепт существует в ptree
+            const newProcessPrefixed = 'vad:p2.1';
+            const executorGroupUri = 'http://example.org/vad#ExecutorGroup_p2.1';
+            const executorGroupPrefixed = 'vad:ExecutorGroup_p2.1';
+            const existingIndividUri = 'http://example.org/vad#p1.1';  // Существующий индивид в t_p1
+            const existingIndividPrefixed = 'vad:p1.1';
+            const executorUri = 'http://example.org/vad#Executor3';
+            const executorPrefixed = 'vad:Executor3';
+
+            const prefixLines = Object.entries(currentPrefixes)
+                .map(([prefix, uri]) => `PREFIX ${prefix}: <${uri}>`)
+                .join('\n');
+
+            // ================================================================
+            // Проверка режима hasNext "на существующий" (issue #313)
+            // ================================================================
+            logStep('Режим hasNext', 'info', 'Проверка режима "vad:hasNext на существующий" (issue #313)');
+
+            const existingIndivids = getIndividsInTrig(trigUri);
+            logStep('Режим hasNext', 'passed',
+                `Найдено ${existingIndivids.length} существующих индивидов в ${trigPrefixed}: ` +
+                existingIndivids.map(uri => getPrefixedName(uri, currentPrefixes)).join(', '));
+
+            // ================================================================
+            // ФАЗА 1: Создание индивида процесса
+            // ================================================================
+            logStep('ФАЗА 1', 'phase', 'Создание индивида процесса vad:p2.1 в vad:t_p1 с hasNext на существующий индивид');
+
+            // Шаг 1.1: Формирование SPARQL INSERT для индивида процесса
+            // Используем режим "vad:hasNext на существующий" - ссылаемся на p1.1 который уже есть в t_p1
+            const phase1InsertQuery = `${prefixLines}
+
+# Создание нового индивида процесса с ExecutorGroup
+# hasNext указывает на существующий индивид в TriG (режим "на существующий", issue #313)
+INSERT DATA {
+    GRAPH ${trigPrefixed} {
+        ${newProcessPrefixed} vad:isSubprocessTrig ${trigPrefixed} ;
+            vad:hasExecutor ${executorGroupPrefixed} ;
+            vad:hasNext ${existingIndividPrefixed} .
+
+        # Группа исполнителей (ID формируется как ExecutorGroup_ + ID процесса)
+        ${executorGroupPrefixed} rdf:type vad:ExecutorGroup ;
+            rdfs:label "Группа исполнителей процесса p2.1" .
+    }
+}`;
+
+            logBlock('Фаза 1 - SPARQL INSERT (Индивид процесса с hasNext на существующий)', phase1InsertQuery, 'sparql');
+            logStep('Шаг 1.1', 'passed', 'SPARQL INSERT DATA запрос сформирован (hasNext на существующий индивид vad:p1.1)');
+
+            // Шаг 1.2: Применение SPARQL INSERT
+            logStep('Шаг 1.2', 'running', 'Применение INSERT для создания индивида процесса...');
+            try {
+                const quadsBefore = currentQuads.length;
+                await applySparql(phase1InsertQuery);
+                const quadsAfter = currentQuads.length;
+                logStep('Шаг 1.2', 'passed', `Добавлено ${quadsAfter - quadsBefore} квадов. Всего: ${quadsAfter}`);
+            } catch (error) {
+                logStep('Шаг 1.2', 'failed', `Ошибка: ${error.message}`);
+                showSummary();
+                return;
+            }
+
+            // Шаг 1.3: Вывод содержимого t_p1 после создания индивида
+            const trigContentAfterIndivid = getGraphContent(trigUri, currentQuads, currentPrefixes);
+            logBlock('Фаза 1 - Содержимое vad:t_p1 после INSERT', trigContentAfterIndivid, 'data');
+
+            // Шаг 1.4: Проверка наличия индивида процесса
+            if (checkIndividExists(newProcessUri, trigUri)) {
+                logStep('Шаг 1.3', 'passed', `Индивид ${newProcessPrefixed} успешно создан в ${trigPrefixed}`);
+            } else {
+                logStep('Шаг 1.3', 'failed', `Индивид ${newProcessPrefixed} НЕ найден в ${trigPrefixed}`);
+                showSummary();
+                return;
+            }
+
+            // Шаг 1.5: Проверка создания ExecutorGroup
+            if (checkExecutorGroupExists(executorGroupUri, trigUri)) {
+                logStep('Шаг 1.4', 'passed', `ExecutorGroup ${executorGroupPrefixed} автоматически создана`);
+            } else {
+                logStep('Шаг 1.4', 'failed', `ExecutorGroup ${executorGroupPrefixed} НЕ создана`);
+                showSummary();
+                return;
+            }
+
+            // ================================================================
+            // ФАЗА 2: Создание индивида исполнителя
+            // ================================================================
+            logStep('ФАЗА 2', 'phase', 'Создание индивида исполнителя: добавление vad:includes в ExecutorGroup');
+
+            const phase2InsertQuery = `${prefixLines}
+
+# Добавление исполнителя в группу (индивид исполнителя)
+INSERT DATA {
+    GRAPH ${trigPrefixed} {
+        ${executorGroupPrefixed} vad:includes ${executorPrefixed} .
+    }
+}`;
+
+            logBlock('Фаза 2 - SPARQL INSERT (Индивид исполнителя)', phase2InsertQuery, 'sparql');
+            logStep('Шаг 2.1', 'passed', 'SPARQL INSERT DATA запрос сформирован');
+
+            // Шаг 2.2: Применение SPARQL INSERT
+            logStep('Шаг 2.2', 'running', 'Применение INSERT для добавления исполнителя в ExecutorGroup...');
+            try {
+                const quadsBefore = currentQuads.length;
+                await applySparql(phase2InsertQuery);
+                const quadsAfter = currentQuads.length;
+                logStep('Шаг 2.2', 'passed', `Добавлен ${quadsAfter - quadsBefore} квад. Всего: ${quadsAfter}`);
+            } catch (error) {
+                logStep('Шаг 2.2', 'failed', `Ошибка: ${error.message}`);
+                showSummary();
+                return;
+            }
+
+            // Шаг 2.3: Проверка наличия vad:includes
+            if (checkIncludesExists(executorGroupUri, executorUri, trigUri)) {
+                logStep('Шаг 2.3', 'passed', `Исполнитель ${executorPrefixed} добавлен в ${executorGroupPrefixed} через vad:includes`);
+            } else {
+                logStep('Шаг 2.3', 'failed', `Связь vad:includes НЕ создана`);
+                showSummary();
+                return;
+            }
+
+            // ================================================================
+            // ФАЗА 3: Удаление индивида исполнителя
+            // ================================================================
+            logStep('ФАЗА 3', 'phase', 'Удаление индивида исполнителя: удаление vad:includes из ExecutorGroup');
+
+            const phase3DeleteQuery = `${prefixLines}
+
+# Удаление связи vad:includes для исполнителя
+DELETE DATA {
+    GRAPH ${trigPrefixed} {
+        ${executorGroupPrefixed} vad:includes ${executorPrefixed} .
+    }
+}`;
+
+            logBlock('Фаза 3 - SPARQL DELETE (Индивид исполнителя)', phase3DeleteQuery, 'sparql');
+            logStep('Шаг 3.1', 'passed', 'SPARQL DELETE DATA запрос сформирован');
+
+            // Шаг 3.2: Применение SPARQL DELETE
+            logStep('Шаг 3.2', 'running', 'Применение DELETE для удаления исполнителя из ExecutorGroup...');
+            try {
+                const quadsBefore = currentQuads.length;
+                await applySparql(phase3DeleteQuery);
+                const quadsAfter = currentQuads.length;
+                logStep('Шаг 3.2', 'passed', `Удалён ${quadsBefore - quadsAfter} квад. Всего: ${quadsAfter}`);
+            } catch (error) {
+                logStep('Шаг 3.2', 'failed', `Ошибка: ${error.message}`);
+                showSummary();
+                return;
+            }
+
+            // Шаг 3.3: Проверка отсутствия vad:includes
+            if (!checkIncludesExists(executorGroupUri, executorUri, trigUri)) {
+                logStep('Шаг 3.3', 'passed', `Исполнитель ${executorPrefixed} успешно удалён из ${executorGroupPrefixed}`);
+            } else {
+                logStep('Шаг 3.3', 'failed', `Связь vad:includes всё ещё существует`);
+                showSummary();
+                return;
+            }
+
+            // ================================================================
+            // ФАЗА 4: Удаление индивида процесса (3 этапа)
+            // ================================================================
+            logStep('ФАЗА 4', 'phase', 'Удаление индивида процесса: 3 этапа согласно io_concept_individ_v4.md');
+
+            // Этап 1: Удаление всех исходящих связей индивида
+            const phase4Step1Query = `${prefixLines}
+
+# issue #309: Удаление всех исходящих триплетов индивида процесса
+# Этап 1 из 3: удаляет isSubprocessTrig, hasExecutor, hasNext
+DELETE WHERE {
+    GRAPH ${trigPrefixed} {
+        ${newProcessPrefixed} ?p ?o .
+    }
+}`;
+
+            // Этап 2: Удаление ExecutorGroup
+            const phase4Step2Query = `${prefixLines}
+
+# issue #309: Удаление объекта ExecutorGroup
+# Этап 2 из 3: удаляет rdf:type, rdfs:label, vad:includes
+DELETE WHERE {
+    GRAPH ${trigPrefixed} {
+        ${executorGroupPrefixed} ?p ?o .
+    }
+}`;
+
+            // Этап 3: Удаление входящих vad:hasNext
+            // В данном тесте входящих hasNext нет (другие индивиды не ссылаются на p2.1)
+            // Но мы всё равно формируем запрос для демонстрации
+            const phase4Step3Query = `${prefixLines}
+
+# issue #309: Удаление входящих связей vad:hasNext
+# Этап 3 из 3: удаляет ссылки на удаляемый индивид от других индивидов
+DELETE WHERE {
+    GRAPH ${trigPrefixed} {
+        ?s vad:hasNext ${newProcessPrefixed} .
+    }
+}`;
+
+            // Объединённый запрос для отображения
+            const fullDeleteQuery = phase4Step1Query + '\n;\n' + phase4Step2Query + '\n;\n' + phase4Step3Query;
+            logBlock('Фаза 4 - SPARQL DELETE (Индивид процесса, 3 этапа)', fullDeleteQuery, 'sparql');
+            logStep('Шаг 4.1', 'passed', 'SPARQL DELETE запросы сформированы (3 этапа)');
+
+            // Шаг 4.2: Применение этапа 1
+            logStep('Шаг 4.2', 'running', 'Этап 1: Удаление исходящих связей индивида...');
+            try {
+                const quadsBefore = currentQuads.length;
+                await applySparql(phase4Step1Query);
+                const quadsAfter = currentQuads.length;
+                logStep('Шаг 4.2', 'passed', `Этап 1 выполнен. Удалено ${quadsBefore - quadsAfter} квадов. Всего: ${quadsAfter}`);
+            } catch (error) {
+                logStep('Шаг 4.2', 'failed', `Ошибка: ${error.message}`);
+                showSummary();
+                return;
+            }
+
+            // Шаг 4.3: Применение этапа 2
+            logStep('Шаг 4.3', 'running', 'Этап 2: Удаление ExecutorGroup...');
+            try {
+                const quadsBefore = currentQuads.length;
+                await applySparql(phase4Step2Query);
+                const quadsAfter = currentQuads.length;
+                logStep('Шаг 4.3', 'passed', `Этап 2 выполнен. Удалено ${quadsBefore - quadsAfter} квадов. Всего: ${quadsAfter}`);
+            } catch (error) {
+                logStep('Шаг 4.3', 'failed', `Ошибка: ${error.message}`);
+                showSummary();
+                return;
+            }
+
+            // Шаг 4.4: Применение этапа 3
+            logStep('Шаг 4.4', 'running', 'Этап 3: Удаление входящих vad:hasNext...');
+            try {
+                const quadsBefore = currentQuads.length;
+                await applySparql(phase4Step3Query);
+                const quadsAfter = currentQuads.length;
+                const deletedCount = quadsBefore - quadsAfter;
+                logStep('Шаг 4.4', 'passed', `Этап 3 выполнен. Удалено ${deletedCount} квадов (${deletedCount === 0 ? 'входящих hasNext не было' : 'входящие hasNext удалены'}). Всего: ${quadsAfter}`);
+            } catch (error) {
+                logStep('Шаг 4.4', 'failed', `Ошибка: ${error.message}`);
+                showSummary();
+                return;
+            }
+
+            // Шаг 4.5: Вывод содержимого t_p1 после удаления
+            const trigContentAfterDelete = getGraphContent(trigUri, currentQuads, currentPrefixes);
+            logBlock('Фаза 4 - Содержимое vad:t_p1 после DELETE', trigContentAfterDelete, 'data');
+
+            // Шаг 4.6: Проверка отсутствия индивида
+            if (!checkIndividExists(newProcessUri, trigUri)) {
+                logStep('Шаг 4.5', 'passed', `Индивид ${newProcessPrefixed} успешно удалён из ${trigPrefixed}`);
+            } else {
+                logStep('Шаг 4.5', 'failed', `Индивид ${newProcessPrefixed} всё ещё существует в ${trigPrefixed}`);
+                showSummary();
+                return;
+            }
+
+            // Шаг 4.7: Проверка отсутствия ExecutorGroup
+            if (!checkExecutorGroupExists(executorGroupUri, trigUri)) {
+                logStep('Шаг 4.6', 'passed', `ExecutorGroup ${executorGroupPrefixed} успешно удалена`);
+            } else {
+                logStep('Шаг 4.6', 'failed', `ExecutorGroup ${executorGroupPrefixed} всё ещё существует`);
+            }
+
+            showSummary();
+        }
+
+        // Запуск теста при загрузке страницы
+        document.addEventListener('DOMContentLoaded', function() {
+            runTest();
+        });
+    </script>
+</body>
+</html>
