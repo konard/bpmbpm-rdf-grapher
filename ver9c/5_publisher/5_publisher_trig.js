@@ -1,6 +1,252 @@
 // Ссылка на issue: https://github.com/bpmbpm/rdf-grapher/issues/232
 // 5_publisher_trig.js - Функции отображения TriG дерева модуля Publisher
 
+        // ==============================================================================
+        // issue #336: Функции для кнопки Методы и выпадающего списка методов
+        // ==============================================================================
+
+        /**
+         * Показывает/скрывает выпадающий список методов для объекта
+         * @param {Event} event - Событие клика
+         * @param {string} objectUri - URI объекта
+         * @param {string} trigUri - URI текущего TriG
+         * @param {string} objectMethodType - Тип объекта ('isSubprocessTrig' или 'ExecutorGroup')
+         */
+        async function toggleMethodsDropdown(event, objectUri, trigUri, objectMethodType) {
+            event.stopPropagation();
+
+            // Закрываем существующий dropdown если есть
+            const existingDropdown = document.querySelector('.methods-dropdown.visible');
+            if (existingDropdown) {
+                existingDropdown.remove();
+            }
+
+            const button = event.target;
+            const buttonRect = button.getBoundingClientRect();
+
+            // Создаём dropdown
+            const dropdown = document.createElement('div');
+            dropdown.className = 'methods-dropdown visible';
+            dropdown.style.position = 'fixed';
+            dropdown.style.left = buttonRect.left + 'px';
+            dropdown.style.top = (buttonRect.bottom + 2) + 'px';
+
+            // Получаем методы для данного типа объекта через SPARQL
+            const methods = await getMethodsForType(objectMethodType);
+
+            if (methods.length === 0) {
+                dropdown.innerHTML = '<div class="methods-dropdown-empty">Нет доступных методов</div>';
+            } else {
+                methods.forEach(method => {
+                    const item = document.createElement('div');
+                    item.className = 'methods-dropdown-item';
+                    item.textContent = method.label;
+                    item.onclick = (e) => {
+                        e.stopPropagation();
+                        dropdown.remove();
+                        executeObjectMethod(method.functionId, objectUri, trigUri);
+                    };
+                    dropdown.appendChild(item);
+                });
+            }
+
+            document.body.appendChild(dropdown);
+
+            // Закрываем dropdown при клике вне его
+            const closeDropdown = (e) => {
+                if (!dropdown.contains(e.target) && e.target !== button) {
+                    dropdown.remove();
+                    document.removeEventListener('click', closeDropdown);
+                }
+            };
+            setTimeout(() => document.addEventListener('click', closeDropdown), 0);
+        }
+
+        /**
+         * Получает список методов для указанного типа объекта через SPARQL
+         * @param {string} objectMethodType - Тип объекта ('isSubprocessTrig' или 'ExecutorGroup')
+         * @returns {Promise<Array>} - Массив объектов { label, functionId }
+         */
+        async function getMethodsForType(objectMethodType) {
+            // Формируем URI типа для SPARQL запроса
+            const typeUri = objectMethodType === 'ExecutorGroup'
+                ? 'http://example.org/vad#ExecutorGroup'
+                : 'http://example.org/vad#isSubprocessTrig';
+
+            // issue #336: Запрос методов из графа vad:techtree (технологическое приложение)
+            const query = `
+                PREFIX rdf: <http://www.w3.org/1999/02/22-rdf-syntax-ns#>
+                PREFIX rdfs: <http://www.w3.org/2000/01/rdf-schema#>
+                PREFIX vad: <http://example.org/vad#>
+
+                SELECT ?method ?label ?functionId WHERE {
+                    GRAPH vad:techtree {
+                        ?method rdf:type vad:ObjectMethod .
+                        ?method vad:methodForType <${typeUri}> .
+                        ?method rdfs:label ?label .
+                        ?method vad:methodFunction ?functionId .
+                    }
+                }
+            `;
+
+            try {
+                // Используем funSPARQLvaluesComunica для выполнения запроса
+                if (typeof funSPARQLvaluesComunica === 'function') {
+                    const results = await funSPARQLvaluesComunica(query, currentPrefixes);
+                    return results.map(row => ({
+                        uri: row.method,
+                        label: row.label,
+                        functionId: row.functionId
+                    }));
+                } else {
+                    console.warn('funSPARQLvaluesComunica not available');
+                    return [];
+                }
+            } catch (error) {
+                console.error('getMethodsForType error:', error);
+                return [];
+            }
+        }
+
+        /**
+         * Выполняет метод объекта
+         * @param {string} functionId - Идентификатор функции ('deleteIndividProcess' или 'deleteIndividExecutor')
+         * @param {string} objectUri - URI объекта
+         * @param {string} trigUri - URI текущего TriG
+         */
+        function executeObjectMethod(functionId, objectUri, trigUri) {
+            console.log(`Executing method: ${functionId} for ${objectUri} in ${trigUri}`);
+
+            switch (functionId) {
+                case 'deleteIndividProcess':
+                    deleteIndividProcessFromTrig(objectUri, trigUri);
+                    break;
+                case 'deleteIndividExecutor':
+                    deleteIndividExecutorFromTrig(objectUri, trigUri);
+                    break;
+                default:
+                    console.warn(`Unknown method function: ${functionId}`);
+                    alert(`Метод "${functionId}" не реализован`);
+            }
+        }
+
+        /**
+         * Удаляет индивид процесса из указанного TriG
+         * issue #336: Реализация метода Delete Individ Process
+         * @param {string} processUri - URI процесса
+         * @param {string} trigUri - URI TriG
+         */
+        function deleteIndividProcessFromTrig(processUri, trigUri) {
+            // Проверяем, доступна ли функция удаления индивида
+            if (typeof openDeleteModal === 'function') {
+                // Устанавливаем контекст для удаления
+                // Используем существующую логику из 3_sd_del_concept_individ
+                const prefixedProcessUri = getPrefixedName(processUri, currentPrefixes);
+                const prefixedTrigUri = getPrefixedName(trigUri, currentPrefixes);
+
+                // Вызываем окно удаления с предустановленными значениями
+                openDeleteModal('individ', prefixedTrigUri, prefixedProcessUri);
+            } else {
+                // Fallback: выполняем удаление напрямую через SPARQL
+                const confirmMsg = `Удалить индивид процесса ${getPrefixedName(processUri, currentPrefixes)} из схемы ${getPrefixedName(trigUri, currentPrefixes)}?`;
+                if (confirm(confirmMsg)) {
+                    performDeleteIndividProcess(processUri, trigUri);
+                }
+            }
+        }
+
+        /**
+         * Удаляет все предикаты vad:includes для ExecutorGroup из указанного TriG
+         * issue #336: Реализация метода Delete Individ Executor
+         * @param {string} executorGroupUri - URI ExecutorGroup
+         * @param {string} trigUri - URI TriG
+         */
+        function deleteIndividExecutorFromTrig(executorGroupUri, trigUri) {
+            const prefixedUri = getPrefixedName(executorGroupUri, currentPrefixes);
+            const prefixedTrigUri = getPrefixedName(trigUri, currentPrefixes);
+
+            const confirmMsg = `Удалить всех исполнителей из группы ${prefixedUri}?`;
+            if (confirm(confirmMsg)) {
+                performDeleteIndividExecutor(executorGroupUri, trigUri);
+            }
+        }
+
+        /**
+         * Выполняет фактическое удаление индивида процесса через SPARQL DELETE
+         * @param {string} processUri - URI процесса
+         * @param {string} trigUri - URI TriG
+         */
+        async function performDeleteIndividProcess(processUri, trigUri) {
+            const prefixedProcess = getPrefixedName(processUri, currentPrefixes);
+            const prefixedTrig = getPrefixedName(trigUri, currentPrefixes);
+
+            // Формируем SPARQL DELETE запрос для удаления всех триплетов процесса из TriG
+            const deleteQuery = `
+DELETE WHERE {
+    GRAPH <${trigUri}> {
+        <${processUri}> ?p ?o .
+    }
+}`;
+
+            try {
+                // Применяем запрос через существующую функцию
+                if (typeof applyTripleToRdfInput === 'function') {
+                    applyTripleToRdfInput(deleteQuery, 'delete');
+                    console.log(`Deleted individ process ${prefixedProcess} from ${prefixedTrig}`);
+
+                    // Обновляем визуализацию
+                    if (typeof refreshVisualization === 'function') {
+                        refreshVisualization();
+                    }
+                } else {
+                    alert('Функция удаления недоступна');
+                }
+            } catch (error) {
+                console.error('Error deleting individ process:', error);
+                alert('Ошибка при удалении индивида процесса: ' + error.message);
+            }
+        }
+
+        /**
+         * Выполняет фактическое удаление предикатов vad:includes для ExecutorGroup
+         * @param {string} executorGroupUri - URI ExecutorGroup
+         * @param {string} trigUri - URI TriG
+         */
+        async function performDeleteIndividExecutor(executorGroupUri, trigUri) {
+            const prefixedGroup = getPrefixedName(executorGroupUri, currentPrefixes);
+            const prefixedTrig = getPrefixedName(trigUri, currentPrefixes);
+
+            // Формируем SPARQL DELETE запрос для удаления всех vad:includes
+            const deleteQuery = `
+DELETE WHERE {
+    GRAPH <${trigUri}> {
+        <${executorGroupUri}> <http://example.org/vad#includes> ?executor .
+    }
+}`;
+
+            try {
+                // Применяем запрос через существующую функцию
+                if (typeof applyTripleToRdfInput === 'function') {
+                    applyTripleToRdfInput(deleteQuery, 'delete');
+                    console.log(`Deleted all executors from ${prefixedGroup} in ${prefixedTrig}`);
+
+                    // Обновляем визуализацию
+                    if (typeof refreshVisualization === 'function') {
+                        refreshVisualization();
+                    }
+                } else {
+                    alert('Функция удаления недоступна');
+                }
+            } catch (error) {
+                console.error('Error deleting executors:', error);
+                alert('Ошибка при удалении исполнителей: ' + error.message);
+            }
+        }
+
+        // ==============================================================================
+        // Конец функций для кнопки Методы
+        // ==============================================================================
+
         /**
          * Получает метаданные процесса из vad:ptree (rdfs:label, dcterms:description, vad:hasTrig)
          * @param {string} processUri - URI процесса
@@ -321,6 +567,9 @@
             const seenConceptProps = new Set();
             let objectLabel = null;
 
+            // issue #336: Определяем тип объекта для кнопки Методы
+            let objectMethodType = null;  // 'isSubprocessTrig' или 'ExecutorGroup'
+
             // issue #324: Используем currentStore вместо currentQuads
             const allQuads = currentStore ? currentStore.getQuads(null, null, null, null) : [];
             allQuads.forEach(quad => {
@@ -336,6 +585,17 @@
                     // Запоминаем rdfs:label для отображения в заголовке
                     if (predicateLabel === 'rdfs:label' || predicateUri === 'http://www.w3.org/2000/01/rdf-schema#label') {
                         objectLabel = quad.object.value;
+                    }
+
+                    // issue #336: Определяем тип объекта по предикатам
+                    if (predicateUri === 'http://example.org/vad#isSubprocessTrig' || predicateLabel === 'vad:isSubprocessTrig') {
+                        objectMethodType = 'isSubprocessTrig';
+                    }
+                    if (predicateUri === 'http://www.w3.org/1999/02/22-rdf-syntax-ns#type') {
+                        if (quad.object.value === 'http://example.org/vad#ExecutorGroup' ||
+                            objectValue === 'vad:ExecutorGroup') {
+                            objectMethodType = 'ExecutorGroup';
+                        }
                     }
 
                     const propInfo = {
@@ -374,12 +634,20 @@
             // ============================================================================
             html += `<div class="trig-property-section">`;
 
-            // Заголовок - URI объекта с кнопкой копирования
+            // Заголовок - URI объекта с кнопкой копирования и Методы
             html += `<div class="trig-property-item">`;
             html += `<div class="trig-property-predicate">URI</div>`;
             html += `<div class="trig-property-value-container">`;
             html += `<div class="trig-property-value uri">${escapeHtml(prefixedUri)}</div>`;
+            html += `<div class="trig-property-buttons">`;
             html += `<button class="copy-id-btn" onclick="copyObjectId('${escapeHtml(objectUri)}', this)">Копировать</button>`;
+            // issue #336: Кнопка Методы (только если объект имеет тип с методами)
+            if (objectMethodType && contextTrigUri) {
+                const escapedObjectUri = escapeHtml(objectUri).replace(/'/g, "\\'");
+                const escapedTrigUri = escapeHtml(contextTrigUri).replace(/'/g, "\\'");
+                html += `<button class="methods-btn" onclick="toggleMethodsDropdown(event, '${escapedObjectUri}', '${escapedTrigUri}', '${objectMethodType}')">Методы</button>`;
+            }
+            html += `</div>`;
             html += `</div>`;
             html += `</div>`;
 

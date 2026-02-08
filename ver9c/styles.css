@@ -1136,6 +1136,77 @@
             background-color: #4CAF50;
         }
 
+        /* issue #336: Стили для кнопки Методы и выпадающего списка */
+        .methods-btn {
+            background-color: #FF9800;
+            color: white;
+            border: none;
+            border-radius: 4px;
+            padding: 4px 8px;
+            cursor: pointer;
+            font-size: 11px;
+            flex-shrink: 0;
+            transition: background-color 0.2s;
+            margin-left: 4px;
+            position: relative;
+        }
+
+        .methods-btn:hover {
+            background-color: #F57C00;
+        }
+
+        .methods-btn:disabled {
+            background-color: #BDBDBD;
+            cursor: not-allowed;
+        }
+
+        .methods-dropdown {
+            position: absolute;
+            top: 100%;
+            left: 0;
+            background: white;
+            border: 1px solid #ccc;
+            border-radius: 4px;
+            box-shadow: 0 2px 8px rgba(0,0,0,0.2);
+            min-width: 180px;
+            z-index: 1100;
+            display: none;
+        }
+
+        .methods-dropdown.visible {
+            display: block;
+        }
+
+        .methods-dropdown-item {
+            padding: 8px 12px;
+            cursor: pointer;
+            font-size: 12px;
+            border-bottom: 1px solid #eee;
+            transition: background-color 0.15s;
+        }
+
+        .methods-dropdown-item:last-child {
+            border-bottom: none;
+        }
+
+        .methods-dropdown-item:hover {
+            background-color: #FFF3E0;
+        }
+
+        .methods-dropdown-empty {
+            padding: 8px 12px;
+            color: #999;
+            font-size: 12px;
+            font-style: italic;
+        }
+
+        /* Контейнер для кнопок URI */
+        .trig-property-buttons {
+            display: flex;
+            gap: 4px;
+            flex-shrink: 0;
+        }
+
         /* Стили для разделителя и виртуальных свойств */
         .trig-property-separator {
             display: flex;

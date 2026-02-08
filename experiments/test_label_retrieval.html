@@ -1,0 +1,100 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Test Label Retrieval</title>
+    <script src="https://unpkg.com/n3@1.17.2/browser/n3.min.js"></script>
+</head>
+<body>
+    <h1>Test Label Retrieval from ptree</h1>
+    <pre id="output"></pre>
+
+    <script>
+        const output = document.getElementById('output');
+        function log(msg) {
+            output.textContent += msg + '\n';
+            console.log(msg);
+        }
+
+        // Sample TriG data from Trig_VADv7.ttl
+        const trigData = `
+@prefix rdf: <http://www.w3.org/1999/02/22-rdf-syntax-ns#> .
+@prefix rdfs: <http://www.w3.org/2000/01/rdf-schema#> .
+@prefix vad: <http://example.org/vad#> .
+
+vad:ptree {
+    vad:ptree rdf:type vad:ObjectTree ;
+        rdfs:label "Дерево Процессов (TriG)" .
+
+    vad:p1_1 rdf:type vad:TypeProcess ;
+        rdfs:label "p1_1 Процесс 1_1" .
+}
+
+vad:t_p1 {
+    vad:t_p1 rdf:type vad:VADProcessDia ;
+        rdfs:label "Схема t_p1 процесса p1" .
+
+    vad:p1_1 vad:isSubprocessTrig vad:t_p1 ;
+        vad:hasExecutor vad:ExecutorGroup_p1_1 .
+}
+`;
+
+        const parser = new N3.Parser({ format: 'trig' });
+        const store = new N3.Store();
+        let prefixes = {};
+
+        parser.parse(trigData, (error, quad, parsedPrefixes) => {
+            if (error) {
+                log('Parse error: ' + error);
+                return;
+            }
+            if (quad) {
+                store.addQuad(quad);
+            } else {
+                prefixes = parsedPrefixes;
+                runTests();
+            }
+        });
+
+        function runTests() {
+            log('=== Store loaded with ' + store.size + ' quads ===\n');
+
+            // Test 1: Get all quads
+            log('--- All quads in store ---');
+            store.getQuads(null, null, null, null).forEach(q => {
+                log(`  [${q.graph.value}] ${q.subject.value} ${q.predicate.value} ${q.object.value}`);
+            });
+
+            log('\n--- Test: Get types for vad:p1_1 ---');
+            const p1_1_uri = 'http://example.org/vad#p1_1';
+            const RDF_TYPE = 'http://www.w3.org/1999/02/22-rdf-syntax-ns#type';
+
+            // Test 2: Get types with string
+            log('Using string: currentStore.getQuads("' + p1_1_uri + '", "' + RDF_TYPE + '", null, null)');
+            const typesWithString = store.getQuads(p1_1_uri, RDF_TYPE, null, null);
+            log('  Found ' + typesWithString.length + ' quads:');
+            typesWithString.forEach(q => {
+                log('    Type: ' + q.object.value + ' (graph: ' + q.graph.value + ')');
+            });
+
+            log('\n--- Test: Get rdfs:label for vad:p1_1 ---');
+            const RDFS_LABEL = 'http://www.w3.org/2000/01/rdf-schema#label';
+
+            const labelsWithString = store.getQuads(p1_1_uri, RDFS_LABEL, null, null);
+            log('  Found ' + labelsWithString.length + ' quads:');
+            labelsWithString.forEach(q => {
+                log('    Label: "' + q.object.value + '" (graph: ' + q.graph.value + ')');
+            });
+
+            log('\n--- Test: Get rdfs:label from ptree graph only ---');
+            const PTREE_GRAPH = 'http://example.org/vad#ptree';
+            const labelsFromPtree = store.getQuads(p1_1_uri, RDFS_LABEL, null, PTREE_GRAPH);
+            log('  Found ' + labelsFromPtree.length + ' quads:');
+            labelsFromPtree.forEach(q => {
+                log('    Label: "' + q.object.value + '"');
+            });
+
+            log('\n=== Tests complete ===');
+        }
+    </script>
+</body>
+</html>
