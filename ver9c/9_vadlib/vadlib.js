@@ -152,7 +152,7 @@ let currentScale = 1.0;
 let currentPrefixes = {};
 let nodeTypesCache = {};
 let nodeSubtypesCache = {};
-let currentQuads = [];
+// issue #324: currentQuads удалён - все операции через currentStore (N3.Store)
 let nodeLabelToUri = {};
 let selectedNodeElement = null;
 let propertiesPanelCounter = 0;
@@ -164,7 +164,7 @@ let dragOffsetY = 0;
 let currentStore = null;
 let comunicaEngine = null;
 let currentDotCode = '';
-let virtualRDFdata = {};
+// issue #324: virtualRDFdata удалён - виртуальные данные хранятся в TriG типа vad:Virtual (vt_*)
 let smartDesignMode = 'filtered';
 let activeFilters = [...getFilterConfig(Mode).hiddenPredicates];
 let allPredicates = [];
@@ -785,15 +785,15 @@ function isVirtualGraph(graphUri) {
  * Возвращает отфильтрованные квады в зависимости от режима фильтрации
  * issue #262, #264: Расширенные режимы фильтрации
  * issue #270: Phase 1 - Использует currentStore.getQuads() вместо currentQuads
+ * issue #324: currentQuads удалён - только currentStore
  * @param {string} filterMode - Режим фильтрации
  * @returns {Array} - Отфильтрованный массив квадов
  */
 function getFilteredQuads(filterMode = TRIG_FILTER_MODES.OBJECT_TREE_PLUS_VAD) {
-    // issue #270: Phase 1 - Используем currentStore.getQuads() как источник данных
-    // Fallback на currentQuads если store не инициализирован
+    // issue #324: Используем только currentStore.getQuads() как источник данных
     const sourceQuads = (currentStore && typeof currentStore.getQuads === 'function')
         ? currentStore.getQuads(null, null, null, null)
-        : currentQuads;
+        : [];
 
     if (!sourceQuads || sourceQuads.length === 0) {
         return [];

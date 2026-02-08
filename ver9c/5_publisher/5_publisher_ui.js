@@ -313,28 +313,32 @@ function buildNodeTypesCache(quads, prefixes) {
 }
 
 /**
- * Обновляет nodeSubtypesCache на основе virtualRDFdata для выбранного TriG
+ * issue #324: Обновляет nodeSubtypesCache на основе Virtual TriG из store
  * Это необходимо для правильного отображения стилей на диаграмме,
  * т.к. processSubtype вычисляется автоматически и зависит от контекста TriG.
  *
  * @param {string} trigUri - URI TriG для которого обновляем кэш
  */
 function updateSubtypesCacheFromVirtualData(trigUri) {
-    if (!virtualRDFdata || !virtualRDFdata[trigUri]) {
+    if (!currentStore || !trigUri) {
         return;
     }
 
-    const processesData = virtualRDFdata[trigUri];
+    // issue #324: Формируем URI виртуального TriG из родительского
+    const virtualTrigUri = trigUri.replace('#t_', '#vt_');
 
-    for (const [processUri, processInfo] of Object.entries(processesData)) {
-        const processSubtype = processInfo.processSubtype;
-        if (!processSubtype) {
-            continue;
-        }
+    // Получаем квады processSubtype из виртуального графа
+    const PROCESS_SUBTYPE_URI = 'http://example.org/vad#processSubtype';
+    const subtypeQuads = currentStore.getQuads(null, PROCESS_SUBTYPE_URI, null, virtualTrigUri);
+
+    subtypeQuads.forEach(quad => {
+        const processUri = quad.subject.value;
+        const subtypeUri = quad.object.value;
 
         // Формируем значения подтипа в обоих форматах (prefixed и full URI)
-        const subtypePrefixed = 'vad:' + processSubtype;
-        const subtypeFullUri = 'http://example.org/vad#' + processSubtype;
+        const subtypeName = subtypeUri.split('#').pop();
+        const subtypePrefixed = 'vad:' + subtypeName;
+        const subtypeFullUri = subtypeUri;
 
         // Инициализируем массив подтипов если его нет
         if (!nodeSubtypesCache[processUri]) {
@@ -348,7 +352,7 @@ function updateSubtypesCacheFromVirtualData(trigUri) {
         if (!nodeSubtypesCache[processUri].includes(subtypeFullUri)) {
             nodeSubtypesCache[processUri].push(subtypeFullUri);
         }
-    }
+    });
 }
 
 // ============================================================================
@@ -443,7 +447,9 @@ function closeAllPropertiesPanels() {
 
 function getNodeProperties(nodeUri) {
     const properties = [];
-    currentQuads.forEach(quad => {
+    // issue #324: Используем currentStore вместо currentQuads
+    const allQuads = currentStore ? currentStore.getQuads(null, null, null, null) : [];
+    allQuads.forEach(quad => {
         if (quad.subject.value === nodeUri) {
             const predicateLabel = getPrefixedName(quad.predicate.value, currentPrefixes);
             const isLiteral = quad.object.termType === 'Literal';
@@ -532,23 +538,32 @@ function showNodeProperties(nodeUri, nodeLabel) {
         });
     }
 
-    // Добавляем virtualRDFdata секцию (вычисляемые свойства)
-    let virtualData = null;
-    if (selectedTrigUri && virtualRDFdata[selectedTrigUri]) {
-        virtualData = virtualRDFdata[selectedTrigUri][nodeUri];
+    // issue #324: Добавляем VirtualTriG секцию (вычисляемые свойства) из store
+    let processSubtype = null;
+    if (selectedTrigUri && currentStore) {
+        // Формируем URI виртуального TriG
+        const virtualTrigUri = selectedTrigUri.replace('#t_', '#vt_');
+        const PROCESS_SUBTYPE_URI = 'http://example.org/vad#processSubtype';
+
+        // Получаем processSubtype для данного узла из Virtual TriG
+        const subtypeQuads = currentStore.getQuads(nodeUri, PROCESS_SUBTYPE_URI, null, virtualTrigUri);
+        if (subtypeQuads.length > 0) {
+            const subtypeUri = subtypeQuads[0].object.value;
+            processSubtype = subtypeUri.split('#').pop();
+        }
     }
 
-    if (virtualData && virtualData.processSubtype) {
+    if (processSubtype) {
         // Добавляем разделитель
         propertiesHtml += '<div class="trig-property-separator" style="margin-top: 15px;">';
         propertiesHtml += '<div class="separator-line"></div>';
-        propertiesHtml += '<div class="separator-text">virtualRDFdata</div>';
+        propertiesHtml += '<div class="separator-text">VirtualTriG</div>';
         propertiesHtml += '<div class="separator-line"></div>';
         propertiesHtml += '</div>';
 
         propertiesHtml += '<div class="property-item" style="margin-top: 10px;">';
         propertiesHtml += '<div class="property-predicate">vad:processSubtype</div>';
-        propertiesHtml += `<div class="property-value uri" style="color: #6a1b9a; font-style: italic;">vad:${virtualData.processSubtype}</div>`;
+        propertiesHtml += `<div class="property-value uri" style="color: #6a1b9a; font-style: italic;">vad:${processSubtype}</div>`;
         propertiesHtml += '</div>';
     }
 
@@ -757,9 +772,10 @@ function handleNodeDoubleClick(event) {
 
     // Если не найдено в ptree, проверяем в текущем графе или во всех графах
     if (!targetTrigUri) {
+        // issue #324: Используем currentStore вместо currentQuads
         const quadsToCheck = selectedTrigUri && trigHierarchy[selectedTrigUri]
             ? trigHierarchy[selectedTrigUri].quads
-            : currentQuads;
+            : (currentStore ? currentStore.getQuads(null, null, null, null) : []);
 
         for (const quad of quadsToCheck) {
             if (quad.subject.value === nodeUri && quad.predicate.value === hasTrigPredicate) {

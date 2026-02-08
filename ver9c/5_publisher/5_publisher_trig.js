@@ -289,7 +289,7 @@
          * Отображает свойства любого объекта (не только TriG) в панели свойств
          * Разделяет свойства на три блока:
          * 1. Свойства индивида из текущего TriG (IndividProcessPredicate)
-         * 2. virtualRDFdata - вычисляемые свойства (отделённые горизонтальной линией)
+         * 2. VirtualTriG - вычисляемые свойства (отделённые горизонтальной линией)
          * 3. Свойства концепта из ptree (ConceptProcessPredicate)
          *
          * @param {string} objectUri - URI объекта
@@ -321,7 +321,9 @@
             const seenConceptProps = new Set();
             let objectLabel = null;
 
-            currentQuads.forEach(quad => {
+            // issue #324: Используем currentStore вместо currentQuads
+            const allQuads = currentStore ? currentStore.getQuads(null, null, null, null) : [];
+            allQuads.forEach(quad => {
                 if (quad.subject.value === objectUri) {
                     const predicateUri = quad.predicate.value;
                     const predicateLabel = getPrefixedName(predicateUri, prefixes);
@@ -396,25 +398,34 @@
             html += `</div>`; // end section 1
 
             // ============================================================================
-            // БЛОК 2: virtualRDFdata - вычисляемые свойства (отделённые линией)
+            // issue #324: БЛОК 2: VirtualTriG - вычисляемые свойства (отделённые линией)
             // ============================================================================
-            let virtualData = null;
-            if (contextTrigUri && virtualRDFdata[contextTrigUri]) {
-                virtualData = virtualRDFdata[contextTrigUri][objectUri];
+            let processSubtype = null;
+            if (contextTrigUri && currentStore) {
+                // Формируем URI виртуального TriG
+                const virtualTrigUri = contextTrigUri.replace('#t_', '#vt_');
+                const PROCESS_SUBTYPE_URI = 'http://example.org/vad#processSubtype';
+
+                // Получаем processSubtype для данного объекта из Virtual TriG
+                const subtypeQuads = currentStore.getQuads(objectUri, PROCESS_SUBTYPE_URI, null, virtualTrigUri);
+                if (subtypeQuads.length > 0) {
+                    const subtypeUri = subtypeQuads[0].object.value;
+                    processSubtype = subtypeUri.split('#').pop();
+                }
             }
 
-            if (virtualData && virtualData.processSubtype) {
+            if (processSubtype) {
                 // Добавляем разделитель
                 html += `<div class="trig-property-separator">`;
                 html += `<div class="separator-line"></div>`;
-                html += `<div class="separator-text">virtualRDFdata</div>`;
+                html += `<div class="separator-text">VirtualTriG</div>`;
                 html += `<div class="separator-line"></div>`;
                 html += `</div>`;
 
                 html += `<div class="trig-property-section">`;
                 html += `<div class="trig-property-item virtual-property">`;
                 html += `<div class="trig-property-predicate">vad:processSubtype</div>`;
-                html += `<div class="trig-property-value uri virtual">vad:${escapeHtml(virtualData.processSubtype)}</div>`;
+                html += `<div class="trig-property-value uri virtual">vad:${escapeHtml(processSubtype)}</div>`;
                 html += `</div>`;
                 html += `</div>`; // end section 2
             }

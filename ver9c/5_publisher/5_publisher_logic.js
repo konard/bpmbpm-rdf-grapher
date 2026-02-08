@@ -83,9 +83,8 @@
                 });
 
                 currentPrefixes = prefixes;
-                currentQuads = quads;
 
-                // issue #270: Phase 1 - Инициализируем currentStore для SPARQL-driven подхода
+                // issue #324: Инициализируем currentStore (единственное хранилище)
                 currentStore = new N3.Store();
                 quads.forEach(quad => currentStore.addQuad(quad));
 
@@ -135,13 +134,10 @@
                     // Сохраняем иерархию
                     trigHierarchy = hierarchyResult.hierarchy;
 
-                    // Вычисляем виртуальные данные (processSubtype)
-                    virtualRDFdata = calculateProcessSubtypes(trigHierarchy, prefixes);
-
-                    // issue #270: Добавляем виртуальные квады в store и hierarchy
-                    // Это позволяет фильтру 'virtual' в quadstore показывать Virtual TriG
-                    if (typeof addVirtualQuadsToStore === 'function') {
-                        addVirtualQuadsToStore(virtualRDFdata, prefixes);
+                    // issue #324: Вычисляем Virtual TriG через recalculateAllVirtualTriGs
+                    // (виртуальные данные хранятся напрямую в store, без virtualRDFdata)
+                    if (typeof recalculateAllVirtualTriGs === 'function') {
+                        await recalculateAllVirtualTriGs(prefixes);
                     }
 
                     // issue #270: Обновляем отображение quadstore с виртуальными данными
@@ -198,15 +194,13 @@
                     });
 
                     // Временно переключаемся в режим VAD для генерации DOT
-                    const originalQuads = currentQuads;
-                    currentQuads = rootGraphInfo.quads;
+                    // issue #324: Не используем currentQuads, работаем напрямую с графовыми квадами
                     currentMode = 'vad';
 
                     const dotCode = rdfToDot(filteredQuads, prefixes);
                     currentDotCode = dotCode;
                     console.log('VAD TriG - Сгенерированный DOT-код:', dotCode);
 
-                    currentQuads = originalQuads;
                     currentMode = 'vad-trig';
 
                     const viz = await Viz.instance();
@@ -331,7 +325,9 @@
             const layoutEngine = document.getElementById('layout-engine').value;
 
             try {
-                const filteredQuads = currentQuads.filter(quad => {
+                // issue #324: Используем currentStore вместо currentQuads
+                const allQuads = currentStore ? currentStore.getQuads(null, null, null, null) : [];
+                const filteredQuads = allQuads.filter(quad => {
                     const predicateUri = quad.predicate.value;
                     const predicateLabel = getPrefixedName(predicateUri, currentPrefixes);
                     return !isPredicateHidden(predicateUri, predicateLabel);
@@ -380,18 +376,14 @@
                 const originalMode = currentMode;
                 currentMode = 'vad';  // Используем логику VAD для рендеринга
 
-                // Временно заменяем currentQuads на квады выбранного графа
-                const originalQuads = currentQuads;
-                currentQuads = graphInfo.quads;
-
+                // issue #324: Не используем currentQuads, работаем напрямую с графовыми квадами
                 // Передаём trigUri в rdfToDot для правильного обновления кэша подтипов
                 // внутри rdfToDotVAD после вызова buildNodeTypesCache
                 const dotCode = rdfToDot(filteredQuads, currentPrefixes, trigUri);
                 currentDotCode = dotCode;
                 console.log('VAD TriG - Сгенерированный DOT-код:', dotCode);
 
-                // Восстанавливаем
-                currentQuads = originalQuads;
+                // Восстанавливаем режим
                 currentMode = originalMode;
 
                 const viz = await Viz.instance();
@@ -494,9 +486,8 @@
                 });
 
                 currentPrefixes = prefixes;
-                currentQuads = quads;
 
-                // Инициализируем currentStore для SPARQL-driven подхода
+                // issue #324: Инициализируем currentStore (единственное хранилище)
                 currentStore = new N3.Store();
                 quads.forEach(quad => currentStore.addQuad(quad));
 
@@ -538,12 +529,10 @@
                     // Сохраняем иерархию
                     trigHierarchy = hierarchyResult.hierarchy;
 
-                    // Вычисляем виртуальные данные (processSubtype)
-                    virtualRDFdata = calculateProcessSubtypes(trigHierarchy, prefixes);
-
-                    // Добавляем виртуальные квады в store и hierarchy
-                    if (typeof addVirtualQuadsToStore === 'function') {
-                        addVirtualQuadsToStore(virtualRDFdata, prefixes);
+                    // issue #324: Вычисляем Virtual TriG через recalculateAllVirtualTriGs
+                    // (виртуальные данные хранятся напрямую в store)
+                    if (typeof recalculateAllVirtualTriGs === 'function') {
+                        await recalculateAllVirtualTriGs(prefixes);
                     }
 
                     // Обновляем отображение quadstore с виртуальными данными
@@ -622,15 +611,13 @@
                     });
 
                     // Временно переключаемся в режим VAD для генерации DOT
-                    const originalQuads = currentQuads;
-                    currentQuads = rootGraphInfo.quads;
+                    // issue #324: Не используем currentQuads
                     currentMode = 'vad';
 
                     const dotCode = rdfToDot(filteredQuads, prefixes, selectedTrigUri);
                     currentDotCode = dotCode;
                     console.log('issue #276: refresh VAD TriG - Сгенерированный DOT-код:', dotCode);
 
-                    currentQuads = originalQuads;
                     currentMode = 'vad-trig';
 
                     const viz = await Viz.instance();
@@ -760,7 +747,9 @@
                 return rdfToDotVAD(quads, prefixes, trigUri);
             }
 
-            buildNodeTypesCache(currentQuads, prefixes);
+            // issue #324: Используем currentStore вместо currentQuads
+            const allQuads = currentStore ? currentStore.getQuads(null, null, null, null) : [];
+            buildNodeTypesCache(allQuads, prefixes);
             nodeLabelToUri = {};
 
             const nodes = new Map();
@@ -844,9 +833,11 @@
         }
 
         function rdfToDotVAD(quads, prefixes = {}, trigUri = null) {
-            buildNodeTypesCache(currentQuads, prefixes);
+            // issue #324: Используем currentStore.getQuads() вместо currentQuads
+            const allQuads = currentStore ? currentStore.getQuads(null, null, null, null) : [];
+            buildNodeTypesCache(allQuads, prefixes);
 
-            // ВАЖНО: Обновляем кэш подтипов из virtualRDFdata ПОСЛЕ buildNodeTypesCache
+            // issue #324: Обновляем кэш подтипов из store (вместо virtualRDFdata)
             // buildNodeTypesCache очищает nodeSubtypesCache, поэтому нужно заново добавить виртуальные данные
             if (trigUri) {
                 updateSubtypesCacheFromVirtualData(trigUri);
@@ -1330,7 +1321,9 @@
         }
 
         function rdfToDotAggregation(quads, prefixes = {}) {
-            buildNodeTypesCache(currentQuads, prefixes);
+            // issue #324: Используем currentStore вместо currentQuads
+            const allQuads = currentStore ? currentStore.getQuads(null, null, null, null) : [];
+            buildNodeTypesCache(allQuads, prefixes);
             nodeLabelToUri = {};
 
             const nodes = new Map();
@@ -1674,7 +1667,9 @@
             allPredicates = [];
             const predicateSet = new Set();
 
-            currentQuads.forEach(quad => {
+            // issue #324: Используем currentStore вместо currentQuads
+            const allQuads = currentStore ? currentStore.getQuads(null, null, null, null) : [];
+            allQuads.forEach(quad => {
                 const predicateUri = quad.predicate.value;
                 const predicateLabel = getPrefixedName(predicateUri, currentPrefixes);
                 if (!predicateSet.has(predicateLabel)) {

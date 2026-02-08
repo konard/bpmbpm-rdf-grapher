@@ -235,7 +235,7 @@ async function applyTripleToRdfInput(sparqlQuery, mode) {
         // и обновленные rdfs:label отобразились на диаграмме
         trigHierarchy = {};
         selectedTrigUri = null;
-        virtualRDFdata = {};
+        // issue #324: virtualRDFdata удалён - данные хранятся в store
 
         // issue #278: Обновляем отображение quadstore после SPARQL UPDATE
         // чтобы пользователь видел изменения без необходимости нажимать "Обновить"
@@ -244,7 +244,8 @@ async function applyTripleToRdfInput(sparqlQuery, mode) {
             console.log('issue #278: quadstore display обновлён после SPARQL UPDATE');
         }
 
-        console.log(`issue #254: SPARQL UPDATE выполнен через Comunica, ${currentQuads.length} триплетов в store`);
+        const storeSize = currentStore ? currentStore.size : 0;
+        console.log(`issue #254: SPARQL UPDATE выполнен через Comunica, ${storeSize} триплетов в store`);
         console.log('issue #274: trigHierarchy инвалидирован для обновления диаграммы');
         showResultSparqlMessage(message + '. Нажмите "Обновить" для отображения в treeview.', 'success');
 
@@ -366,7 +367,7 @@ function refreshQuadstoreFromRdfInput() {
         if (quads.length > 0) {
             currentQuads = quads;
             currentPrefixes = prefixes;
-            // issue #254: Также обновляем currentStore для синхронизации
+            // issue #324: Обновляем currentStore (единственное хранилище)
             currentStore = new N3.Store();
             quads.forEach(q => currentStore.addQuad(q));
 
@@ -375,7 +376,7 @@ function refreshQuadstoreFromRdfInput() {
             // и обновленные rdfs:label отобразились на диаграмме
             trigHierarchy = {};
             selectedTrigUri = null;
-            virtualRDFdata = {};
+            // issue #324: virtualRDFdata удалён - данные хранятся в store
 
             console.log(`issue #254: Quadstore обновлён из textarea, ${quads.length} триплетов`);
             console.log('issue #274: trigHierarchy инвалидирован для обновления диаграммы');
@@ -439,36 +440,25 @@ function showResultSparqlMessage(message, type) {
 // ==============================================================================
 
 /**
- * issue #309: Показывает Virtual TriG после применения SPARQL
+ * issue #309, #324: Показывает Virtual TriG после применения SPARQL
  * Пересчитывает Virtual TriG на основе текущих данных store и показывает в модальном окне
  */
-function showVirtualTrigAfterApply() {
-    // Проверяем, что данные загружены
-    if (typeof currentQuads === 'undefined' || currentQuads.length === 0) {
+async function showVirtualTrigAfterApply() {
+    // issue #324: Проверяем, что store загружен
+    if (!currentStore || currentStore.size === 0) {
         showResultSparqlMessage('Данные quadstore пусты. Сначала загрузите данные.', 'error');
         return;
     }
 
-    // issue #309: Пересчитываем trigHierarchy если нужно
-    if (typeof trigHierarchy === 'undefined' || !trigHierarchy || Object.keys(trigHierarchy).length === 0) {
-        if (typeof parseTriGHierarchy === 'function') {
-            const hierarchyResult = parseTriGHierarchy(currentQuads, currentPrefixes);
-            if (hierarchyResult && hierarchyResult.valid) {
-                trigHierarchy = hierarchyResult.hierarchy;
-            }
-        }
+    // issue #324: Пересчитываем Virtual TriG через единый механизм
+    if (typeof recalculateAllVirtualTriGs === 'function') {
+        await recalculateAllVirtualTriGs(currentPrefixes);
     }
 
-    // issue #309: Пересчитываем virtualRDFdata
-    let virtualData = {};
-    if (typeof calculateProcessSubtypes === 'function' && typeof trigHierarchy !== 'undefined') {
-        virtualData = calculateProcessSubtypes(trigHierarchy, currentPrefixes);
-    }
-
-    // issue #309: Форматируем Virtual TriG
+    // issue #324: Форматируем Virtual TriG из store
     let virtualTrigText = '';
-    if (typeof formatVirtualRDFdata === 'function' && Object.keys(virtualData).length > 0) {
-        virtualTrigText = formatVirtualRDFdata(virtualData, currentPrefixes);
+    if (typeof formatVirtualTriGFromStore === 'function') {
+        virtualTrigText = formatVirtualTriGFromStore(currentPrefixes);
     } else {
         virtualTrigText = '# Virtual TriG пуст.\n# Убедитесь, что данные загружены и содержат TriG типа VADProcessDia.';
     }
