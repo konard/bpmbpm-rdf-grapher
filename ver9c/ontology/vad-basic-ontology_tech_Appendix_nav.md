@@ -170,7 +170,8 @@ graph TD
     classDef methodClass fill:#f3e5f5
     
     class Tech,Auto,Virtual,ObjectMethod baseClass
-    class,Detailed,DetailedChild,DetailedExternal,notDetailed,notDetailedChild,notDetailedExternal,NotDefinedType processClass
+#    class,Detailed,DetailedChild,DetailedExternal,notDetailed,notDetailedChild,notDetailedExternal,NotDefinedType processClass
+class Detailed,DetailedChild,DetailedExternal,notDetailed,notDetailedChild,notDetailedExternal,NotDefinedType processClass
     class ConceptProcessPredicate,IndividProcessPredicate,ConceptExecutorPredicate,ConceptExecutorGroupPredicate,ConceptTriGPredicate techObject
     class AutoIsSubprocessTrig,AutoExecutorGroup,AutoNewTrigId,AutoNewTrigLabel,AutoProcessSubtype autoObject
     class DeleteIndividProcess,DeleteIndividExecutor methodClass
