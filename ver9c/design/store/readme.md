@@ -79,3 +79,5 @@ Fixes bpmbpm/rdf-grapher#326
   - Подтверждает завершение миграции: currentQuads и virtualRDFdata удалено.
   - currentStore(N3.Store) является единственным источником истины.
 - nodeTypesCache, nodeSubtypesCache, 4. allTrigGraphs https://github.com/bpmbpm/rdf-grapher/pull/333
+- store_concept_v4.md [Рекомендации по дальнейшей миграции](https://github.com/bpmbpm/rdf-grapher/blob/main/ver9c/design/store/store_concept_v4.md#%D1%80%D0%B5%D0%BA%D0%BE%D0%BC%D0%B5%D0%BD%D0%B4%D0%B0%D1%86%D0%B8%D0%B8-%D0%BF%D0%BE-%D0%B4%D0%B0%D0%BB%D1%8C%D0%BD%D0%B5%D0%B9%D1%88%D0%B5%D0%B9-%D0%BC%D0%B8%D0%B3%D1%80%D0%B0%D1%86%D0%B8%D0%B8)
+Следующие массивы рекомендуется удалить в ближайшей итерации:
