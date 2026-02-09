@@ -191,8 +191,13 @@ DELETE WHERE {
             try {
                 // Применяем запрос через существующую функцию
                 if (typeof applyTripleToRdfInput === 'function') {
-                    applyTripleToRdfInput(deleteQuery, 'delete');
+                    await applyTripleToRdfInput(deleteQuery, 'delete');
                     console.log(`Deleted individ process ${prefixedProcess} from ${prefixedTrig}`);
+
+                    // issue #338: Восстанавливаем selectedTrigUri после applyTripleToRdfInput,
+                    // так как она сбрасывает selectedTrigUri в null (issue #274).
+                    // Это позволяет refreshVisualization корректно отобразить текущую схему.
+                    selectedTrigUri = trigUri;
 
                     // Обновляем визуализацию
                     if (typeof refreshVisualization === 'function') {
@@ -227,8 +232,13 @@ DELETE WHERE {
             try {
                 // Применяем запрос через существующую функцию
                 if (typeof applyTripleToRdfInput === 'function') {
-                    applyTripleToRdfInput(deleteQuery, 'delete');
+                    await applyTripleToRdfInput(deleteQuery, 'delete');
                     console.log(`Deleted all executors from ${prefixedGroup} in ${prefixedTrig}`);
+
+                    // issue #338: Восстанавливаем selectedTrigUri после applyTripleToRdfInput,
+                    // так как она сбрасывает selectedTrigUri в null (issue #274).
+                    // Это позволяет refreshVisualization корректно отобразить текущую схему.
+                    selectedTrigUri = trigUri;
 
                     // Обновляем визуализацию
                     if (typeof refreshVisualization === 'function') {
