@@ -5,3 +5,4 @@ URI обеспечивает стандартизированный способ
 - Persistence [qna](https://qna.habr.com/q/1217644) ; [habr](https://habr.com/ru/articles/113585/)
 - CRUD [wiki](https://ru.wikipedia.org/wiki/CRUD) ; [habr](https://habr.com/ru/articles/971138/)
 ### LD term
+- https://github.com/bpmbpm/doc/blob/main/LD2/RDF/type_vs_class.md
