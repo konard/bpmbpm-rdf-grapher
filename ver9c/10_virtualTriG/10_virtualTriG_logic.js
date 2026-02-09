@@ -373,6 +373,170 @@ function removeAllVirtualTriGs() {
 }
 
 // ============================================================================
+// ФУНКЦИИ ВЫЧИСЛЕНИЯ EXECUTORGROUP LABELS
+// ============================================================================
+
+/**
+ * Получает все ExecutorGroup в указанном TriG
+ *
+ * @param {string} trigUri - URI TriG графа
+ * @returns {Promise<Array>} - Массив URI ExecutorGroup
+ */
+async function getExecutorGroupsInTrig(trigUri) {
+    const query = `
+        PREFIX rdf: <http://www.w3.org/1999/02/22-rdf-syntax-ns#>
+        PREFIX vad: <http://example.org/vad#>
+
+        SELECT DISTINCT ?executorGroup WHERE {
+            GRAPH <${trigUri}> {
+                ?executorGroup rdf:type vad:ExecutorGroup .
+            }
+        }
+    `;
+
+    try {
+        const results = await funSPARQLvaluesComunica(query, currentPrefixes);
+        return results.map(row => row.executorGroup);
+    } catch (error) {
+        console.error('getExecutorGroupsInTrig error:', error);
+        return [];
+    }
+}
+
+/**
+ * Получает исполнителей для ExecutorGroup
+ *
+ * @param {string} executorGroupUri - URI ExecutorGroup
+ * @returns {Promise<Array>} - Массив URI исполнителей
+ */
+async function getExecutorsInGroup(executorGroupUri) {
+    const query = `
+        PREFIX vad: <http://example.org/vad#>
+
+        SELECT DISTINCT ?executor WHERE {
+            ?executorGroupUri vad:includes ?executor .
+        }
+    `;
+
+    try {
+        const results = await funSPARQLvaluesComunica(query, currentPrefixes);
+        return results.map(row => row.executor);
+    } catch (error) {
+        console.error('getExecutorsInGroup error:', error);
+        return [];
+    }
+}
+
+/**
+ * Вычисляет rdfs:label для ExecutorGroup как перечисление исполнителей через запятую
+ *
+ * @param {string} executorGroupUri - URI ExecutorGroup
+ * @returns {Promise<string>} - Вычисленная метка
+ */
+async function computeExecutorGroupLabel(executorGroupUri) {
+    // Получаем всех исполнителей в группе
+    const executorsQuery = `
+        PREFIX vad: <http://example.org/vad#>
+        PREFIX rdfs: <http://www.w3.org/2000/01/rdf-schema#>
+
+        SELECT ?executor ?executorLabel WHERE {
+            ?executorGroupUri vad:includes ?executor .
+            OPTIONAL {
+                ?executor rdfs:label ?executorLabel .
+            }
+        }
+        ORDER BY ?executor
+    `;
+
+    try {
+        const results = await funSPARQLvaluesComunica(executorsQuery, currentPrefixes);
+        
+        if (results.length === 0) {
+            return '';
+        }
+
+        // Собираем метки исполнителей
+        const executorLabels = results.map(row => {
+            if (row.executorLabel) {
+                return row.executorLabel;
+            } else {
+                // Если у исполнителя нет rdfs:label, используем префиксное имя
+                return getPrefixedName(row.executor, currentPrefixes);
+            }
+        });
+
+        // Объединяем через запятую
+        return executorLabels.join(', ');
+    } catch (error) {
+        console.error('computeExecutorGroupLabel error:', error);
+        return '';
+    }
+}
+
+/**
+ * Создаёт Virtual TriG для ExecutorGroup с вычисленным rdfs:label
+ *
+ * @param {string} parentTrigUri - URI родительского VADProcessDia
+ * @param {Object} executorGroupLabels - { executorGroupUri: label }
+ * @param {Object} prefixes - Словарь префиксов
+ * @returns {Array} - Массив созданных квадов
+ */
+function createExecutorGroupVirtualTriG(parentTrigUri, executorGroupLabels, prefixes) {
+    if (!parentTrigUri || !currentStore || Object.keys(executorGroupLabels).length === 0) {
+        return [];
+    }
+
+    const factory = N3.DataFactory;
+    const { namedNode, literal } = factory;
+    const newQuads = [];
+
+    // Формируем URI виртуального контейнера для ExecutorGroup
+    let virtualContainerUri;
+    if (parentTrigUri.includes('#t_')) {
+        virtualContainerUri = parentTrigUri.replace('#t_', '#vt_eg_');
+    } else {
+        const localName = parentTrigUri.split('#').pop() || parentTrigUri.split('/').pop();
+        virtualContainerUri = VIRTUAL_TRIG_NS + 'vt_eg_' + localName;
+    }
+
+    const virtualGraphNode = namedNode(virtualContainerUri);
+
+    // 1. rdf:type vad:Virtual
+    newQuads.push(factory.quad(
+        virtualGraphNode,
+        namedNode(RDF_TYPE_URI),
+        namedNode(VIRTUAL_TYPE_URI),
+        virtualGraphNode
+    ));
+
+    // 2. vad:hasParentObj <parentTrigUri>
+    newQuads.push(factory.quad(
+        virtualGraphNode,
+        namedNode(HAS_PARENT_OBJ_URI),
+        namedNode(parentTrigUri),
+        virtualGraphNode
+    ));
+
+    // 3. Добавляем rdfs:label для каждого ExecutorGroup
+    for (const [executorGroupUri, label] of Object.entries(executorGroupLabels)) {
+        if (label) {
+            newQuads.push(factory.quad(
+                namedNode(executorGroupUri),
+                namedNode('http://www.w3.org/2000/01/rdf-schema#label'),
+                literal(label),
+                virtualGraphNode
+            ));
+        }
+    }
+
+    // Добавляем квады в store
+    newQuads.forEach(quad => currentStore.addQuad(quad));
+
+    console.log(`createExecutorGroupVirtualTriG: Created ${newQuads.length} quads for ${virtualContainerUri}`);
+    return newQuads;
+}
+
+// ============================================================================
 // ГЛАВНАЯ ФУНКЦИЯ ПЕРЕСЧЁТА
 // ============================================================================
 
@@ -433,10 +597,28 @@ async function recalculateAllVirtualTriGs(prefixes) {
                 processSubtypes[processUri] = subtype;
             }
 
-            // Создаём Virtual TriG
+            // Создаём Virtual TriG для процессов
             const newQuads = createVirtualTriG(trigUri, processSubtypes, prefixes);
             stats.createdQuads += newQuads.length;
             stats.virtualTrigsCreated++;
+
+            // 5. Вычисляем rdfs:label для ExecutorGroup
+            const executorGroups = await getExecutorGroupsInTrig(trigUri);
+            if (executorGroups.length > 0) {
+                const executorGroupLabels = {};
+                for (const executorGroupUri of executorGroups) {
+                    const label = await computeExecutorGroupLabel(executorGroupUri);
+                    if (label) {
+                        executorGroupLabels[executorGroupUri] = label;
+                    }
+                }
+
+                // Создаём Virtual TriG для ExecutorGroup
+                if (Object.keys(executorGroupLabels).length > 0) {
+                    const egQuads = createExecutorGroupVirtualTriG(trigUri, executorGroupLabels, prefixes);
+                    stats.createdQuads += egQuads.length;
+                }
+            }
         }
 
     } catch (error) {

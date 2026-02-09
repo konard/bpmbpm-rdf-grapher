@@ -142,7 +142,7 @@ SELECT ?group WHERE {
         // ExecutorGroup
         triplets += `\n        # Группа исполнителей (ID формируется как ExecutorGroup_ + ID процесса)\n`;
         triplets += `        ${executorGroupUri} rdf:type vad:ExecutorGroup ;\n`;
-        triplets += `            rdfs:label "Группа исполнителей процесса ${individLabel}" .`;
+        triplets += `            dcterms:description "Группа исполнителей процесса ${individLabel}" .`;
 
         return `${prefixDeclarations}
 

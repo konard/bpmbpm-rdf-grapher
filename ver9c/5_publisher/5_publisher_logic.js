@@ -979,6 +979,36 @@
                 });
             });
 
+            // Получаем rdfs:label для ExecutorGroup из Virtual TriG
+            if (trigUri && currentStore) {
+                // Ищем соответствующий Virtual TriG для ExecutorGroup
+                let virtualTrigUri = null;
+                if (trigUri.includes('#t_')) {
+                    virtualTrigUri = trigUri.replace('#t_', '#vt_eg_');
+                } else {
+                    const localName = trigUri.split('#').pop() || trigUri.split('/').pop();
+                    virtualTrigUri = 'http://example.org/vad#vt_eg_' + localName;
+                }
+
+                // Получаем rdfs:label из Virtual TriG
+                const virtualQuads = currentStore.getQuads(
+                    null,
+                    namedNode('http://www.w3.org/2000/01/rdf-schema#label'),
+                    null,
+                    namedNode(virtualTrigUri)
+                );
+
+                virtualQuads.forEach(quad => {
+                    const executorGroupUri = quad.subject.value;
+                    const label = quad.object.value;
+                    
+                    if (executorGroups.has(executorGroupUri)) {
+                        const groupInfo = executorGroups.get(executorGroupUri);
+                        groupInfo.label = label;
+                    }
+                });
+            }
+
             // Генерация DOT-кода
             // Используем rankdir=TB чтобы rank=same группировал узлы горизонтально
             // А процессы идут в одной строке благодаря rank=same
@@ -1159,16 +1189,23 @@
             visibleProcesses.forEach((processInfo, uri) => {
                 const nodeId = generateVadNodeId(uri, prefixes);
 
-                // Получаем список исполнителей
+                // Получаем метку ExecutorGroup (вычисленную в Virtual TriG)
                 let executorsList = '';
                 let executorGroupUri = null;
                 if (processInfo.executorGroup && executorGroups.has(processInfo.executorGroup)) {
                     executorGroupUri = processInfo.executorGroup;
                     const group = executorGroups.get(processInfo.executorGroup);
-                    const executorNamesList = group.executors.map(exUri =>
-                        executorNames.get(exUri) || getPrefixedName(exUri, prefixes)
-                    );
-                    executorsList = executorNamesList.join(', ');
+                    
+                    // Используем вычисленную rdfs:label из Virtual TriG
+                    if (group.label) {
+                        executorsList = group.label;
+                    } else {
+                        // Fallback: строим список из имен исполнителей (старый способ)
+                        const executorNamesList = group.executors.map(exUri =>
+                            executorNames.get(exUri) || getPrefixedName(exUri, prefixes)
+                        );
+                        executorsList = executorNamesList.join(', ');
+                    }
                 }
 
                 if (executorsList && executorGroupUri) {
