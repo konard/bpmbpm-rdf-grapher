@@ -414,7 +414,7 @@ async function getExecutorsInGroup(executorGroupUri) {
         PREFIX vad: <http://example.org/vad#>
 
         SELECT DISTINCT ?executor WHERE {
-            ?executorGroupUri vad:includes ?executor .
+            <${executorGroupUri}> vad:includes ?executor .
         }
     `;
 
@@ -440,7 +440,7 @@ async function computeExecutorGroupLabel(executorGroupUri) {
         PREFIX rdfs: <http://www.w3.org/2000/01/rdf-schema#>
 
         SELECT ?executor ?executorLabel WHERE {
-            ?executorGroupUri vad:includes ?executor .
+            <${executorGroupUri}> vad:includes ?executor .
             OPTIONAL {
                 ?executor rdfs:label ?executorLabel .
             }
