@@ -205,9 +205,12 @@ graph LR
     %% Предикаты
     Predicates_P[Предикаты:<br/>rdf:type, rdfs:label<br/>dcterms:description<br/>vad:hasParentObj, vad:hasTrig]
     Predicates_E[Предикаты:<br/>rdf:type, rdfs:label<br/>vad:hasParentObj]
-    Predicates_IP[Предикаты:<br/>vad:isSubprocessTrig(а)<br/>vad:hasExecutor(а)<br/>vad:processSubtype<br/>vad:hasNext]
-    Predicates_EG[Предикаты:<br/>rdf:type(а), rdfs:label(а)<br/>vad:includes]
-    Predicates_T[Предикаты:<br/>rdf:type(а), rdfs:label(а)<br/>vad:hasParentObj(а)<br/>vad:definesProcess(а)]
+
+%% Predicates_IP[Предикаты:<br/>vad:isSubprocessTrig(а)<br/>vad:hasExecutor(а)<br/>vad:processSubtype<br/>vad:hasNext]
+    Predicates_IP[Предикаты:<br/>vad:isSubprocessTrig<br/>vad:hasExecutor<br/>vad:processSubtype<br/>vad:hasNext]
+    Predicates_EG[Предикаты:<br/>rdf:type, rdfs:label<br/>vad:includes]
+    Predicates_T[Предикаты:<br/>rdf:type, rdfs:label<br/>vad:hasParentObj<br/>vad:definesProcess]
+  
     
     ConceptProcessPredicate --> Predicates_P
     ConceptExecutorPredicate --> Predicates_E
@@ -224,6 +227,14 @@ graph LR
     class ConceptProcessPredicate,ConceptExecutorPredicate,IndividProcessPredicate,ConceptExecutorGroupPredicate,ConceptTriGPredicate techObjectClass
     class Predicates_P,Predicates_E,Predicates_IP,Predicates_EG,Predicates_T predicateClass
 ```
+
+```
+ Predicates_IP[Предикаты:<br/>vad:isSubprocessTrig(а)<br/>vad:hasExecutor(а)<br/>vad:processSubtype<br/>vad:hasNext]
+ Predicates_EG[Предикаты:<br/>rdf:type(а), rdfs:label(а)<br/>vad:includes]
+ Predicates_T[Предикаты:<br/>rdf:type(а), rdfs:label(а)<br/>vad:hasParentObj(а)<br/>vad:definesProcess(а)]
+```
+Дает ошибку, т.к. не нравится (a)
+см. [mermaid.live](https://mermaid.live/edit#pako:eNqlVttq20AQ_RWxJdDCJrVqy7pQAiUxJtCLaUwfGociSytbRZbEalWShkATKIX2oe99Ke0XpJdQk5J-w-qPOpJlZyVZpkkNBu3OmTlz29k9QlZgE2SgETXDsfTw6cCX4Le2JvFP_A-_TE75Ob9ITpLT5IPUp253Jg8ZJWTvlWkb2df9Ib272aOBRaKoD-v9GYouUHSB6hwQK2YBFWAAsF1zlAGfPdjO7Wy7pmhW2rXGZGLmKldefuXnyVt-Cb7-hv8PPk3ewc4Jv-BTfi7B1rfkfRYCBDDT2gp8i4Qst9ujxHYtk838rJHtFzTnISxVrQhz3R3fdl-59lLWGtly1i4N4nAldRFRtJKWcKlyQVDJ8hf-PfnIf_GpUH5pfX2zLplC_UVYJTmFBsiQNbmoAlcGXQsvhFmO8nPyBlrlJ3TOBT-7apgFPnrR26uCjKxNqe0Y7DAkWIKvyPDMIfEygW0xQieRYZPIom7I3MDP9tPcj82oZ1LisyfDl1jKd8DF0X6FuXN95jJDahTCFIzu1MeTKrvRbjwM58faHd3mZ3dEy_PcF_ZzPGimTonwx-SAVQO7pg_L-G_M3eneLKuub3kxFLRqsf__ZVps2sRxfRLlR6FwJmuOXdbpYruunltleGflqCqjd3r_MJ8qFN36cVTG9itTCG6jKcz5fApZngnXBHEkK_AZ1HcrXUuO63nGLSI7ikNKOEasMSSYWAWo4zhN0ihBw7kbBaTsaEQXvcrws3GIs2mH5zNH9EnE1lQO19UI11QDr0w7XprfUvyiW2LTYLFeuFDxgqgrrvqllCEMTwrXRgajMcFoAjPQTJfoKKUdIAa3ORkgAz6hz83YYwM08I9BLTT950EwmWtCXKMxMhzTi2AVhzYwwNsA3itXEOLbhG4Fsc-QITflZmYEGUfoABnr7Y1Gu92QW7qsqU1Z0VoYHSKjpW3obbWtamqrqSlNTVeOMXqd8cobDV3WdUVRdVW9pyiyhhGEBkl-NHsrZU-m47_8xYWJ)
 
 ## 5. Детальное описание объектов
 
