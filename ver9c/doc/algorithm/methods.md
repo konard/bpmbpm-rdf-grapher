@@ -145,8 +145,8 @@ graph TD
     getPredicatesForNewConceptManual --> currentStore_getQuads
     getConceptsManual --> currentStore_getQuads
     
-    currentStore_getQuads[Current Store<br/>getQuads()]
-    
+    currentStore_getQuads[Current Store<br/>getQuads]
+ %%  currentStore_getQuads[Current Store<br/>getQuads()]
     %% Стили
     classDef logicModule fill:#e1f5fe
     classDef sparqlModule fill:#f3e5f5
