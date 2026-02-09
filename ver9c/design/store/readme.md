@@ -74,7 +74,7 @@ Fixes bpmbpm/rdf-grapher#326
 востанавливаем https://github.com/bpmbpm/rdf-grapher/pull/329  
 вопросы по Virtual TriG https://github.com/bpmbpm/rdf-grapher/pull/331
 
-## 3 Перевод вслед за и других массивов
+## 3 Удаление вслед за currentQuads и virtualRDFdata и других массивов
 - store_concept_v4.md - Документирует текущее состояние хранилища данных Quadstore: https://github.com/bpmbpm/rdf-grapher/pull/333
   - Подтверждает завершение миграции: currentQuads и virtualRDFdata удалено.
   - currentStore(N3.Store) является единственным источником истины.
