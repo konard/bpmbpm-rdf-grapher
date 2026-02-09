@@ -141,6 +141,34 @@ const INFERENCE_RULES_N3 = `
 } => {
     ?process vad:processSubtype vad:notDetailedExternal .
 } .
+
+# ==============================================================================
+# ПРАВИЛО 8: ExecutorGroup rdfs:label computation
+# Вычисляет rdfs:label для ExecutorGroup как перечисление всех исполнителей
+# ==============================================================================
+{
+    ?executorGroup rdf:type vad:ExecutorGroup .
+    ?executorGroup vad:includes ?executor .
+    ?executor rdfs:label ?executorLabel .
+} => {
+    ?executorGroup rdfs:label ?executorLabel .
+} .
+
+# ==============================================================================
+# ПРАВИЛО 9: ExecutorGroup aggregated label
+# Агрегирует множественные метки исполнителей в одну строку через запятую
+# ==============================================================================
+{
+    ?executorGroup rdf:type vad:ExecutorGroup .
+    ?executorGroup vad:includes ?executor1 .
+    ?executorGroup vad:includes ?executor2 .
+    ?executor1 rdfs:label ?label1 .
+    ?executor2 rdfs:label ?label2 .
+    FILTER(?executor1 != ?executor2)
+} => {
+    ?executorGroup rdfs:label ?concatenatedLabel .
+    BIND(CONCAT(?label1, ", ", ?label2) AS ?concatenatedLabel)
+} .
 `;
 
 /**

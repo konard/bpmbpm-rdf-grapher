@@ -241,6 +241,103 @@ flowchart TD
 
 Иначе процесс является **External** (во внешней схеме).
 
+### 4.5 Вычисление rdfs:label для ExecutorGroup
+
+#### 4.5.1 Общее описание
+
+`rdfs:label` для объектов `vad:ExecutorGroup` является вычисляемым параметром, который формируется в Virtual TriG. Алгоритм вычисления:
+
+1. **Сбор исполнителей**: Для каждого `ExecutorGroup` собираются все исполнители через предикат `vad:includes`
+2. **Получение имен исполнителей**: Для каждого исполнителя получается его `rdfs:label` (если нет, используется префиксное имя)
+3. **Формирование строки**: Имена исполнителей объединяются через запятую
+4. **Сохранение в Virtual TriG**: Вычисленная метка сохраняется как `rdfs:label` в соответствующем Virtual TriG
+
+#### 4.5.2 Пример вычисления
+
+```turtle
+# Исходные данные в VADProcessDia (например, vad:t_p1)
+vad:t_p1 {
+    vad:ExecutorGroup_p1.1 rdf:type vad:ExecutorGroup ;
+        dcterms:description "Группа исполнителей процесса p1.1" ;
+        vad:includes vad:Executor1 ;
+        vad:includes vad:Executor2 ;
+        vad:includes vad:Executor3 .
+    
+    vad:Executor1 rdf:type vad:TypeExecutor ;
+        rdfs:label "Исполнитель 1" .
+    
+    vad:Executor2 rdf:type vad:TypeExecutor ;
+        rdfs:label "Исполнитель 2" .
+    
+    vad:Executor3 rdf:type vad:TypeExecutor .
+        # У исполнителя 3 нет rdfs:label
+}
+```
+
+```turtle
+# Результат в Virtual TriG (vad:vt_eg_t_p1)
+vad:vt_eg_t_p1 {
+    rdf:type vad:Virtual ;
+    vad:hasParentObj vad:t_p1 .
+    
+    # Вычисленная метка ExecutorGroup
+    vad:ExecutorGroup_p1.1 rdfs:label "Исполнитель 1, Исполнитель 2, vad:Executor3" .
+}
+```
+
+#### 4.5.3 Правила вывода (Reasoner)
+
+Для вычисления `rdfs:label` используются следующие правила вывода в формате N3:
+
+```notation3
+# Правило 8: ExecutorGroup rdfs:label computation
+# Вычисляет rdfs:label для ExecutorGroup как перечисление всех исполнителей
+{
+    ?executorGroup rdf:type vad:ExecutorGroup .
+    ?executorGroup vad:includes ?executor .
+    ?executor rdfs:label ?executorLabel .
+} => {
+    ?executorGroup rdfs:label ?executorLabel .
+} .
+
+# Правило 9: ExecutorGroup aggregated label
+# Агрегирует множественные метки исполнителей в одну строку через запятую
+{
+    ?executorGroup rdf:type vad:ExecutorGroup .
+    ?executorGroup vad:includes ?executor1 .
+    ?executorGroup vad:includes ?executor2 .
+    ?executor1 rdfs:label ?label1 .
+    ?executor2 rdfs:label ?label2 .
+    FILTER(?executor1 != ?executor2)
+} => {
+    ?executorGroup rdfs:label ?concatenatedLabel .
+    BIND(CONCAT(?label1, ", ", ?label2) AS ?concatenatedLabel)
+} .
+```
+
+#### 4.5.4 Изменения в создании ExecutorGroup
+
+При создании индивида процесса автоматически создаётся `ExecutorGroup` со следующими свойствами:
+
+```turtle
+# Раньше (до ver9c_3ExecutorGroup1):
+vad:ExecutorGroup_p1.1 rdf:type vad:ExecutorGroup ;
+    rdfs:label "Группа исполнителей процесса p1.1" .
+
+# Теперь (после ver9c_3ExecutorGroup1):
+vad:ExecutorGroup_p1.1 rdf:type vad:ExecutorGroup ;
+    dcterms:description "Группа исполнителей процесса p1.1" .
+# rdfs:label вычисляется в Virtual TriG
+```
+
+#### 4.5.5 Интеграция с визуализацией
+
+В модуле `5_publisher_logic.js` функция `rdfToDotVAD()` была обновлена:
+
+1. **Получение вычисленной метки**: Сначала ищется `rdfs:label` в Virtual TriG
+2. **Fallback**: Если метка не найдена, используется старый способ (построение списка из имен исполнителей)
+3. **Отображение**: Вычисленная метка отображается на схеме процесса как подпись к узлу ExecutorGroup
+
 ---
 
 ## 5. Типы изменений, влияющие на Virtual TriG
