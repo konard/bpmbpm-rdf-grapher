@@ -1,0 +1,230 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+    <meta charset="UTF-8">
+    <title>Test ExecutorGroup Virtual TriG</title>
+    <style>
+        body { font-family: Arial, sans-serif; margin: 20px; }
+        .test-section { margin: 20px 0; padding: 15px; border: 1px solid #ccc; }
+        button { padding: 10px; margin: 5px; cursor: pointer; }
+        textarea { width: 100%; height: 200px; font-family: monospace; }
+        .error { color: red; }
+        .success { color: green; }
+    </style>
+</head>
+<body>
+    <h1>Test ExecutorGroup Virtual TriG Integration</h1>
+    
+    <div class="test-section">
+        <h3>1. Load Test Data</h3>
+        <button onclick="loadTestData()">Load Trig_VADv8.ttl</button>
+        <div id="load-status"></div>
+    </div>
+    
+    <div class="test-section">
+        <h3>2. Test Virtual TriG Computation</h3>
+        <button onclick="testVirtualTrig()">Test Virtual TriG Computation</button>
+        <div id="virtual-trig-status"></div>
+    </div>
+    
+    <div class="test-section">
+        <h3>3. Virtual TriG Output</h3>
+        <button onclick="showVirtualTrig()">Show Virtual TriG</button>
+        <textarea id="virtual-trig-output" readonly placeholder="Virtual TriG output will appear here..."></textarea>
+    </div>
+    
+    <div class="test-section">
+        <h3>4. Test Results</h3>
+        <div id="test-results"></div>
+    </div>
+
+    <!-- Load N3 library -->
+    <script src="https://unpkg.com/n3@1.17.2/browser/n3.min.js"></script>
+    <script src="https://rdf.js.org/comunica-browser/versions/v4/engines/query-sparql-rdfjs/comunica-browser.js"></script>
+    
+    <!-- Load vadlib modules -->
+    <script src="9_vadlib/vadlib.js"></script>
+    <script src="9_vadlib/vadlib_sparql.js"></script>
+    
+    <!-- Load Virtual TriG module -->
+    <script src="10_virtualTriG/10_virtualTriG_sparql.js"></script>
+    <script src="10_virtualTriG/10_virtualTriG_logic.js"></script>
+
+    <script>
+        let currentStore = null;
+        let currentPrefixes = null;
+        let testDataLoaded = false;
+
+        // Test data (simplified version of Trig_VADv8.ttl)
+        const testTrigData = `
+@prefix rdf: <http://www.w3.org/1999/02/22-rdf-syntax-ns#> .
+@prefix rdfs: <http://www.w3.org/2000/01/rdf-schema#> .
+@prefix dcterms: <http://purl.org/dc/terms/> .
+@prefix vad: <http://example.org/vad#> .
+
+vad:rtree {
+    vad:rtree rdf:type vad:ObjectTree ;
+        rdfs:label "Дерево Исполнителей (TriG)" ;
+        vad:hasParentObj vad:root .
+
+    vad:Executor1 rdf:type vad:TypeExecutor ;
+        rdfs:label "Исполнитель 1" ;
+        vad:hasParentObj vad:Org-structure .
+
+    vad:Executor2 rdf:type vad:TypeExecutor ;
+        rdfs:label "Исполнитель 2" ;
+        vad:hasParentObj vad:Org-structure .
+
+    vad:Executor3 rdf:type vad:TypeExecutor ;
+        rdfs:label "Исполнитель 3" ;
+        vad:hasParentObj vad:Org-structure .
+}
+
+vad:t_p1 {
+    vad:t_p1 rdf:type vad:VADProcessDia ;
+        rdfs:label "Схема t_p1 процесса p1" ;
+        vad:hasParentObj vad:p1 .
+
+    vad:p1_1 vad:isSubprocessTrig vad:t_p1 ;
+        vad:hasExecutor vad:ExecutorGroup_p1_1 ;
+        vad:hasNext vad:p1_2 .
+
+    vad:ExecutorGroup_p1_1 rdf:type vad:ExecutorGroup ;
+        vad:includes vad:Executor1, vad:Executor2 .
+
+    vad:ExecutorGroup_p1_2 rdf:type vad:ExecutorGroup ;
+        vad:includes vad:Executor1, vad:Executor2, vad:Executor3 .
+}
+
+vad:ptree {
+    vad:ptree rdf:type vad:ObjectTree ;
+        rdfs:label "Дерево Процессов (TriG)" ;
+        vad:hasParentObj vad:root .
+
+    vad:p1 rdf:type vad:TypeProcess ;
+        rdfs:label "p1 Процесс 1" ;
+        dcterms:description "p1 Процесс 1" ;
+        vad:hasParentObj vad:ptree ;
+        vad:hasTrig vad:t_p1 .
+
+    vad:p1_1 rdf:type vad:TypeProcess ;
+        rdfs:label "p1_1 Процесс 1_1" ;
+        dcterms:description "Первый процесс в цепочке добавленной стоимости" ;
+        vad:hasParentObj vad:p1 ;
+        vad:hasTrig vad:t_p1 .
+
+    vad:p1_2 rdf:type vad:TypeProcess ;
+        rdfs:label "Процесс 1_2" ;
+        dcterms:description "Второй процесс, выполняется после Процесса 1" ;
+        vad:hasParentObj vad:p1 .
+}
+        `;
+
+        function updateStatus(elementId, message, isError = false) {
+            const element = document.getElementById(elementId);
+            element.innerHTML = `<div class="${isError ? 'error' : 'success'}">${message}</div>`;
+        }
+
+        async function loadTestData() {
+            try {
+                updateStatus('load-status', 'Loading test data...');
+                
+                // Parse TriG data
+                const parser = new N3.Parser({ format: 'trig' });
+                currentStore = new N3.Store();
+                
+                await new Promise((resolve, reject) => {
+                    const quads = [];
+                    parser.parse(testTrigData, (error, quad, prefixes) => {
+                        if (error) {
+                            reject(error);
+                            return;
+                        }
+                        if (quad) {
+                            quads.push(quad);
+                        } else {
+                            // Parsing complete
+                            quads.forEach(quad => currentStore.addQuad(quad));
+                            currentPrefixes = prefixes;
+                            resolve();
+                        }
+                    });
+                });
+
+                testDataLoaded = true;
+                updateStatus('load-status', `✅ Test data loaded successfully! ${currentStore.getQuads().length} quads parsed.`);
+                
+            } catch (error) {
+                updateStatus('load-status', `❌ Failed to load test data: ${error.message}`, true);
+                console.error('Load error:', error);
+            }
+        }
+
+        async function testVirtualTrig() {
+            if (!testDataLoaded) {
+                updateStatus('virtual-trig-status', '❌ Please load test data first!', true);
+                return;
+            }
+
+            try {
+                updateStatus('virtual-trig-status', 'Testing Virtual TriG computation...');
+                
+                // Trigger Virtual TriG computation
+                const stats = await recalculateAllVirtualTriGs(currentPrefixes);
+                
+                updateStatus('virtual-trig-status', 
+                    `✅ Virtual TriG computation completed! ` +
+                    `Created: ${stats.virtualTrigsCreated}, ` +
+                    `Quads: ${stats.createdQuads}, ` +
+                    `Errors: ${stats.errors.length}`
+                );
+                
+                // Test specific ExecutorGroup label computation
+                await testExecutorGroupLabels();
+                
+            } catch (error) {
+                updateStatus('virtual-trig-status', `❌ Virtual TriG computation failed: ${error.message}`, true);
+                console.error('Virtual TriG error:', error);
+            }
+        }
+
+        async function testExecutorGroupLabels() {
+            const testResults = document.getElementById('test-results');
+            let results = '<h4>ExecutorGroup Label Tests:</h4>';
+            
+            // Test ExecutorGroup_p1_1 (should be "Исполнитель 1, Исполнитель 2")
+            const eg1 = await computeExecutorGroupLabel('http://example.org/vad#ExecutorGroup_p1_1');
+            const expected1 = 'Исполнитель 1, Исполнитель 2';
+            results += `<p>ExecutorGroup_p1_1: "${eg1}" ${eg1 === expected1 ? '✅' : '❌'} (expected: "${expected1}")</p>`;
+            
+            // Test ExecutorGroup_p1_2 (should be "Исполнитель 1, Исполнитель 2, Исполнитель 3")
+            const eg2 = await computeExecutorGroupLabel('http://example.org/vad#ExecutorGroup_p1_2');
+            const expected2 = 'Исполнитель 1, Исполнитель 2, Исполнитель 3';
+            results += `<p>ExecutorGroup_p1_2: "${eg2}" ${eg2 === expected2 ? '✅' : '❌'} (expected: "${expected2}")</p>`;
+            
+            testResults.innerHTML = results;
+        }
+
+        function showVirtualTrig() {
+            if (!currentStore) {
+                document.getElementById('virtual-trig-output').value = 'Please load test data first!';
+                return;
+            }
+
+            try {
+                const virtualTrigContent = formatVirtualTriGFromStore(currentPrefixes);
+                document.getElementById('virtual-trig-output').value = virtualTrigContent;
+            } catch (error) {
+                document.getElementById('virtual-trig-output').value = `Error: ${error.message}`;
+                console.error('Show Virtual TriG error:', error);
+            }
+        }
+
+        // Initialize
+        window.onload = function() {
+            updateStatus('load-status', 'Ready to load test data.');
+            updateStatus('virtual-trig-status', 'Virtual TriG computation ready.');
+        };
+    </script>
+</body>
+</html>
