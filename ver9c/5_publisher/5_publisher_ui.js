@@ -442,33 +442,56 @@ function showNodeProperties(nodeUri, nodeLabel) {
         });
     }
 
-    // issue #324: Добавляем VirtualTriG секцию (вычисляемые свойства) из store
-    let processSubtype = null;
+    // issue #324, issue #355: Добавляем VirtualTriG секцию (вычисляемые свойства) из store
+    // Унифицированный подход: получаем ВСЕ свойства узла из Virtual TriG (processSubtype, rdfs:label и др.)
+    const virtualTrigProperties = [];
     if (selectedTrigUri && currentStore) {
         // Формируем URI виртуального TriG
         const virtualTrigUri = selectedTrigUri.replace('#t_', '#vt_');
-        const PROCESS_SUBTYPE_URI = 'http://example.org/vad#processSubtype';
 
-        // Получаем processSubtype для данного узла из Virtual TriG
-        const subtypeQuads = currentStore.getQuads(nodeUri, PROCESS_SUBTYPE_URI, null, virtualTrigUri);
-        if (subtypeQuads.length > 0) {
-            const subtypeUri = subtypeQuads[0].object.value;
-            processSubtype = subtypeUri.split('#').pop();
-        }
+        // issue #355: Получаем ВСЕ свойства для данного узла из Virtual TriG (унифицированный подход)
+        const virtualQuads = currentStore.getQuads(nodeUri, null, null, virtualTrigUri);
+        virtualQuads.forEach(quad => {
+            // Пропускаем rdf:type и vad:hasParentObj - это метаданные графа
+            const predicateUri = quad.predicate.value;
+            if (predicateUri === 'http://www.w3.org/1999/02/22-rdf-syntax-ns#type' ||
+                predicateUri === 'http://example.org/vad#hasParentObj') {
+                return;
+            }
+
+            const predicateLabel = getPrefixedName(predicateUri, currentPrefixes);
+            const isLiteral = quad.object.termType === 'Literal';
+            let objectLabel;
+            if (isLiteral) {
+                objectLabel = `"${quad.object.value}"`;
+            } else {
+                // Для URI объектов извлекаем локальное имя для более читабельного отображения
+                const fullPrefixed = getPrefixedName(quad.object.value, currentPrefixes);
+                objectLabel = fullPrefixed;
+            }
+
+            virtualTrigProperties.push({
+                predicateLabel: predicateLabel,
+                objectLabel: objectLabel,
+                isLiteral: isLiteral
+            });
+        });
     }
 
-    if (processSubtype) {
+    if (virtualTrigProperties.length > 0) {
         // Добавляем разделитель
         propertiesHtml += '<div class="trig-property-separator" style="margin-top: 15px;">';
         propertiesHtml += '<div class="separator-line"></div>';
-        propertiesHtml += '<div class="separator-text">VirtualTriG</div>';
+        propertiesHtml += '<div class="separator-text">Virtual TriG</div>';
         propertiesHtml += '<div class="separator-line"></div>';
         propertiesHtml += '</div>';
 
-        propertiesHtml += '<div class="property-item" style="margin-top: 10px;">';
-        propertiesHtml += '<div class="property-predicate">vad:processSubtype</div>';
-        propertiesHtml += `<div class="property-value uri" style="color: #6a1b9a; font-style: italic;">vad:${processSubtype}</div>`;
-        propertiesHtml += '</div>';
+        virtualTrigProperties.forEach(prop => {
+            propertiesHtml += '<div class="property-item" style="margin-top: 10px;">';
+            propertiesHtml += `<div class="property-predicate">${prop.predicateLabel}</div>`;
+            propertiesHtml += `<div class="property-value ${prop.isLiteral ? 'literal' : 'uri'}" style="color: #6a1b9a; font-style: italic;">${prop.objectLabel}</div>`;
+            propertiesHtml += '</div>';
+        });
     }
 
     // Блок 3: Свойства концепта из ptree (отделённые линией)
