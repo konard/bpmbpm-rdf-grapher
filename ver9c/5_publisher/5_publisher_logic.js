@@ -832,6 +832,10 @@
             // issue #334: buildNodeTypesCache и updateSubtypesCacheFromVirtualData удалены
             // Теперь используются getNodeTypes() и getNodeSubtypes() из vadlib.js
 
+            // Import namedNode from N3.DataFactory
+            const factory = N3.DataFactory;
+            const { namedNode } = factory;
+
             nodeLabelToUri = {};
 
             // Собираем информацию о процессах и их исполнителях
