@@ -2,3 +2,7 @@
 ### also
 - https://github.com/bpmbpm/rdf-grapher/blob/main/ver9c/design/store/ontology_store.md_v1.md
 - https://github.com/bpmbpm/rdf-grapher/blob/main/ver9c/doc/quadstore_io.md
+- https://github.com/bpmbpm/rdf-grapher/blob/main/ver9c/design/reasoner/reasoner_concept_v1.md 
+### 
+Выяснилось, https://github.com/bpmbpm/rdf-grapher/blob/main/ver9c/design/store/ontology_store.md_v1.md 
+что reasoner как бы и нет, поэтому https://github.com/bpmbpm/rdf-grapher/issues/359
