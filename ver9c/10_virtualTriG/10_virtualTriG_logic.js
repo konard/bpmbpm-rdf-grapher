@@ -765,5 +765,14 @@ function onQuadRemoved(quad) {
 // ЭКСПОРТ ФУНКЦИЙ (для использования в других модулях)
 // ============================================================================
 
-// Функции доступны глобально для вызова из других модулей
+// Делаем функции доступными глобально для вызова из других модулей
+if (typeof global !== 'undefined') {
+    global.recalculateAllVirtualTriGs = recalculateAllVirtualTriGs;
+    global.formatVirtualTriGFromStore = formatVirtualTriGFromStore;
+    global.computeExecutorGroupLabel = computeExecutorGroupLabel;
+    global.createExecutorGroupVirtualTriG = createExecutorGroupVirtualTriG;
+    global.getExecutorGroupsInTrig = getExecutorGroupsInTrig;
+    global.getExecutorsInGroup = getExecutorsInGroup;
+}
+
 // В модульной системе ES6 использовать export
