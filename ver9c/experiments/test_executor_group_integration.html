@@ -1,0 +1,245 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+    <meta charset="UTF-8">
+    <title>Test ExecutorGroup Virtual TriG Integration</title>
+    <style>
+        body { font-family: Arial, sans-serif; margin: 20px; }
+        .section { margin-bottom: 30px; border: 1px solid #ccc; padding: 15px; }
+        .filter-section { margin-bottom: 20px; }
+        select, button, textarea { margin: 5px; padding: 5px; }
+        textarea { width: 100%; height: 200px; font-family: monospace; }
+        .error { color: red; }
+        .success { color: green; }
+    </style>
+</head>
+<body>
+    <h1>Test ExecutorGroup Virtual TriG Integration</h1>
+    
+    <div class="section">
+        <h3>1. Load Test Data</h3>
+        <button onclick="loadTestData()">Load Trig_VADv8.ttl</button>
+        <div id="load-status"></div>
+    </div>
+
+    <div class="section">
+        <h3>2. Simulate refreshVisualization()</h3>
+        <button onclick="simulateRefreshVisualization()">Run refreshVisualization()</button>
+        <div id="refresh-status"></div>
+    </div>
+
+    <div class="section filter-section">
+        <h3>3. Test Quadstore Filters</h3>
+        <select id="trig-filter" onchange="updateFilter()">
+            <option value="objectTreePlusVad">ObjectTree + VADProcessDia (по умолчанию)</option>
+            <option value="virtual">Virtual TriG (виртуальный TriG вычисляемых параметров)</option>
+            <option value="all">Все TriG (full quadstore без фильтров)</option>
+        </select>
+        <button onclick="updateFilter()">Update Filter</button>
+        <div id="filter-status"></div>
+    </div>
+
+    <div class="section">
+        <h3>4. Quadstore Content (Filtered View)</h3>
+        <textarea id="quadstore-output" readonly placeholder="Quadstore content will appear here..."></textarea>
+        <div id="quadstore-info"></div>
+    </div>
+
+    <div class="section">
+        <h3>5. Virtual TriG Content (Direct)</h3>
+        <button onclick="showVirtualTriGDirect()">Show Virtual TriG Direct</button>
+        <textarea id="virtual-trig-output" readonly placeholder="Virtual TriG content will appear here..."></textarea>
+        <div id="virtual-trig-info"></div>
+    </div>
+
+    <!-- Include required scripts -->
+    <script src="../node_modules/n3/n3.min.js"></script>
+    <script src="9_vadlib/vadlib.js"></script>
+    <script src="9_vadlib/vadlib_sparql.js"></script>
+    <script src="10_virtualTriG/10_virtualTriG_logic.js"></script>
+    <script src="10_virtualTriG/10_virtualTriG_ui.js"></script>
+    <script src="2_triplestore/2_triplestore_ui.js"></script>
+    <script src="3_sd/3_sd_logic.js"></script>
+    <script src="5_publisher/5_publisher_logic.js"></script>
+
+    <script>
+        let testData = '';
+        let isLoaded = false;
+
+        // Global variables expected by the modules
+        let currentStore = null;
+        let currentPrefixes = {};
+        let currentMode = 'vad-trig';
+        let selectedTrigUri = null;
+        let trigHierarchy = null;
+
+        async function loadTestData() {
+            const statusEl = document.getElementById('load-status');
+            statusEl.innerHTML = 'Loading test data...';
+            
+            try {
+                const response = await fetch('dia/Trig_VADv8.ttl');
+                if (!response.ok) {
+                    throw new Error(`HTTP ${response.status}: ${response.statusText}`);
+                }
+                testData = await response.text();
+                
+                // Simulate filling the RDF input
+                const inputEl = document.createElement('textarea');
+                inputEl.value = testData;
+                
+                statusEl.innerHTML = '<span class="success">✅ Test data loaded successfully</span>';
+                isLoaded = true;
+                
+                // Automatically run refresh visualization
+                setTimeout(() => simulateRefreshVisualization(), 1000);
+                
+            } catch (error) {
+                statusEl.innerHTML = `<span class="error">❌ Failed to load: ${error.message}</span>`;
+            }
+        }
+
+        async function simulateRefreshVisualization() {
+            const statusEl = document.getElementById('refresh-status');
+            
+            if (!isLoaded) {
+                statusEl.innerHTML = '<span class="error">❌ Please load test data first</span>';
+                return;
+            }
+
+            statusEl.innerHTML = 'Running refreshVisualization()...';
+            
+            try {
+                // Simulate what refreshVisualization() does
+                const parser = new N3.Parser({ format: 'trig' });
+                const quads = [];
+                let prefixes = {};
+
+                await new Promise((resolve, reject) => {
+                    parser.parse(testData, (error, quad, parsedPrefixes) => {
+                        if (error) {
+                            reject(error);
+                            return;
+                        }
+                        if (quad) {
+                            quads.push(quad);
+                        } else {
+                            if (parsedPrefixes) {
+                                prefixes = parsedPrefixes;
+                            }
+                            resolve();
+                        }
+                    });
+                });
+
+                currentPrefixes = prefixes;
+                currentStore = new N3.Store();
+                quads.forEach(quad => currentStore.addQuad(quad));
+
+                console.log('Parsed', quads.length, 'quads');
+                console.log('Prefixes:', prefixes);
+
+                // Trigger Virtual TriG recalculation (this is the key step)
+                if (typeof recalculateAllVirtualTriGs === 'function') {
+                    console.log('Calling recalculateAllVirtualTriGs...');
+                    const stats = await recalculateAllVirtualTriGs(prefixes);
+                    console.log('Virtual TriG stats:', stats);
+                    statusEl.innerHTML = `<span class="success">✅ refreshVisualization() completed. Stats: ${JSON.stringify(stats)}</span>`;
+                } else {
+                    statusEl.innerHTML = '<span class="error">❌ recalculateAllVirtualTriGs function not found</span>';
+                }
+
+                // Update display
+                updateFilter();
+
+            } catch (error) {
+                statusEl.innerHTML = `<span class="error">❌ refreshVisualization() failed: ${error.message}</span>`;
+                console.error('refreshVisualization error:', error);
+            }
+        }
+
+        function updateFilter() {
+            if (!currentStore) {
+                document.getElementById('filter-status').innerHTML = '<span class="error">❌ No data loaded</span>';
+                return;
+            }
+
+            const filterSelect = document.getElementById('trig-filter');
+            const filterMode = filterSelect.value;
+            
+            console.log('Updating filter to:', filterMode);
+
+            // Get filtered quads using the same function as main app
+            let filteredQuads = [];
+            if (typeof getFilteredQuads === 'function') {
+                filteredQuads = getFilteredQuads(filterMode);
+            } else {
+                // Fallback
+                filteredQuads = currentStore.getQuads(null, null, null, null);
+            }
+
+            console.log('Filtered quads count:', filteredQuads.length);
+
+            // Serialize to TriG format
+            const writer = new N3.Writer({
+                format: 'application/trig',
+                prefixes: currentPrefixes
+            });
+
+            filteredQuads.forEach(quad => writer.addQuad(quad));
+
+            writer.end((error, result) => {
+                if (error) {
+                    console.error('Writer error:', error);
+                    document.getElementById('quadstore-output').value = 'Error: ' + error.message;
+                } else {
+                    document.getElementById('quadstore-output').value = result;
+                    document.getElementById('quadstore-info').innerHTML = 
+                        `<strong>${filteredQuads.length} quads</strong> in filter mode: <em>${filterMode}</em>`;
+                }
+            });
+        }
+
+        function showVirtualTriGDirect() {
+            if (!currentStore) {
+                document.getElementById('virtual-trig-info').innerHTML = '<span class="error">❌ No data loaded</span>';
+                return;
+            }
+
+            // Get Virtual TriG content directly
+            if (typeof formatVirtualTriGFromStore === 'function') {
+                const virtualContent = formatVirtualTriGFromStore(currentPrefixes);
+                document.getElementById('virtual-trig-output').value = virtualContent;
+                
+                // Count ExecutorGroup label quads
+                const labelQuads = currentStore.getQuads(
+                    null,
+                    N3.DataFactory.namedNode('http://www.w3.org/2000/01/rdf-schema#label'),
+                    null,
+                    null
+                );
+                
+                const egLabelQuads = labelQuads.filter(q => {
+                    const typeQuads = currentStore.getQuads(
+                        q.subject,
+                        N3.DataFactory.namedNode('http://www.w3.org/1999/02/22-rdf-syntax-ns#type'),
+                        N3.DataFactory.namedNode('http://example.org/vad#ExecutorGroup'),
+                        null
+                    );
+                    return typeQuads.length > 0;
+                });
+
+                document.getElementById('virtual-trig-info').innerHTML = 
+                    `<strong>${egLabelQuads.length} ExecutorGroup rdfs:label quads found</strong>`;
+            } else {
+                document.getElementById('virtual-trig-info').innerHTML = '<span class="error">❌ formatVirtualTriGFromStore function not found</span>';
+            }
+        }
+
+        // Auto-load test data when page opens
+        window.addEventListener('load', () => {
+            console.log('Page loaded, ready to test');
+        });
+    </script>
+</body>
+</html>
