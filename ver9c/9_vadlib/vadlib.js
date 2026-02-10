@@ -192,8 +192,18 @@ let techAppendixData = {
 // Константа для URI графа технологических данных (Вариант 2: общий quadstore)
 const TECHTREE_GRAPH_URI = 'http://example.org/vad#techtree';
 
+// issue #359: Константа для URI графа базовой онтологии VAD
+const VADONTOLOGY_GRAPH_URI = 'http://example.org/vad#VADontology';
+
+// issue #359: Данные базовой онтологии VAD (для semantic reasoning)
+let vadOntologyData = {
+    loaded: false,
+    quads: []  // Квады из vad-basic-ontology.trig для semantic reasoning
+};
+
 // Режимы фильтрации TriG в окне RDF данные
 // issue #262, #264: Расширенные режимы фильтрации
+// issue #359: Добавлен режим VADONTOLOGY для просмотра базовой онтологии
 const TRIG_FILTER_MODES = {
     ALL: 'all',                       // Все TriG (full quadstore без фильтров)
     NO_TECH: 'noTech',                // Без TechnoTree (устаревший, сохранён для совместимости)
@@ -202,7 +212,8 @@ const TRIG_FILTER_MODES = {
     VAD_PROCESS_DIA: 'vadProcessDia', // Только VADProcessDia (схемы процессов с индивидами)
     OBJECT_TREE_PLUS_VAD: 'objectTreePlusVad', // ObjectTree + VADProcessDia (по умолчанию)
     VIRTUAL: 'virtual',               // Только Virtual (виртуальный TriG вычисляемых параметров) - issue #264
-    TECHTREE: 'techtree'              // Только techtree (vad-basic-ontology_tech_Appendix.ttl)
+    TECHTREE: 'techtree',             // Только techtree (vad-basic-ontology_tech_Appendix.ttl)
+    VADONTOLOGY: 'vadontology'        // issue #359: Базовая онтология VAD (vad-basic-ontology.trig)
 };
 
 // issue #264: Текущий режим фильтрации TriG (по умолчанию - ObjectTree + VADProcessDia)
@@ -798,6 +809,140 @@ function removeTechQuadsFromStore() {
     }
 }
 
+// ============================================================================
+// issue #359: ЗАГРУЗКА БАЗОВОЙ ОНТОЛОГИИ VAD ДЛЯ SEMANTIC REASONING
+// ============================================================================
+
+/**
+ * issue #359: Загружает vad-basic-ontology.trig и парсит базовую онтологию
+ * Вызывается при старте приложения для поддержки semantic reasoning
+ *
+ * Онтология загружается в граф vad:VADontology и используется для:
+ * - RDFS/OWL reasoning через comunica-feature-reasoning
+ * - Семантического вывода типов и подтипов процессов
+ * - Замены жёстко закодированных констант на SPARQL-запросы к онтологии
+ */
+async function loadVADOntology() {
+    const defaultPath = 'ontology/vad-basic-ontology.trig';
+    // Вычисляем полный путь для информативных сообщений об ошибках
+    const fullPath = new URL(defaultPath, window.location.href).href;
+
+    try {
+        const response = await fetch(defaultPath);
+        if (!response.ok) {
+            throw new Error(`Файл не найден: ${fullPath}`);
+        }
+
+        const trigContent = await response.text();
+        await parseVADOntology(trigContent);
+
+        vadOntologyData.loaded = true;
+        console.log('VAD ontology loaded successfully');
+        console.log('VAD ontology quads count:', vadOntologyData.quads.length);
+
+    } catch (error) {
+        console.error('Error loading VAD ontology:', error);
+
+        // Показываем диалог с ошибкой и предложением выбрать файл
+        showFileNotFoundDialog({
+            title: 'Ошибка загрузки базовой онтологии VAD',
+            message: `Файл не найден по пути: ${fullPath}`,
+            fileType: '.trig',
+            onFileSelected: async (file) => {
+                try {
+                    const content = await file.text();
+                    await parseVADOntology(content);
+                    vadOntologyData.loaded = true;
+                    showSuccessNotification('Базовая онтология VAD загружена из файла: ' + file.name);
+                } catch (parseError) {
+                    showErrorNotification(`Ошибка парсинга: ${parseError.message}`);
+                }
+            }
+        });
+    }
+}
+
+/**
+ * issue #359: Парсит содержимое vad-basic-ontology.trig
+ * Отдельная функция для повторного использования при выборе файла вручную
+ * @param {string} trigContent - Содержимое TriG файла
+ */
+async function parseVADOntology(trigContent) {
+    // Парсим TriG файл с использованием Promise для ожидания завершения
+    const ontologyQuads = await new Promise((resolve, reject) => {
+        const parser = new N3.Parser({ format: 'application/trig' });
+        const quads = [];
+
+        parser.parse(trigContent, (error, quad, prefixes) => {
+            if (error) {
+                reject(error);
+                return;
+            }
+            if (quad) {
+                quads.push(quad);
+            } else {
+                // quad is null, parsing is complete
+                resolve(quads);
+            }
+        });
+    });
+
+    // Сохраняем квады (TriG уже содержит именованный граф vad:VADontology)
+    vadOntologyData.quads = ontologyQuads;
+}
+
+/**
+ * issue #359: Добавляет квады базовой онтологии VAD в общий quadstore
+ * Вызывается после загрузки пользовательских данных
+ */
+function addVADOntologyQuadsToStore() {
+    if (!vadOntologyData.loaded || vadOntologyData.quads.length === 0) {
+        console.log('addVADOntologyQuadsToStore: VAD ontology not loaded or empty');
+        return;
+    }
+
+    if (!currentStore) {
+        console.error('addVADOntologyQuadsToStore: currentStore not initialized');
+        return;
+    }
+
+    // Проверяем дубликаты через currentStore.getQuads()
+    const ontologyQuadsToAdd = vadOntologyData.quads.filter(ontologyQuad => {
+        const existing = currentStore.getQuads(
+            ontologyQuad.subject,
+            ontologyQuad.predicate,
+            ontologyQuad.object,
+            ontologyQuad.graph
+        );
+        return existing.length === 0;
+    });
+
+    if (ontologyQuadsToAdd.length > 0) {
+        ontologyQuadsToAdd.forEach(quad => currentStore.addQuad(quad));
+        console.log(`Added ${ontologyQuadsToAdd.length} VAD ontology quads to store`);
+    }
+}
+
+/**
+ * issue #359: Удаляет квады базовой онтологии VAD из общего quadstore
+ * Используется при очистке данных
+ */
+function removeVADOntologyQuadsFromStore() {
+    if (!currentStore) {
+        return;
+    }
+
+    // Получаем все квады из VADontology графа
+    const ontologyQuads = currentStore.getQuads(null, null, null, VADONTOLOGY_GRAPH_URI);
+
+    // Удаляем каждый квад
+    ontologyQuads.forEach(quad => currentStore.removeQuad(quad));
+
+    if (ontologyQuads.length > 0) {
+        console.log(`Removed ${ontologyQuads.length} VAD ontology quads from store`);
+    }
+}
+
 /**
  * Проверяет, является ли граф типом TechnoTree
  * @param {string} graphUri - URI графа
@@ -806,14 +951,28 @@ function removeTechQuadsFromStore() {
 function isTechnoTreeGraph(graphUri) {
     if (!graphUri) return false;
     // issue #264: TechnoTree графы: techtree, techroot (vtree устарел)
+    // issue #359: Добавлен VADontology как TechnoTree
     // Также включает Virtual графы (vt_*) для обратной совместимости
     return graphUri === TECHTREE_GRAPH_URI ||
+           graphUri === VADONTOLOGY_GRAPH_URI || // issue #359: VAD basic ontology
            graphUri === VTREE_GRAPH_URI || // @deprecated - для обратной совместимости
            graphUri === TECHROOT_GRAPH_URI ||
            graphUri.endsWith('#techtree') ||
+           graphUri.endsWith('#VADontology') || // issue #359
            graphUri.endsWith('#vtree') || // @deprecated
            graphUri.endsWith('#techroot') ||
            isVirtualGraph(graphUri); // issue #264: Virtual графы (vt_*)
+}
+
+/**
+ * issue #359: Проверяет, является ли граф базовой онтологией VAD
+ * @param {string} graphUri - URI графа
+ * @returns {boolean} - true если граф типа VADontology
+ */
+function isVADOntologyGraph(graphUri) {
+    if (!graphUri) return false;
+    return graphUri === VADONTOLOGY_GRAPH_URI ||
+           graphUri.endsWith('#VADontology');
 }
 
 /**
@@ -831,7 +990,7 @@ function isObjectTreeGraph(graphUri) {
 
 /**
  * Проверяет, является ли граф типом VADProcessDia
- * Все графы кроме root, ptree, rtree, techtree, vtree, techroot и vt_* считаются VADProcessDia
+ * Все графы кроме root, ptree, rtree, techtree, vtree, techroot, VADontology и vt_* считаются VADProcessDia
  * @param {string} graphUri - URI графа
  * @returns {boolean} - true если граф типа VADProcessDia
  */
@@ -843,11 +1002,16 @@ function isVADProcessDiaGraph(graphUri) {
         graphUri.endsWith('#rtree') ||
         graphUri.endsWith('#techtree') ||
         graphUri.endsWith('#vtree') ||
-        graphUri.endsWith('#techroot')) {
+        graphUri.endsWith('#techroot') ||
+        graphUri.endsWith('#VADontology')) { // issue #359: Исключаем VADontology
         return false;
     }
     // issue #264: Исключаем виртуальные графы типа vad:Virtual (vt_*)
     if (isVirtualGraph(graphUri)) {
+        return false;
+    }
+    // issue #359: Исключаем VADontology граф
+    if (isVADOntologyGraph(graphUri)) {
         return false;
     }
     return true;
@@ -940,6 +1104,10 @@ function getFilteredQuads(filterMode = TRIG_FILTER_MODES.OBJECT_TREE_PLUS_VAD) {
                 quad.graph?.value === TECHTREE_GRAPH_URI ||
                 quad.graph?.value?.endsWith('#techtree')
             );
+
+        case TRIG_FILTER_MODES.VADONTOLOGY:
+            // issue #359: VADontology (vad-basic-ontology.trig - базовая онтология)
+            return sourceQuads.filter(quad => isVADOntologyGraph(quad.graph?.value));
 
         default:
             // issue #264: По умолчанию - ObjectTree + VADProcessDia

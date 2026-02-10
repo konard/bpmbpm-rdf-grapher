@@ -84,6 +84,7 @@
                         <option value="objectTree">ObjectTree (концепты процесса и исполнителя)</option>
                         <option value="vadProcessDia">VADProcessDia (схемы процессов с индивидами)</option>
                         <option value="techtree">TechTree (vad-basic-ontology_tech_Appendix.ttl)</option>
+                        <option value="vadontology">VADontology TriG (vad-basic-ontology.trig)</option>
                         <option value="virtual">Virtual TriG (виртуальный TriG вычисляемых параметров)</option>
                         <option value="all">Все TriG (full quadstore без фильтров)</option>
                     </select>
@@ -757,9 +758,11 @@ WHERE {
             }
         }
 
-        // Загружаем технологическое приложение и инициализируем UI при старте
+        // Загружаем технологическое приложение и базовую онтологию при старте
         document.addEventListener('DOMContentLoaded', function() {
             loadTechAppendix();
+            // issue #359: Загружаем базовую онтологию VAD для semantic reasoning
+            loadVADOntology();
             // issue #234: Инициализация описания режима визуализации и видимости полей
             if (typeof updateModeDescription === 'function') {
                 updateModeDescription();

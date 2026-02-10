@@ -93,6 +93,11 @@
                     addTechQuadsToStore();
                 }
 
+                // issue #359: Добавляем квады базовой онтологии VAD для semantic reasoning
+                if (typeof addVADOntologyQuadsToStore === 'function') {
+                    addVADOntologyQuadsToStore();
+                }
+
                 // issue #260: Обновляем отображение quadstore с учётом текущего фильтра
                 if (typeof updateQuadstoreDisplay === 'function') {
                     updateQuadstoreDisplay();
@@ -492,6 +497,11 @@
                 // Добавляем технологические квады в общий quadstore
                 if (typeof addTechQuadsToStore === 'function') {
                     addTechQuadsToStore();
+                }
+
+                // issue #359: Добавляем квады базовой онтологии VAD для semantic reasoning
+                if (typeof addVADOntologyQuadsToStore === 'function') {
+                    addVADOntologyQuadsToStore();
                 }
 
                 // Обновляем отображение quadstore с учётом текущего фильтра
