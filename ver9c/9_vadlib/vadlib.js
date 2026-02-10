@@ -3,16 +3,19 @@
 
 // Import Comunica for full SPARQL support
 // Make it global so it's accessible from other modules
-global.Comunica = null;
-try {
-    // Try to import new Comunica package structure
-    global.Comunica = require('@comunica/query-sparql-rdfjs');
-} catch (error) {
+// Note: This code only runs in Node.js environment; browsers load Comunica via <script> tag
+if (typeof global !== 'undefined' && typeof require === 'function') {
+    global.Comunica = null;
     try {
-        // Fallback to legacy Comunica package
-        global.Comunica = require('comunica');
-    } catch (legacyError) {
-        console.warn('Comunica SPARQL engine not available - using fallback SPARQL implementation');
+        // Try to import new Comunica package structure
+        global.Comunica = require('@comunica/query-sparql-rdfjs');
+    } catch (error) {
+        try {
+            // Fallback to legacy Comunica package
+            global.Comunica = require('comunica');
+        } catch (legacyError) {
+            console.warn('Comunica SPARQL engine not available - using fallback SPARQL implementation');
+        }
     }
 }
 
@@ -177,7 +180,13 @@ let draggedPanel = null;
 let dragOffsetX = 0;
 let dragOffsetY = 0;
 let currentStore = null;
-global.comunicaEngine = null;
+// Note: comunicaEngine may be declared in vadlib_sparql.js, so we use var and check
+if (typeof comunicaEngine === 'undefined') {
+    var comunicaEngine = null;
+}
+if (typeof global !== 'undefined') {
+    global.comunicaEngine = comunicaEngine;
+}
 let currentDotCode = '';
 // issue #324: virtualRDFdata удалён - виртуальные данные хранятся в TriG типа vad:Virtual (vt_*)
 let smartDesignMode = 'filtered';
