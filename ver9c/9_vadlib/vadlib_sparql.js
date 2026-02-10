@@ -1,6 +1,11 @@
 // Ссылка на issue: https://github.com/bpmbpm/rdf-grapher/issues/252
 // vadlib_sparql.js - SPARQL query engine functions for RDF Grapher
 
+// Ensure comunicaEngine is available in current scope
+if (typeof comunicaEngine === 'undefined') {
+    var comunicaEngine = null;
+}
+
         function funSPARQLvalues(sparqlQuery, variableName = 'value') {
             const results = [];
 
@@ -324,9 +329,18 @@
 
             try {
                 // Инициализируем Comunica engine если нужно
-                if (!comunicaEngine) {
+                // Use global or scope variable as available
+                let engine = typeof comunicaEngine !== 'undefined' ? comunicaEngine : global.comunicaEngine;
+                if (!engine) {
                     if (typeof Comunica !== 'undefined' && Comunica.QueryEngine) {
-                        comunicaEngine = new Comunica.QueryEngine();
+                        engine = new Comunica.QueryEngine();
+                        // Store back to both scope locations
+                        if (typeof comunicaEngine !== 'undefined') {
+                            comunicaEngine = engine;
+                        }
+                        if (typeof global !== 'undefined') {
+                            global.comunicaEngine = engine;
+                        }
                     } else {
                         console.error('funSPARQLvaluesComunica: Comunica не загружена, fallback на funSPARQLvalues');
                         return funSPARQLvalues(sparqlQuery, variableName);
@@ -337,7 +351,7 @@
                 // currentStore уже является единственным источником данных
 
                 // Выполняем запрос через Comunica
-                const bindingsStream = await comunicaEngine.queryBindings(sparqlQuery, {
+                const bindingsStream = await engine.queryBindings(sparqlQuery, {
                     sources: [currentStore]
                 });
 
@@ -542,9 +556,18 @@
 
             try {
                 // Инициализируем Comunica engine если нужно
-                if (!comunicaEngine) {
+                // Use global or scope variable as available
+                let engine = typeof comunicaEngine !== 'undefined' ? comunicaEngine : global.comunicaEngine;
+                if (!engine) {
                     if (typeof Comunica !== 'undefined' && Comunica.QueryEngine) {
-                        comunicaEngine = new Comunica.QueryEngine();
+                        engine = new Comunica.QueryEngine();
+                        // Store back to both scope locations
+                        if (typeof comunicaEngine !== 'undefined') {
+                            comunicaEngine = engine;
+                        }
+                        if (typeof global !== 'undefined') {
+                            global.comunicaEngine = engine;
+                        }
                     } else {
                         console.error('funSPARQLvaluesComunicaUpdate: Comunica не загружена');
                         return false;
@@ -555,7 +578,7 @@
                 // Не нужно инициализировать из currentQuads
 
                 // Выполняем UPDATE запрос через Comunica
-                await comunicaEngine.queryVoid(sparqlUpdateQuery, {
+                await engine.queryVoid(sparqlUpdateQuery, {
                     sources: [currentStore]
                 });
 
@@ -653,9 +676,18 @@
 
             try {
                 // Инициализируем Comunica engine если нужно
-                if (!comunicaEngine) {
+                // Use global or scope variable as available
+                let engine = typeof comunicaEngine !== 'undefined' ? comunicaEngine : global.comunicaEngine;
+                if (!engine) {
                     if (typeof Comunica !== 'undefined' && Comunica.QueryEngine) {
-                        comunicaEngine = new Comunica.QueryEngine();
+                        engine = new Comunica.QueryEngine();
+                        // Store back to both scope locations
+                        if (typeof comunicaEngine !== 'undefined') {
+                            comunicaEngine = engine;
+                        }
+                        if (typeof global !== 'undefined') {
+                            global.comunicaEngine = engine;
+                        }
                     } else {
                         console.error('funSPARQLask: Comunica не загружена, используем fallback');
                         return funSPARQLaskSimple(sparqlQuery);
@@ -663,7 +695,7 @@
                 }
 
                 // Выполняем ASK запрос через Comunica
-                const result = await comunicaEngine.queryBoolean(sparqlQuery, {
+                const result = await engine.queryBoolean(sparqlQuery, {
                     sources: [currentStore]
                 });
 

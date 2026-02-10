@@ -88,7 +88,7 @@ async function getVirtualTrigParent(virtualGraphUri) {
     `;
 
     try {
-        const results = await funSPARQLvaluesComunica(query, currentPrefixes);
+        const results = await funSPARQLvaluesComunica(query, 'parent');
         if (results && results.length > 0) {
             return results[0].parent;
         }
@@ -168,7 +168,7 @@ async function getAllProcessMetadataFromPtree() {
     `;
 
     try {
-        const results = await funSPARQLvaluesComunica(query, currentPrefixes);
+        const results = await funSPARQLvaluesComunica(query, 'process');
         const metadata = {};
 
         results.forEach(row => {
@@ -209,7 +209,7 @@ async function getVADProcessDiaGraphs() {
     `;
 
     try {
-        const results = await funSPARQLvaluesComunica(query, currentPrefixes);
+        const results = await funSPARQLvaluesComunica(query, 'trig');
         return results.map(row => ({
             trigUri: row.trig,
             definesProcess: row.definesProcess || row.hasParent || null,
@@ -239,7 +239,7 @@ async function getProcessIndividualsInTrig(trigUri) {
     `;
 
     try {
-        const results = await funSPARQLvaluesComunica(query, currentPrefixes);
+        const results = await funSPARQLvaluesComunica(query, 'process');
         return results.map(row => row.process);
     } catch (error) {
         console.error('getProcessIndividualsInTrig error:', error);
@@ -255,19 +255,32 @@ async function getProcessIndividualsInTrig(trigUri) {
  * Создаёт Virtual TriG для указанного VADProcessDia
  * Добавляет квады напрямую в currentStore (без использования currentQuads)
  *
+ * ВАЖНО: Один VADProcessDia = один Virtual TriG (vad:vt_*)
+ * ExecutorGroup rdfs:label добавляются в этот же Virtual TriG
+ *
  * @param {string} parentTrigUri - URI родительского VADProcessDia
  * @param {Object} processSubtypes - { processUri: subtypeName }
+ * @param {Object} executorGroupLabels - { executorGroupUri: label } (опционально)
  * @param {Object} prefixes - Словарь префиксов
  * @returns {Array} - Массив созданных квадов
  */
-function createVirtualTriG(parentTrigUri, processSubtypes, prefixes) {
+function createVirtualTriG(parentTrigUri, processSubtypes, executorGroupLabels, prefixes) {
     if (!parentTrigUri || !currentStore) {
         console.error('createVirtualTriG: missing parentTrigUri or currentStore');
         return [];
     }
 
+    // Проверка на пустые входные данные - не создаём Virtual TriG если нечего добавлять
+    const hasProcessSubtypes = processSubtypes && Object.keys(processSubtypes).length > 0;
+    const hasExecutorGroupLabels = executorGroupLabels && Object.keys(executorGroupLabels).length > 0;
+
+    if (!hasProcessSubtypes && !hasExecutorGroupLabels) {
+        console.log('createVirtualTriG: No data to add, skipping Virtual TriG creation');
+        return [];
+    }
+
     const factory = N3.DataFactory;
-    const { namedNode } = factory;
+    const { namedNode, literal } = factory;
     const newQuads = [];
 
     // Формируем URI виртуального контейнера (vt_ вместо t_)
@@ -298,14 +311,30 @@ function createVirtualTriG(parentTrigUri, processSubtypes, prefixes) {
     ));
 
     // 3. Добавляем processSubtype для каждого процесса
-    for (const [processUri, subtypeName] of Object.entries(processSubtypes)) {
-        const subtypeUri = VIRTUAL_TRIG_NS + subtypeName;
-        newQuads.push(factory.quad(
-            namedNode(processUri),
-            namedNode(PROCESS_SUBTYPE_URI),
-            namedNode(subtypeUri),
-            virtualGraphNode
-        ));
+    if (hasProcessSubtypes) {
+        for (const [processUri, subtypeName] of Object.entries(processSubtypes)) {
+            const subtypeUri = VIRTUAL_TRIG_NS + subtypeName;
+            newQuads.push(factory.quad(
+                namedNode(processUri),
+                namedNode(PROCESS_SUBTYPE_URI),
+                namedNode(subtypeUri),
+                virtualGraphNode
+            ));
+        }
+    }
+
+    // 4. Добавляем rdfs:label для каждого ExecutorGroup
+    if (hasExecutorGroupLabels) {
+        for (const [executorGroupUri, label] of Object.entries(executorGroupLabels)) {
+            if (label) {
+                newQuads.push(factory.quad(
+                    namedNode(executorGroupUri),
+                    namedNode('http://www.w3.org/2000/01/rdf-schema#label'),
+                    literal(label),
+                    virtualGraphNode
+                ));
+            }
+        }
     }
 
     // Добавляем квады в store (SPARQL-driven: только store, без currentQuads)
@@ -395,7 +424,7 @@ async function getExecutorGroupsInTrig(trigUri) {
     `;
 
     try {
-        const results = await funSPARQLvaluesComunica(query, currentPrefixes);
+        const results = await funSPARQLvaluesComunica(query, 'executorGroup');
         return results.map(row => row.executorGroup);
     } catch (error) {
         console.error('getExecutorGroupsInTrig error:', error);
@@ -419,7 +448,7 @@ async function getExecutorsInGroup(executorGroupUri) {
     `;
 
     try {
-        const results = await funSPARQLvaluesComunica(query, currentPrefixes);
+        const results = await funSPARQLvaluesComunica(query, 'executor');
         return results.map(row => row.executor);
     } catch (error) {
         console.error('getExecutorsInGroup error:', error);
@@ -431,25 +460,30 @@ async function getExecutorsInGroup(executorGroupUri) {
  * Вычисляет rdfs:label для ExecutorGroup как перечисление исполнителей через запятую
  *
  * @param {string} executorGroupUri - URI ExecutorGroup
+ * @param {string} parentTrigUri - URI родительского VADProcessDia (для GRAPH контекста)
  * @returns {Promise<string>} - Вычисленная метка
  */
-async function computeExecutorGroupLabel(executorGroupUri) {
+async function computeExecutorGroupLabel(executorGroupUri, parentTrigUri) {
     // Получаем всех исполнителей в группе
     const executorsQuery = `
         PREFIX vad: <http://example.org/vad#>
         PREFIX rdfs: <http://www.w3.org/2000/01/rdf-schema#>
 
         SELECT ?executor ?executorLabel WHERE {
-            <${executorGroupUri}> vad:includes ?executor .
+            GRAPH <${parentTrigUri}> {
+                <${executorGroupUri}> vad:includes ?executor .
+            }
             OPTIONAL {
-                ?executor rdfs:label ?executorLabel .
+                GRAPH vad:rtree {
+                    ?executor rdfs:label ?executorLabel .
+                }
             }
         }
         ORDER BY ?executor
     `;
 
     try {
-        const results = await funSPARQLvaluesComunica(executorsQuery, currentPrefixes);
+        const results = await funSPARQLvaluesComunica(executorsQuery, 'executor');
         
         if (results.length === 0) {
             return '';
@@ -473,68 +507,10 @@ async function computeExecutorGroupLabel(executorGroupUri) {
     }
 }
 
-/**
- * Создаёт Virtual TriG для ExecutorGroup с вычисленным rdfs:label
- *
- * @param {string} parentTrigUri - URI родительского VADProcessDia
- * @param {Object} executorGroupLabels - { executorGroupUri: label }
- * @param {Object} prefixes - Словарь префиксов
- * @returns {Array} - Массив созданных квадов
- */
-function createExecutorGroupVirtualTriG(parentTrigUri, executorGroupLabels, prefixes) {
-    if (!parentTrigUri || !currentStore || Object.keys(executorGroupLabels).length === 0) {
-        return [];
-    }
-
-    const factory = N3.DataFactory;
-    const { namedNode, literal } = factory;
-    const newQuads = [];
-
-    // Формируем URI виртуального контейнера для ExecutorGroup
-    let virtualContainerUri;
-    if (parentTrigUri.includes('#t_')) {
-        virtualContainerUri = parentTrigUri.replace('#t_', '#vt_eg_');
-    } else {
-        const localName = parentTrigUri.split('#').pop() || parentTrigUri.split('/').pop();
-        virtualContainerUri = VIRTUAL_TRIG_NS + 'vt_eg_' + localName;
-    }
-
-    const virtualGraphNode = namedNode(virtualContainerUri);
-
-    // 1. rdf:type vad:Virtual
-    newQuads.push(factory.quad(
-        virtualGraphNode,
-        namedNode(RDF_TYPE_URI),
-        namedNode(VIRTUAL_TYPE_URI),
-        virtualGraphNode
-    ));
-
-    // 2. vad:hasParentObj <parentTrigUri>
-    newQuads.push(factory.quad(
-        virtualGraphNode,
-        namedNode(HAS_PARENT_OBJ_URI),
-        namedNode(parentTrigUri),
-        virtualGraphNode
-    ));
-
-    // 3. Добавляем rdfs:label для каждого ExecutorGroup
-    for (const [executorGroupUri, label] of Object.entries(executorGroupLabels)) {
-        if (label) {
-            newQuads.push(factory.quad(
-                namedNode(executorGroupUri),
-                namedNode('http://www.w3.org/2000/01/rdf-schema#label'),
-                literal(label),
-                virtualGraphNode
-            ));
-        }
-    }
-
-    // Добавляем квады в store
-    newQuads.forEach(quad => currentStore.addQuad(quad));
-
-    console.log(`createExecutorGroupVirtualTriG: Created ${newQuads.length} quads for ${virtualContainerUri}`);
-    return newQuads;
-}
+// NOTE: createExecutorGroupVirtualTriG function was REMOVED
+// ExecutorGroup labels are now added to the SAME Virtual TriG as processSubtype data
+// via the createVirtualTriG function (see Issue #351 fix)
+// Rule: One VADProcessDia = one Virtual TriG (vad:vt_*)
 
 // ============================================================================
 // ГЛАВНАЯ ФУНКЦИЯ ПЕРЕСЧЁТА
@@ -550,7 +526,10 @@ function createExecutorGroupVirtualTriG(parentTrigUri, executorGroupLabels, pref
  * 3. Для каждого VADProcessDia:
  *    - Находим индивиды процессов
  *    - Вычисляем processSubtype для каждого
- *    - Создаём Virtual TriG
+ *    - Вычисляем rdfs:label для ExecutorGroup
+ *    - Создаём ОДИН Virtual TriG с ВСЕМИ данными (processSubtype + ExecutorGroup labels)
+ *
+ * ВАЖНО: Один VADProcessDia = один Virtual TriG (vad:vt_*)
  *
  * @param {Object} prefixes - Словарь префиксов
  * @returns {Promise<Object>} - Статистика пересчёта
@@ -577,14 +556,10 @@ async function recalculateAllVirtualTriGs(prefixes) {
         for (const trigInfo of vadProcessDias) {
             const { trigUri, definesProcess } = trigInfo;
 
-            // Получаем индивиды процессов в этом TriG
+            // 4.1. Получаем индивиды процессов в этом TriG
             const processUris = await getProcessIndividualsInTrig(trigUri);
 
-            if (processUris.length === 0) {
-                continue;
-            }
-
-            // Вычисляем подтипы для каждого процесса
+            // 4.2. Вычисляем подтипы для каждого процесса
             const processSubtypes = {};
             for (const processUri of processUris) {
                 const metadata = processMetadata[processUri] || {};
@@ -597,27 +572,21 @@ async function recalculateAllVirtualTriGs(prefixes) {
                 processSubtypes[processUri] = subtype;
             }
 
-            // Создаём Virtual TriG для процессов
-            const newQuads = createVirtualTriG(trigUri, processSubtypes, prefixes);
-            stats.createdQuads += newQuads.length;
-            stats.virtualTrigsCreated++;
-
-            // 5. Вычисляем rdfs:label для ExecutorGroup
+            // 4.3. Вычисляем rdfs:label для ExecutorGroup
+            const executorGroupLabels = {};
             const executorGroups = await getExecutorGroupsInTrig(trigUri);
-            if (executorGroups.length > 0) {
-                const executorGroupLabels = {};
-                for (const executorGroupUri of executorGroups) {
-                    const label = await computeExecutorGroupLabel(executorGroupUri);
-                    if (label) {
-                        executorGroupLabels[executorGroupUri] = label;
-                    }
+            for (const executorGroupUri of executorGroups) {
+                const label = await computeExecutorGroupLabel(executorGroupUri, trigUri);
+                if (label) {
+                    executorGroupLabels[executorGroupUri] = label;
                 }
+            }
 
-                // Создаём Virtual TriG для ExecutorGroup
-                if (Object.keys(executorGroupLabels).length > 0) {
-                    const egQuads = createExecutorGroupVirtualTriG(trigUri, executorGroupLabels, prefixes);
-                    stats.createdQuads += egQuads.length;
-                }
+            // 4.4. Создаём ОДИН Virtual TriG со ВСЕМИ данными (processSubtype + ExecutorGroup labels)
+            const newQuads = createVirtualTriG(trigUri, processSubtypes, executorGroupLabels, prefixes);
+            if (newQuads.length > 0) {
+                stats.createdQuads += newQuads.length;
+                stats.virtualTrigsCreated++;
             }
         }
 
@@ -770,7 +739,7 @@ if (typeof global !== 'undefined') {
     global.recalculateAllVirtualTriGs = recalculateAllVirtualTriGs;
     global.formatVirtualTriGFromStore = formatVirtualTriGFromStore;
     global.computeExecutorGroupLabel = computeExecutorGroupLabel;
-    global.createExecutorGroupVirtualTriG = createExecutorGroupVirtualTriG;
+    global.createVirtualTriG = createVirtualTriG;
     global.getExecutorGroupsInTrig = getExecutorGroupsInTrig;
     global.getExecutorsInGroup = getExecutorsInGroup;
 }
