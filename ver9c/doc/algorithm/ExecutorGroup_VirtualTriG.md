@@ -1,12 +1,17 @@
 # Algorithm for ExecutorGroup rdfs:label Computation in Virtual TriG
 
-**Issue Reference**: #351 - ver9c_3ExecutorGroup1c  
-**Author**: AI Issue Solver  
-**Date**: 2026-02-10  
+**Issue Reference**: #351 - ver9c_3ExecutorGroup1c
+**Author**: AI Issue Solver
+**Date**: 2026-02-10
+**Updated**: 2026-02-10 (PR #352 revision - merged ExecutorGroup labels into single Virtual TriG)
 
 ## Overview
 
-This algorithm describes how rdfs:label values are computed for ExecutorGroup objects and stored in Virtual TriG graphs (`vad:vt_eg_*`) as part of the Virtual TriG system in ver9c.
+This algorithm describes how rdfs:label values are computed for ExecutorGroup objects and stored in Virtual TriG graphs (`vad:vt_*`) as part of the Virtual TriG system in ver9c.
+
+**IMPORTANT RULE**: One VADProcessDia (process schema) = ONE Virtual TriG graph
+- ExecutorGroup rdfs:label quads are stored in the SAME Virtual TriG (`vad:vt_*`) as processSubtype data
+- There should NOT be separate Virtual TriG graphs for ExecutorGroup labels (`vad:vt_eg_*` prefix is NOT used)
 
 ## Problem Statement
 
@@ -65,61 +70,102 @@ For each ExecutorGroup:
 
 ### Phase 4: Virtual TriG Generation
 ```
+IMPORTANT: One VADProcessDia = ONE Virtual TriG (vad:vt_*)
+
 1. Create Virtual TriG container URI
-   Pattern: Replace parent trig URI "#t_" with "#vt_eg_"
-   Example: vad:t_p1 → vad:vt_eg_p1
+   Pattern: Replace parent trig URI "#t_" with "#vt_"
+   Example: vad:t_p1 → vad:vt_p1
 
 2. Create metadata quads for the Virtual TriG graph
    a. rdf:type vad:Virtual
    b. vad:hasParentObj <parentTrigUri>
 
-3. Create rdfs:label quads for each ExecutorGroup
-   Pattern: ?executorGroup rdfs:label "<computed_label>" 
+3. Create processSubtype quads for each process in the schema
+   Pattern: ?process vad:processSubtype ?subtypeUri
+   Where: ?process = Process URI
+         ?subtypeUri = Computed subtype (DetailedChild, DetailedExternal, etc.)
+
+4. Create rdfs:label quads for each ExecutorGroup
+   Pattern: ?executorGroup rdfs:label "<computed_label>"
    Where: ?executorGroup = ExecutorGroup URI
          <computed_label> = result from Phase 3
-         Graph = Virtual TriG container URI
+         Graph = Same Virtual TriG container URI (vad:vt_*)
 
-4. Add all quads to the N3 store
+5. Add all quads to the N3 store
 ```
 
 ## Data Flow Diagram
 
 ```
-┌─────────────────┐    ┌─────────────────┐    ┌─────────────────┐
-│  VADProcessDia  │    │  ExecutorGroup │    │  Executor     │
-│  Graph (t_p1) │───▶│  (p1_1)     │───▶│  (Executor1)  │
-│                 │    │               │    │  rdfs:label   │
-│  vad:includes   │    │  vad:includes  │    │  "Исполнитель 1"│
-│  relationship    │    │  relationship  │    └─────────────────┘
-└─────────────────┘    └─────────────────┘              │
-                                         │
-                               ┌─────────────────┐
-                               │  Virtual TriG    │
-                               │  (vt_eg_p1)    │
-                               │                 │
-                               │  Computed:      │
-                               │  rdfs:label     │
-                               │  "Исполнитель 1" │
-                               └─────────────────┘
+┌─────────────────────┐    ┌─────────────────┐    ┌─────────────────┐
+│  VADProcessDia      │    │  ExecutorGroup  │    │  Executor       │
+│  Graph (t_p1)       │───▶│  (p1_1)         │───▶│  (Executor1)    │
+│                     │    │                 │    │  rdfs:label     │
+│  Process individuals│    │  vad:includes   │    │  "Исполнитель 1"│
+│  (p1_1, p1_2, ...)  │    │  relationship   │    └─────────────────┘
+└─────────────────────┘    └─────────────────┘              │
+         │                                                   │
+         ▼                                                   ▼
+┌─────────────────────────────────────────────────────────────────┐
+│  SINGLE Virtual TriG (vt_p1)                                    │
+│                                                                 │
+│  Contains BOTH:                                                 │
+│  1. processSubtype data:                                        │
+│     vad:p1_1 vad:processSubtype vad:DetailedExternal            │
+│     vad:p1_2 vad:processSubtype vad:notDetailedExternal         │
+│                                                                 │
+│  2. ExecutorGroup rdfs:label (computed):                        │
+│     vad:ExecutorGroup_p1_1 rdfs:label "Исполнитель 1"           │
+│     vad:ExecutorGroup_p1_2 rdfs:label "Исполнитель 1, Исп. 2"   │
+│                                                                 │
+│  3. Metadata:                                                   │
+│     vad:vt_p1 rdf:type vad:Virtual                              │
+│     vad:vt_p1 vad:hasParentObj vad:t_p1                         │
+└─────────────────────────────────────────────────────────────────┘
 ```
 
 ## Expected Output Example
 
 For the test data in `Trig_VADv8.ttl`, the expected Virtual TriG content should be:
 
+**IMPORTANT**: All data for a process schema is in ONE Virtual TriG graph (vad:vt_*), NOT separate vad:vt_eg_* graphs.
+
 ```trig
-vad:vt_eg_p1 {
+vad:vt_p1 {
+    # Metadata
+    vad:vt_p1 rdf:type vad:Virtual .
+    vad:vt_p1 vad:hasParentObj vad:t_p1 .
+
+    # Process subtype data
+    vad:p1_1 vad:processSubtype vad:DetailedExternal .
+    vad:p1_2 vad:processSubtype vad:notDetailedExternal .
+
+    # ExecutorGroup rdfs:label (computed)
     vad:ExecutorGroup_p1_1 rdfs:label "Исполнитель 1" .
     vad:ExecutorGroup_p1_2 rdfs:label "Исполнитель 1, Исполнитель 2" .
-    vad:vt_eg_p1 rdf:type vad:Virtual .
-    vad:vt_eg_p1 vad:hasParentObj vad:t_p1 .
 }
 
-vad:vt_eg_p1_1 {
-    vad:ExecutorGroup_p1_1_1 rdfs:label "Исполнитель 21, Исполнитель 1, Исполнитель 2" .
+vad:vt_p1_1 {
+    # Metadata
+    vad:vt_p1_1 rdf:type vad:Virtual .
+    vad:vt_p1_1 vad:hasParentObj vad:t_p1_1 .
+
+    # Process subtype data
+    vad:p1_1_1 vad:processSubtype vad:DetailedChild .
+    vad:p1_1_2 vad:processSubtype vad:notDetailedChild .
+
+    # ExecutorGroup rdfs:label (computed)
+    vad:ExecutorGroup_p1_1_1 rdfs:label "Исполнитель 21" .
     vad:ExecutorGroup_p1_1_2 rdfs:label "Исполнитель 21, Исполнитель 22" .
-    vad:vt_eg_p1_1 rdf:type vad:Virtual .
-    vad:vt_eg_p1_1 vad:hasParentObj vad:t_p1_1 .
+}
+
+vad:vt_p2 {
+    # Metadata
+    vad:vt_p2 rdf:type vad:Virtual .
+    vad:vt_p2 vad:hasParentObj vad:t_p2 .
+
+    # Process subtype data and ExecutorGroup labels
+    # ... (similar pattern)
 }
 ```
 
@@ -129,10 +175,12 @@ vad:vt_eg_p1_1 {
 - **File**: `ver9c/10_virtualTriG/10_virtualTriG_logic.js`
 - **Main Function**: `recalculateAllVirtualTriGs(prefixes)`
 - **Key Sub-functions**:
-  - `getExecutorGroupsInTrig(trigUri)`
-  - `getExecutorsInGroup(executorGroupUri)`
-  - `computeExecutorGroupLabel(executorGroupUri)`
-  - `createExecutorGroupVirtualTriG(parentTrigUri, executorGroupLabels, prefixes)`
+  - `createVirtualTriG(parentTrigUri, processSubtypes, executorGroupLabels, prefixes)` - creates SINGLE Virtual TriG with all data
+  - `getExecutorGroupsInTrig(trigUri)` - finds ExecutorGroup objects in a graph
+  - `getExecutorsInGroup(executorGroupUri)` - finds executors in an ExecutorGroup
+  - `computeExecutorGroupLabel(executorGroupUri, parentTrigUri)` - computes rdfs:label from executor names
+
+**NOTE**: `createExecutorGroupVirtualTriG()` function was REMOVED - all Virtual TriG data is now created by `createVirtualTriG()`
 
 ### Dependencies
 - **SPARQL Engine**: `@comunica/query-sparql-rdfjs` package
@@ -204,7 +252,7 @@ IF SPARQL query fails:
 ### 3. Data Validation
 - **Input Data**: Verify `Trig_VADv8.ttl` has expected structure
 - **Output Data**: Confirm Virtual TriG contains expected quads
-- **Graph Names**: Verify `vad:vt_eg_*` naming convention
+- **Graph Names**: Verify `vad:vt_*` naming convention (ONE Virtual TriG per process schema, NO separate `vad:vt_eg_*` graphs)
 
 ## Troubleshooting Guide
 
@@ -245,6 +293,13 @@ IF SPARQL query fails:
 
 ---
 
-**Status**: ✅ Algorithm fully documented and implemented  
-**Version**: ver9c  
-**Last Updated**: 2026-02-10
+**Status**: ✅ Algorithm fully documented and implemented
+**Version**: ver9c
+**Last Updated**: 2026-02-10 (PR #352 revision - merged ExecutorGroup labels into single Virtual TriG)
+
+## Revision History
+
+| Date | Change | Issue/PR |
+|------|--------|----------|
+| 2026-02-10 | Initial documentation | #351, PR #350, PR #346 |
+| 2026-02-10 | Fixed: ExecutorGroup labels now added to same Virtual TriG (vt_*) instead of separate graphs (vt_eg_*) | #351, PR #352 |
