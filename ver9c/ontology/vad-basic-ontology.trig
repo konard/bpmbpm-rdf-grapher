@@ -356,30 +356,30 @@ vad:VADontology {
     # ==========================================================================
 
     # Зонтичный класс для подтипов
-    vad:CollorVadShape
+    vad:ColorVadShape
         rdf:type rdfs:Class, owl:Class ;
-        rdfs:label "CollorVadShape" ;
+        rdfs:label "ColorVadShape" ;
         rdfs:comment "Зонтичный класс для подтипов процессов, определяющий цвет VAD-элемента." ;
         dcterms:description "Зонтичный класс для подтипов процессов" .
 
     # Базовые подтипы
     vad:Detailed
         rdf:type rdfs:Class, owl:Class ;
-        rdfs:subClassOf vad:CollorVadShape ;
+        rdfs:subClassOf vad:ColorVadShape ;
         rdfs:label "Detailed" ;
         rdfs:comment "Детализированный процесс (имеет дочернюю схему hasTrig)." ;
         dcterms:description "Детализированный процесс (имеет дочернюю схему)" .
 
     vad:notDetailed
         rdf:type rdfs:Class, owl:Class ;
-        rdfs:subClassOf vad:CollorVadShape ;
+        rdfs:subClassOf vad:ColorVadShape ;
         rdfs:label "notDetailed" ;
         rdfs:comment "Не детализированный процесс (не имеет дочерней схемы)." ;
         dcterms:description "Не детализированный процесс (без дочерней схемы)" .
 
     vad:NotDefinedType
         rdf:type rdfs:Class, owl:Class ;
-        rdfs:subClassOf vad:CollorVadShape ;
+        rdfs:subClassOf vad:ColorVadShape ;
         rdfs:label "NotDefinedType" ;
         rdfs:comment "Процесс с неопределённым родителем (hasParentObj = pNotDefined)." ;
         dcterms:description "Процесс с неопределённым родителем (pNotDefined)" .
