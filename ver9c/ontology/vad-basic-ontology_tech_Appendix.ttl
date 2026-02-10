@@ -1030,6 +1030,57 @@ vad:techtree
 # ==============================================================================
 
 # ==============================================================================
+# issue #359: ПРАВИЛА REASONING ДЛЯ EXECUTORGROUP RDFS:LABEL
+# ==============================================================================
+# Определение автоматического вычисления rdfs:label для ExecutorGroup
+# через агрегацию rdfs:label всех включённых исполнителей
+# ==============================================================================
+
+vad:AutoExecutorGroupLabel
+    rdf:type vad:Auto ;
+    rdfs:label "AutoExecutorGroupLabel" ;
+    vad:generatesProperty rdfs:label ;
+    vad:generationRule """
+        rdfs:label для ExecutorGroup вычисляется автоматически через reasoning:
+        1. Получаем все исполнители через vad:includes
+        2. Агрегируем их rdfs:label через запятую
+        3. Результат: "Исполнитель1, Исполнитель2, ..."
+
+        SPARQL CONSTRUCT:
+        CONSTRUCT {
+            ?executorGroup rdfs:label ?aggregatedLabel .
+        }
+        WHERE {
+            ?executorGroup rdf:type vad:ExecutorGroup .
+            {
+                SELECT ?executorGroup (GROUP_CONCAT(?label; separator=", ") AS ?aggregatedLabel)
+                WHERE {
+                    ?executorGroup vad:includes ?executor .
+                    ?executor rdfs:label ?label .
+                }
+                GROUP BY ?executorGroup
+            }
+        }
+    """ ;
+    rdfs:comment """
+        issue #359: Автоматическое вычисление rdfs:label для ExecutorGroup.
+
+        Вместо хранения статического label, значение вычисляется динамически
+        через reasoning на основе rdfs:label всех исполнителей, входящих
+        в группу через предикат vad:includes.
+
+        Пример:
+        vad:eg_p1.1 vad:includes vad:r1, vad:r2, vad:r3 .
+        vad:r1 rdfs:label "Бухгалтерия" .
+        vad:r2 rdfs:label "Финансовый отдел" .
+        vad:r3 rdfs:label "Директор" .
+
+        Результат reasoning:
+        vad:eg_p1.1 rdfs:label "Бухгалтерия, Финансовый отдел, Директор" .
+    """ ;
+    dcterms:description "Автоматическое вычисление rdfs:label для ExecutorGroup через reasoning" .
+
+# ==============================================================================
 # МЕТОДЫ ОБЪЕКТОВ СХЕМЫ (OBJECT METHODS)
 # ==============================================================================
 # issue #336: Определение методов для типов объектов на схеме процесса

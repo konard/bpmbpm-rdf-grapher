@@ -198,6 +198,219 @@ vad:VADProcessDia rdfs:subClassOf vad:TriG .
 vad:ObjectTree rdfs:subClassOf vad:TriG .
 `;
 
+// issue #359: Флаг использования базовой онтологии VAD для reasoning
+let useVADOntologyForReasoning = true;
+
+// ============================================================================
+// issue #359: ФУНКЦИИ ДЛЯ РАБОТЫ С БАЗОВОЙ ОНТОЛОГИЕЙ VAD
+// ============================================================================
+
+/**
+ * issue #359: Получает RDFS правила из графа vad:VADontology
+ * Извлекает rdfs:subClassOf и rdfs:domain/rdfs:range для reasoning
+ *
+ * @returns {Promise<Array>} - Массив квадов с RDFS правилами
+ */
+async function getOntologyRDFSRules() {
+    if (!currentStore) {
+        console.warn('getOntologyRDFSRules: currentStore not initialized');
+        return [];
+    }
+
+    const ontologyGraphUri = 'http://example.org/vad#VADontology';
+
+    // Получаем все RDFS правила из онтологии
+    const rdfsQuads = [];
+
+    // rdfs:subClassOf
+    const subClassQuads = currentStore.getQuads(
+        null,
+        'http://www.w3.org/2000/01/rdf-schema#subClassOf',
+        null,
+        ontologyGraphUri
+    );
+    rdfsQuads.push(...subClassQuads);
+
+    // rdfs:domain
+    const domainQuads = currentStore.getQuads(
+        null,
+        'http://www.w3.org/2000/01/rdf-schema#domain',
+        null,
+        ontologyGraphUri
+    );
+    rdfsQuads.push(...domainQuads);
+
+    // rdfs:range
+    const rangeQuads = currentStore.getQuads(
+        null,
+        'http://www.w3.org/2000/01/rdf-schema#range',
+        null,
+        ontologyGraphUri
+    );
+    rdfsQuads.push(...rangeQuads);
+
+    // owl:equivalentClass
+    const equivQuads = currentStore.getQuads(
+        null,
+        'http://www.w3.org/2002/07/owl#equivalentClass',
+        null,
+        ontologyGraphUri
+    );
+    rdfsQuads.push(...equivQuads);
+
+    console.log(`getOntologyRDFSRules: Found ${rdfsQuads.length} RDFS quads from VADontology`);
+    return rdfsQuads;
+}
+
+/**
+ * issue #359: Получает разрешённые типы из онтологии через SPARQL
+ * Заменяет жёстко закодированный массив VAD_ALLOWED_TYPES
+ *
+ * @returns {Promise<Array<string>>} - Массив URI разрешённых типов
+ */
+async function getOntologyAllowedTypes() {
+    if (!currentStore) {
+        console.warn('getOntologyAllowedTypes: currentStore not initialized');
+        return [];
+    }
+
+    try {
+        // Запрашиваем все классы, определённые в онтологии
+        const query = `
+            PREFIX rdf: <http://www.w3.org/1999/02/22-rdf-syntax-ns#>
+            PREFIX rdfs: <http://www.w3.org/2000/01/rdf-schema#>
+            PREFIX owl: <http://www.w3.org/2002/07/owl#>
+            PREFIX vad: <http://example.org/vad#>
+
+            SELECT DISTINCT ?class WHERE {
+                GRAPH vad:VADontology {
+                    ?class rdf:type rdfs:Class .
+                }
+            }
+        `;
+
+        const results = await funSPARQLvaluesComunica(query, currentPrefixes);
+        const allowedTypes = results.map(row => row.class);
+
+        console.log(`getOntologyAllowedTypes: Found ${allowedTypes.length} classes from VADontology`);
+        return allowedTypes;
+
+    } catch (error) {
+        console.error('getOntologyAllowedTypes error:', error);
+        return [];
+    }
+}
+
+/**
+ * issue #359: Получает разрешённые предикаты из онтологии через SPARQL
+ * Заменяет жёстко закодированный массив VAD_ALLOWED_PREDICATES
+ *
+ * @returns {Promise<Array<string>>} - Массив URI разрешённых предикатов
+ */
+async function getOntologyAllowedPredicates() {
+    if (!currentStore) {
+        console.warn('getOntologyAllowedPredicates: currentStore not initialized');
+        return [];
+    }
+
+    try {
+        // Запрашиваем все свойства, определённые в онтологии
+        const query = `
+            PREFIX rdf: <http://www.w3.org/1999/02/22-rdf-syntax-ns#>
+            PREFIX rdfs: <http://www.w3.org/2000/01/rdf-schema#>
+            PREFIX owl: <http://www.w3.org/2002/07/owl#>
+            PREFIX vad: <http://example.org/vad#>
+
+            SELECT DISTINCT ?property WHERE {
+                GRAPH vad:VADontology {
+                    { ?property rdf:type rdf:Property }
+                    UNION
+                    { ?property rdf:type owl:ObjectProperty }
+                    UNION
+                    { ?property rdf:type owl:DatatypeProperty }
+                }
+            }
+        `;
+
+        const results = await funSPARQLvaluesComunica(query, currentPrefixes);
+        const allowedPredicates = results.map(row => row.property);
+
+        console.log(`getOntologyAllowedPredicates: Found ${allowedPredicates.length} properties from VADontology`);
+        return allowedPredicates;
+
+    } catch (error) {
+        console.error('getOntologyAllowedPredicates error:', error);
+        return [];
+    }
+}
+
+/**
+ * issue #359: Получает иерархию подтипов процессов из онтологии
+ * Используется для семантического reasoning вместо жёстко закодированной логики
+ *
+ * @returns {Promise<Object>} - Иерархия подтипов { subtype: [parentTypes] }
+ */
+async function getProcessSubtypeHierarchy() {
+    if (!currentStore) {
+        console.warn('getProcessSubtypeHierarchy: currentStore not initialized');
+        return {};
+    }
+
+    try {
+        const query = `
+            PREFIX rdfs: <http://www.w3.org/2000/01/rdf-schema#>
+            PREFIX vad: <http://example.org/vad#>
+
+            SELECT ?subtype ?parent WHERE {
+                GRAPH vad:VADontology {
+                    ?subtype rdfs:subClassOf ?parent .
+                    FILTER(STRSTARTS(STR(?subtype), STR(vad:)))
+                    FILTER(?parent != rdfs:Class && ?parent != rdfs:Resource)
+                }
+            }
+        `;
+
+        const results = await funSPARQLvaluesComunica(query, currentPrefixes);
+        const hierarchy = {};
+
+        results.forEach(row => {
+            const subtype = row.subtype;
+            const parent = row.parent;
+
+            if (!hierarchy[subtype]) {
+                hierarchy[subtype] = [];
+            }
+            hierarchy[subtype].push(parent);
+        });
+
+        console.log(`getProcessSubtypeHierarchy: Found ${Object.keys(hierarchy).length} subtype relationships`);
+        return hierarchy;
+
+    } catch (error) {
+        console.error('getProcessSubtypeHierarchy error:', error);
+        return {};
+    }
+}
+
+/**
+ * issue #359: Проверяет доступность базовой онтологии VAD
+ *
+ * @returns {boolean} - true если онтология загружена
+ */
+function isVADOntologyLoaded() {
+    if (!currentStore) return false;
+
+    // Проверяем наличие метаданных графа VADontology
+    const ontologyQuads = currentStore.getQuads(
+        'http://example.org/vad#VADontology',
+        'http://www.w3.org/1999/02/22-rdf-syntax-ns#type',
+        'http://example.org/vad#TechnoTree',
+        'http://example.org/vad#VADontology'
+    );
+
+    return ontologyQuads.length > 0;
+}
+
 // ============================================================================
 // ИНИЦИАЛИЗАЦИЯ REASONER
 // ============================================================================
