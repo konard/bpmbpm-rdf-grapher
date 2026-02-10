@@ -13,7 +13,9 @@
 ### Ontology 
 - [Basic VAD Ontology - Базовая онтология верхнеуровневых процессов](https://github.com/bpmbpm/rdf-grapher/blob/main/ver9c/ontology/vad-basic-ontology.ttl)
 - Технологическая часть онтологии [Tech Appendix - Технологические классы и объекты](https://github.com/bpmbpm/rdf-grapher/blob/main/ver9c/ontology/vad-basic-ontology_tech_Appendix.ttl)
-- [Терминологический словарь (Terminology Dictionary)](https://github.com/bpmbpm/rdf-grapher/blob/main/ver9c/ontology/term.md), например,  ptree - это хранилище концептов процесса, а индивиды процесса хранятся в TriG типа VADProcessDia. 
+- [Терминологический словарь (Terminology Dictionary)](https://github.com/bpmbpm/rdf-grapher/blob/main/ver9c/ontology/term.md), например,  ptree - это хранилище концептов процесса, а индивиды процесса хранятся в TriG типа VADProcessDia.
+#### Наименования obj & predicate
+- имена классов / подклассов / типов : пишутся в формате UpperCamelCase (как в Java), а имена предикатов - в формате lowerCamelCase. 
  
 ### LD requirements 
 - triple (requirements for the implementation of triplets)
