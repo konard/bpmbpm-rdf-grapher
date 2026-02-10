@@ -209,7 +209,16 @@ async function runTest() {
         const virtualTrigLogic = fs.readFileSync(
             path.join(__dirname, '../10_virtualTriG/10_virtualTriG_logic.js'), 'utf8'
         );
-        eval(virtualTrigLogic);
+        
+        // Execute the script and expose functions to global scope
+        const script = new Function('N3', 'currentStore', 'currentPrefixes', virtualTrigLogic + `
+            // Expose functions to global scope
+            global.computeExecutorGroupLabel = computeExecutorGroupLabel;
+            global.recalculateAllVirtualTriGs = recalculateAllVirtualTriGs;
+            global.formatVirtualTriGFromStore = formatVirtualTriGFromStore;
+            global.getPrefixedName = getPrefixedName;
+        `);
+        script(N3, global.currentStore, global.currentPrefixes);
         
         // Test ExecutorGroup label computation
         console.log('4. Testing ExecutorGroup label computation...');
