@@ -12,27 +12,34 @@
 vad:Tech (Базовый технологический класс)
 ├── vad:Auto (Автозаполнение)
 ├── vad:Virtual (Виртуальные TriG-контейнеры)
-└── vad:ObjectMethod (Методы объектов)
+├── vad:ObjectMethod (Методы объектов)
+└── vad:VadXPredicat (Зонтичный класс для предикатов) [issue #357]
+    ├── vad:ConceptProcessPredicate (Предикаты концептов процессов)
+    ├── vad:IndividProcessPredicate (Предикаты индивидов процессов)
+    ├── vad:ConceptExecutorPredicate (Предикаты концептов исполнителей)
+    ├── vad:ConceptExecutorGroupPredicate (Предикаты групп исполнителей)
+    └── vad:ConceptTriGPredicate (Предикаты TriG схем)
 
-vad:Detailed (Детализированный процесс)
-├── vad:DetailedChild
-└── vad:DetailedExternal
-
-vad:notDetailed (Не детализированный процесс)
-├── vad:notDetailedChild
-└── vad:notDetailedExternal
-
-vad:NotDefinedType (Процесс с неопределённым родителем)
+vad:CollorVadShape (Зонтичный класс для подтипов процессов) [issue #357]
+├── vad:Detailed (Детализированный процесс)
+│   ├── vad:DetailedChild
+│   └── vad:DetailedExternal
+├── vad:notDetailed (Не детализированный процесс)
+│   ├── vad:notDetailedChild
+│   └── vad:notDetailedExternal
+└── vad:NotDefinedType (Процесс с неопределённым родителем)
 ```
 
 ### 1.2 Технологические объекты (Tech Objects)
 
 ```
-vad:ConceptProcessPredicate (Предикаты концептов процессов)
-vad:IndividProcessPredicate (Предикаты индивидов процессов)
-vad:ConceptExecutorPredicate (Предикаты концептов исполнителей)
-vad:ConceptExecutorGroupPredicate (Предикаты групп исполнителей)
-vad:ConceptTriGPredicate (Предикаты TriG схем)
+vad:VadXPredicat (Зонтичный класс для предикатов)
+├── vad:ConceptProcessPredicate (Предикаты концептов процессов)
+├── vad:IndividProcessPredicate (Предикаты индивидов процессов)
+├── vad:ConceptExecutorPredicate (Предикаты концептов исполнителей)
+├── vad:ConceptExecutorGroupPredicate (Предикаты групп исполнителей)
+└── vad:ConceptTriGPredicate (Предикаты TriG схем)
+
 vad:ConceptProcessTreePredicate (Предикаты дерева процессов)
 vad:ConceptExecutorTreePredicate (Предикаты дерева исполнителей)
 ```
@@ -62,13 +69,15 @@ vad:DeleteIndividExecutor (Удаление индивида исполните�
 | **vad:Auto** | vad:Tech | Автозаполнение | vad:generatesProperty, vad:generationRule | Да |
 | **vad:Virtual** | vad:Tech | Виртуальные TriG-контейнеры | vad:hasParentObj | Нет |
 | **vad:ObjectMethod** | vad:Tech | Методы объектов | vad:methodForType, vad:methodFunction | Нет |
-| **vad:Detailed** | - | Детализированный процесс | vad:hasNodeStyle, vad:styleLegendLabel | Нет |
+| **vad:VadXPredicat** | vad:Tech | Зонтичный класс для предикатов [issue #357] | - | Нет |
+| **vad:CollorVadShape** | - | Зонтичный класс для подтипов процессов [issue #357] | - | Нет |
+| **vad:Detailed** | vad:CollorVadShape | Детализированный процесс | vad:hasNodeStyle, vad:styleLegendLabel | Нет |
 | **vad:DetailedChild** | vad:Detailed | Детализированный подпроцесс | vad:hasNodeStyle, vad:styleLegendLabel | Нет |
 | **vad:DetailedExternal** | vad:Detailed | Детализированный внешний процесс | vad:hasNodeStyle, vad:styleLegendLabel | Нет |
-| **vad:notDetailed** | - | Не детализированный процесс | vad:hasNodeStyle, vad:styleLegendLabel | Нет |
+| **vad:notDetailed** | vad:CollorVadShape | Не детализированный процесс | vad:hasNodeStyle, vad:styleLegendLabel | Нет |
 | **vad:notDetailedChild** | vad:notDetailed | Не детализированный подпроцесс | vad:hasNodeStyle, vad:styleLegendLabel | Нет |
 | **vad:notDetailedExternal** | vad:notDetailed | Не детализированный внешний процесс | vad:hasNodeStyle, vad:styleLegendLabel | Нет |
-| **vad:NotDefinedType** | - | Процесс с неопределённым родителем | vad:hasNodeStyle, vad:styleLegendLabel | Нет |
+| **vad:NotDefinedType** | vad:CollorVadShape | Процесс с неопределённым родителем | vad:hasNodeStyle, vad:styleLegendLabel | Нет |
 
 ## 3. Технологические объекты и их предикаты
 
@@ -134,44 +143,49 @@ graph TD
     Tech[vad:Tech] --> Auto[vad:Auto]
     Tech --> Virtual[vad:Virtual]
     Tech --> ObjectMethod[vad:ObjectMethod]
-    
-    %% Процессные подтипы
-    Detailed[vad:Detailed] --> DetailedChild[vad:DetailedChild]
+    Tech --> VadXPredicat[vad:VadXPredicat]
+
+    %% Зонтичный класс для предикатов (issue #357)
+    VadXPredicat --> ConceptProcessPredicate[vad:ConceptProcessPredicate]
+    VadXPredicat --> IndividProcessPredicate[vad:IndividProcessPredicate]
+    VadXPredicat --> ConceptExecutorPredicate[vad:ConceptExecutorPredicate]
+    VadXPredicat --> ConceptExecutorGroupPredicate[vad:ConceptExecutorGroupPredicate]
+    VadXPredicat --> ConceptTriGPredicate[vad:ConceptTriGPredicate]
+
+    %% Зонтичный класс для подтипов процессов (issue #357)
+    CollorVadShape[vad:CollorVadShape] --> Detailed[vad:Detailed]
+    CollorVadShape --> notDetailed[vad:notDetailed]
+    CollorVadShape --> NotDefinedType[vad:NotDefinedType]
+
+    %% Подклассы процессных подтипов
+    Detailed --> DetailedChild[vad:DetailedChild]
     Detailed --> DetailedExternal[vad:DetailedExternal]
-    
-    notDetailed[vad:notDetailed] --> notDetailedChild[vad:notDetailedChild]
+
+    notDetailed --> notDetailedChild[vad:notDetailedChild]
     notDetailed --> notDetailedExternal[vad:notDetailedExternal]
-    
-    NotDefinedType[vad:NotDefinedType]
-    
-    %% Технологические объекты
-    ConceptProcessPredicate[vad:ConceptProcessPredicate]
-    IndividProcessPredicate[vad:IndividProcessPredicate]
-    ConceptExecutorPredicate[vad:ConceptExecutorPredicate]
-    ConceptExecutorGroupPredicate[vad:ConceptExecutorGroupPredicate]
-    ConceptTriGPredicate[vad:ConceptTriGPredicate]
-    
+
     %% Автогенерируемые объекты
     Auto --> AutoIsSubprocessTrig[vad:AutoIsSubprocessTrig]
     Auto --> AutoExecutorGroup[vad:AutoExecutorGroup]
     Auto --> AutoNewTrigId[vad:AutoNewTrigId]
     Auto --> AutoNewTrigLabel[vad:AutoNewTrigLabel]
     Auto --> AutoProcessSubtype[vad:AutoProcessSubtype]
-    
+
     %% Методы объектов
     ObjectMethod --> DeleteIndividProcess[vad:DeleteIndividProcess]
     ObjectMethod --> DeleteIndividExecutor[vad:DeleteIndividExecutor]
-    
+
     %% Стили
     classDef baseClass fill:#e3f2fd
     classDef processClass fill:#e8f5e8
     classDef techObject fill:#fff3e0
     classDef autoObject fill:#fce4ec
     classDef methodClass fill:#f3e5f5
-    
+    classDef umbrellaClass fill:#ffe0b2
+
     class Tech,Auto,Virtual,ObjectMethod baseClass
-%%  class,Detailed,DetailedChild,DetailedExternal,notDetailed,notDetailedChild,notDetailedExternal,NotDefinedType processClass
-class Detailed,DetailedChild,DetailedExternal,notDetailed,notDetailedChild,notDetailedExternal,NotDefinedType processClass
+    class VadXPredicat,CollorVadShape umbrellaClass
+    class Detailed,DetailedChild,DetailedExternal,notDetailed,notDetailedChild,notDetailedExternal,NotDefinedType processClass
     class ConceptProcessPredicate,IndividProcessPredicate,ConceptExecutorPredicate,ConceptExecutorGroupPredicate,ConceptTriGPredicate techObject
     class AutoIsSubprocessTrig,AutoExecutorGroup,AutoNewTrigId,AutoNewTrigLabel,AutoProcessSubtype autoObject
     class DeleteIndividProcess,DeleteIndividExecutor methodClass
