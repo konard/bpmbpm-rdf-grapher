@@ -152,6 +152,8 @@ async function testMainWorkflow() {
         
         // Test getFilteredQuads with VIRTUAL mode (like UI filter)
         if (typeof getFilteredQuads === 'function') {
+            // Define TRIG_FILTER_MODES if not available
+            const TRIG_FILTER_MODES = { VIRTUAL: 'virtual' };
             const virtualQuads = getFilteredQuads(TRIG_FILTER_MODES.VIRTUAL);
             console.log(`Virtual filter found ${virtualQuads.length} quads`);
 

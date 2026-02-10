@@ -88,7 +88,7 @@ async function getVirtualTrigParent(virtualGraphUri) {
     `;
 
     try {
-        const results = await funSPARQLvaluesComunica(query, currentPrefixes);
+        const results = await funSPARQLvaluesComunica(query, 'parent');
         if (results && results.length > 0) {
             return results[0].parent;
         }
@@ -168,7 +168,7 @@ async function getAllProcessMetadataFromPtree() {
     `;
 
     try {
-        const results = await funSPARQLvaluesComunica(query, currentPrefixes);
+        const results = await funSPARQLvaluesComunica(query, 'process');
         const metadata = {};
 
         results.forEach(row => {
@@ -209,7 +209,7 @@ async function getVADProcessDiaGraphs() {
     `;
 
     try {
-        const results = await funSPARQLvaluesComunica(query, currentPrefixes);
+        const results = await funSPARQLvaluesComunica(query, 'trig');
         return results.map(row => ({
             trigUri: row.trig,
             definesProcess: row.definesProcess || row.hasParent || null,
@@ -239,7 +239,7 @@ async function getProcessIndividualsInTrig(trigUri) {
     `;
 
     try {
-        const results = await funSPARQLvaluesComunica(query, currentPrefixes);
+        const results = await funSPARQLvaluesComunica(query, 'process');
         return results.map(row => row.process);
     } catch (error) {
         console.error('getProcessIndividualsInTrig error:', error);
@@ -395,7 +395,7 @@ async function getExecutorGroupsInTrig(trigUri) {
     `;
 
     try {
-        const results = await funSPARQLvaluesComunica(query, currentPrefixes);
+        const results = await funSPARQLvaluesComunica(query, 'executorGroup');
         return results.map(row => row.executorGroup);
     } catch (error) {
         console.error('getExecutorGroupsInTrig error:', error);
@@ -419,7 +419,7 @@ async function getExecutorsInGroup(executorGroupUri) {
     `;
 
     try {
-        const results = await funSPARQLvaluesComunica(query, currentPrefixes);
+        const results = await funSPARQLvaluesComunica(query, 'executor');
         return results.map(row => row.executor);
     } catch (error) {
         console.error('getExecutorsInGroup error:', error);
@@ -431,25 +431,30 @@ async function getExecutorsInGroup(executorGroupUri) {
  * Вычисляет rdfs:label для ExecutorGroup как перечисление исполнителей через запятую
  *
  * @param {string} executorGroupUri - URI ExecutorGroup
+ * @param {string} parentTrigUri - URI родительского VADProcessDia (для GRAPH контекста)
  * @returns {Promise<string>} - Вычисленная метка
  */
-async function computeExecutorGroupLabel(executorGroupUri) {
+async function computeExecutorGroupLabel(executorGroupUri, parentTrigUri) {
     // Получаем всех исполнителей в группе
     const executorsQuery = `
         PREFIX vad: <http://example.org/vad#>
         PREFIX rdfs: <http://www.w3.org/2000/01/rdf-schema#>
 
         SELECT ?executor ?executorLabel WHERE {
-            <${executorGroupUri}> vad:includes ?executor .
+            GRAPH <${parentTrigUri}> {
+                <${executorGroupUri}> vad:includes ?executor .
+            }
             OPTIONAL {
-                ?executor rdfs:label ?executorLabel .
+                GRAPH vad:rtree {
+                    ?executor rdfs:label ?executorLabel .
+                }
             }
         }
         ORDER BY ?executor
     `;
 
     try {
-        const results = await funSPARQLvaluesComunica(executorsQuery, currentPrefixes);
+        const results = await funSPARQLvaluesComunica(executorsQuery, 'executor');
         
         if (results.length === 0) {
             return '';
@@ -607,7 +612,7 @@ async function recalculateAllVirtualTriGs(prefixes) {
             if (executorGroups.length > 0) {
                 const executorGroupLabels = {};
                 for (const executorGroupUri of executorGroups) {
-                    const label = await computeExecutorGroupLabel(executorGroupUri);
+                    const label = await computeExecutorGroupLabel(executorGroupUri, trigUri);
                     if (label) {
                         executorGroupLabels[executorGroupUri] = label;
                     }

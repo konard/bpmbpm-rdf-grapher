@@ -1,6 +1,21 @@
 // Ссылка на issue: https://github.com/bpmbpm/rdf-grapher/issues/232
 // vadlib.js - Основная библиотека утилит RDF Grapher
 
+// Import Comunica for full SPARQL support
+// Make it global so it's accessible from other modules
+global.Comunica = null;
+try {
+    // Try to import new Comunica package structure
+    global.Comunica = require('@comunica/query-sparql-rdfjs');
+} catch (error) {
+    try {
+        // Fallback to legacy Comunica package
+        global.Comunica = require('comunica');
+    } catch (legacyError) {
+        console.warn('Comunica SPARQL engine not available - using fallback SPARQL implementation');
+    }
+}
+
 // ============================================================================
 // РЕЖИМ ВИЗУАЛИЗАЦИИ
 // ============================================================================
@@ -162,7 +177,7 @@ let draggedPanel = null;
 let dragOffsetX = 0;
 let dragOffsetY = 0;
 let currentStore = null;
-let comunicaEngine = null;
+global.comunicaEngine = null;
 let currentDotCode = '';
 // issue #324: virtualRDFdata удалён - виртуальные данные хранятся в TriG типа vad:Virtual (vt_*)
 let smartDesignMode = 'filtered';
