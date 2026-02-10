@@ -1,5 +1,6 @@
 <!-- PR #308 | 2026-02-05 -->
 <!-- Ссылка на issue: https://github.com/bpmbpm/rdf-grapher/issues/307 -->
+[Структура - требование](https://github.com/bpmbpm/rdf-grapher/blob/main/ver9c/analysis/hierarchical_diagram.md#52-%D0%BF%D0%BE%D0%B4%D0%BA%D0%BB%D0%B0%D1%81%D1%81%D1%8B-%D1%81%D1%85%D0%B5%D0%BC)
 
 # Анализ добавления Структурных и Иерархических схем в RDF Grapher
 
