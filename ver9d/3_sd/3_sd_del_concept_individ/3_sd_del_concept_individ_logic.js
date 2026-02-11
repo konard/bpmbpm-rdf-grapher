@@ -1,0 +1,2046 @@
+// Ссылка на issue: https://github.com/bpmbpm/rdf-grapher/issues/252
+// 3_sd_del_concept_individ_logic.js - Модуль удаления концептов и индивидов
+/**
+ * ==============================================================================
+ * DELETE CONCEPT/INDIVID MODULE
+ * ==============================================================================
+ *
+ * Модуль для удаления Концептов и Индивидов в системе RDF Grapher.
+ * Позволяет удалять:
+ * - Концепт процесса (vad:TypeProcess) из vad:ptree
+ * - Концепт исполнителя (vad:TypeExecutor) из vad:rtree
+ * - Индивид процесса из vad:VADProcessDia
+ * - Индивид исполнителя из vad:VADProcessDia
+ * - Схему процесса (TriG типа vad:VADProcessDia)
+ *
+ * Алгоритм работы:
+ * 1. Пользователь нажимает кнопку "Del Concept\Individ\Schema" в окне Smart Design
+ * 2. Выбирает тип операции удаления из выпадающего списка:
+ *    - Удалить концепт процесса
+ *    - Удалить концепт исполнителя
+ *    - Удалить индивид процесса во всех схемах
+ *    - Удалить индивид исполнителя во всех схемах
+ *    - Удалить схему процесса (TriG)
+ *    - Удалить индивид процесса в схеме (issue #311)
+ *    - Удалить индивид исполнителя в схеме (issue #311)
+ * 3. В зависимости от типа операции:
+ *    - Для концептов: проверяется наличие индивидов и дочерних элементов
+ *    - Для индивидов: показывается список индивидов для удаления
+ *    - Для схем: показывается список TriG для удаления
+ * 4. Формируются промежуточные SPARQL запросы для проверок
+ * 5. Генерируется итоговый SPARQL DELETE запрос
+ *
+ * Правила удаления:
+ *
+ * 1. Удаление концепта процесса (vad:TypeProcess):
+ *    - Проверка наличия индивидов процесса (isSubprocessTrig)
+ *    - Проверка наличия схемы процесса (hasTrig)
+ *    - Проверка наличия дочерних процессов (hasParentObj)
+ *    - Если найдены индивиды/схема - ошибка, сначала удалите их
+ *    - Если найдены дочерние - ошибка, сначала исправьте hasParentObj
+ *
+ * 2. Удаление концепта исполнителя (vad:TypeExecutor):
+ *    - Проверка использования исполнителя в TriG (vad:includes)
+ *    - Если найден - ошибка со списком TriG, где используется
+ *
+ * 3. Удаление индивида процесса:
+ *    - Выбор концепта процесса
+ *    - Показ всех индивидов (кнопка "Показать индивиды")
+ *    - Удаление всех триплетов с subject = id удаляемого индивида
+ *
+ * 4. Удаление индивида исполнителя:
+ *    - Выбор концепта исполнителя
+ *    - Показ всех TriG, где используется (кнопка "Показать индивиды")
+ *    - Удаление vad:includes из соответствующих TriG
+ *
+ * 5. Удаление схемы процесса (TriG):
+ *    - Выбор TriG для удаления
+ *    - Удаление всего графа TriG
+ *    - Удаление триплета vad:hasTrig в концепте процесса
+ *
+ * @file 3_sd_del_concept_individ_logic.js
+ * @version 1.0
+ * @date 2026-01-29
+ * @see 3_sd_create_new_concept_logic.js - Аналогичный модуль для создания
+ * @see sparql-driven-programming.md - Концепция SPARQL-driven программирования
+ */
+
+// ==============================================================================
+// КОНСТАНТЫ И КОНФИГУРАЦИЯ
+// ==============================================================================
+
+/**
+ * Типы операций удаления
+ */
+const DEL_OPERATION_TYPES = {
+    CONCEPT_PROCESS: 'concept-process',
+    CONCEPT_EXECUTOR: 'concept-executor',
+    INDIVID_PROCESS: 'individ-process',
+    INDIVID_EXECUTOR: 'individ-executor',
+    TRIG_SCHEMA: 'trig-schema',
+    // issue #311 п.3: Удаление индивида процесса в конкретной схеме
+    INDIVID_PROCESS_IN_SCHEMA: 'individ-process-in-schema',
+    // issue #311 п.4: Удаление индивида исполнителя в конкретной схеме
+    INDIVID_EXECUTOR_IN_SCHEMA: 'individ-executor-in-schema'
+};
+
+/**
+ * Конфигурация типов операций удаления
+ */
+const DEL_CONCEPT_CONFIG = {
+    [DEL_OPERATION_TYPES.CONCEPT_PROCESS]: {
+        displayName: 'Удалить концепт процесса',
+        description: 'Удаление концепта процесса (vad:TypeProcess) из vad:ptree',
+        targetGraph: 'vad:ptree',
+        targetGraphUri: 'http://example.org/vad#ptree',
+        typeValue: 'vad:TypeProcess',
+        typeValueUri: 'http://example.org/vad#TypeProcess',
+        // Проверки перед удалением
+        checks: ['individuals', 'schema', 'children']
+    },
+    [DEL_OPERATION_TYPES.CONCEPT_EXECUTOR]: {
+        displayName: 'Удалить концепт исполнителя',
+        description: 'Удаление концепта исполнителя (vad:TypeExecutor) из vad:rtree',
+        targetGraph: 'vad:rtree',
+        targetGraphUri: 'http://example.org/vad#rtree',
+        typeValue: 'vad:TypeExecutor',
+        typeValueUri: 'http://example.org/vad#TypeExecutor',
+        // Проверки перед удалением
+        checks: ['usedInTrigs']
+    },
+    [DEL_OPERATION_TYPES.INDIVID_PROCESS]: {
+        // issue #311 п.3: Переименовано — теперь «во всех схемах»
+        displayName: 'Удалить индивид процесса во всех схемах',
+        description: 'Удаление индивида процесса из всех TriG типа vad:VADProcessDia',
+        // Индивиды находятся в разных TriG
+        hasShowIndividualsButton: true
+        // issue #309: Предупреждение удалено — алгоритм теперь полностью удаляет
+        // ExecutorGroup и входящие vad:hasNext других индивидов процесса
+    },
+    [DEL_OPERATION_TYPES.INDIVID_EXECUTOR]: {
+        // issue #311 п.4: Переименовано — теперь «во всех схемах»
+        displayName: 'Удалить индивид исполнителя во всех схемах',
+        description: 'Удаление vad:includes из всех TriG типа vad:VADProcessDia',
+        hasShowIndividualsButton: true
+    },
+    [DEL_OPERATION_TYPES.TRIG_SCHEMA]: {
+        displayName: 'Удалить схему процесса (TriG)',
+        description: 'Удаление TriG типа vad:VADProcessDia и связи vad:hasTrig'
+    },
+    // issue #311 п.3: Удаление индивида процесса в конкретной схеме
+    [DEL_OPERATION_TYPES.INDIVID_PROCESS_IN_SCHEMA]: {
+        displayName: 'Удалить индивид процесса в схеме',
+        description: 'Удаление индивида процесса только из выбранной схемы (TriG)',
+        hasShowIndividualsButton: true
+    },
+    // issue #311 п.4: Удаление индивида исполнителя в конкретной схеме
+    [DEL_OPERATION_TYPES.INDIVID_EXECUTOR_IN_SCHEMA]: {
+        displayName: 'Удалить индивид исполнителя в схеме',
+        description: 'Удаление vad:includes только из выбранной схемы (TriG)',
+        hasShowIndividualsButton: true
+    }
+};
+
+// SPARQL запросы вынесены в 3_sd_del_concept_individ_sparql.js
+// в соответствии с концепцией SPARQL-driven Programming (issue #252)
+
+// ==============================================================================
+// ГЛОБАЛЬНЫЕ ПЕРЕМЕННЫЕ МОДУЛЯ
+// ==============================================================================
+
+/**
+ * Текущее состояние модуля удаления
+ */
+let delConceptState = {
+    isOpen: false,
+    selectedOperation: null,
+    selectedConcept: null,
+    selectedTrig: null,           // issue #311: Выбранный TriG для «в схеме»
+    selectedIndividuals: [],
+    foundIndividuals: [],
+    foundTrigs: [],
+    validationErrors: [],
+    intermediateSparql: ''
+};
+
+/**
+ * Хранилище промежуточных SPARQL запросов для отображения
+ */
+let delIntermediateSparqlQueries = [];
+
+// ==============================================================================
+// ФУНКЦИИ РАБОТЫ С SPARQL
+// ==============================================================================
+
+/**
+ * Получает концепты процессов из ptree для dropdown
+ * Issue #252: Обновлена цепочка вызовов — funSPARQLvaluesComunica → funSPARQLvalues → manual fallback
+ * @returns {Array<{uri: string, label: string}>} Массив концептов
+ */
+function getProcessConceptsForDeletion() {
+    const sparqlQuery = DEL_CONCEPT_SPARQL.GET_PROCESS_CONCEPTS;
+
+    let concepts = [];
+
+    // Issue #252: Пробуем сначала через funSPARQLvalues (синхронный)
+    if (typeof funSPARQLvalues === 'function') {
+        concepts = funSPARQLvalues(sparqlQuery, 'concept');
+    }
+
+    // Issue #252: Если funSPARQLvalues вернул пустой результат, используем ручной поиск
+    // (funSPARQLvaluesComunica async — для полной поддержки OPTIONAL требуется async pipeline)
+    if (concepts.length === 0) {
+        concepts = getConceptsManual('http://example.org/vad#TypeProcess', 'http://example.org/vad#ptree');
+    }
+
+    delIntermediateSparqlQueries.push({
+        description: 'Получение концептов процессов из ptree',
+        query: sparqlQuery,
+        result: concepts.length > 0
+            ? concepts.map(c => c.label || c.uri).join(', ')
+            : '(нет результатов)'
+    });
+
+    return concepts;
+}
+
+/**
+ * Получает концепты исполнителей из rtree для dropdown
+ * Issue #252: Обновлена цепочка вызовов — funSPARQLvaluesComunica → funSPARQLvalues → manual fallback
+ * @returns {Array<{uri: string, label: string}>} Массив концептов
+ */
+function getExecutorConceptsForDeletion() {
+    const sparqlQuery = DEL_CONCEPT_SPARQL.GET_EXECUTOR_CONCEPTS;
+
+    let concepts = [];
+
+    // Issue #252: Пробуем сначала через funSPARQLvalues (синхронный)
+    if (typeof funSPARQLvalues === 'function') {
+        concepts = funSPARQLvalues(sparqlQuery, 'concept');
+    }
+
+    // Issue #252: Если funSPARQLvalues вернул пустой результат, используем ручной поиск
+    if (concepts.length === 0) {
+        concepts = getConceptsManual('http://example.org/vad#TypeExecutor', 'http://example.org/vad#rtree');
+    }
+
+    delIntermediateSparqlQueries.push({
+        description: 'Получение концептов исполнителей из rtree',
+        query: sparqlQuery,
+        result: concepts.length > 0
+            ? concepts.map(c => c.label || c.uri).join(', ')
+            : '(нет результатов)'
+    });
+
+    return concepts;
+}
+
+/**
+ * Ручное получение концептов (fallback)
+ * @param {string} typeUri - URI типа концепта
+ * @param {string} graphUri - URI графа
+ * @returns {Array<{uri: string, label: string}>} Массив концептов
+ */
+function getConceptsManual(typeUri, graphUri) {
+    const concepts = [];
+    const rdfTypeUri = 'http://www.w3.org/1999/02/22-rdf-syntax-ns#type';
+    const rdfsLabelUri = 'http://www.w3.org/2000/01/rdf-schema#label';
+
+    // issue #326: Используем currentStore.getQuads() вместо currentQuads
+    if (currentStore) {
+        const quads = currentStore.getQuads(null, null, null, null);
+        const conceptUris = new Set();
+
+        // Найти все концепты с указанным типом в указанном графе
+        quads.forEach(quad => {
+            if (quad.predicate.value === rdfTypeUri &&
+                quad.object.value === typeUri &&
+                quad.graph && quad.graph.value === graphUri) {
+                conceptUris.add(quad.subject.value);
+            }
+        });
+
+        conceptUris.forEach(uri => {
+            let label = typeof getPrefixedName === 'function'
+                ? getPrefixedName(uri, currentPrefixes)
+                : uri;
+
+            // Ищем label В ТОМ ЖЕ ГРАФЕ, где находится концепт
+            quads.forEach(quad => {
+                if (quad.subject.value === uri &&
+                    quad.predicate.value === rdfsLabelUri &&
+                    quad.graph && quad.graph.value === graphUri) {
+                    label = quad.object.value;
+                }
+            });
+
+            concepts.push({ uri, label });
+        });
+    }
+
+    return concepts;
+}
+
+/**
+ * Проверяет наличие индивидов для концепта процесса
+ * Issue #217: Теперь также проверяет, используется ли сам концепт как индивид в других TriG
+ * @param {string} conceptUri - URI концепта
+ * @returns {Array<{uri: string, trig: string, label: string}>} Найденные индивиды
+ */
+function checkProcessIndividuals(conceptUri) {
+    const sparqlQuery = DEL_CONCEPT_SPARQL.CHECK_PROCESS_INDIVIDUALS(conceptUri);
+
+    // 1. Ищем индивиды ВНУТРИ схемы данного концепта (через hasTrig)
+    let individuals = findProcessIndividualsManual(conceptUri);
+
+    delIntermediateSparqlQueries.push({
+        description: 'Проверка наличия индивидов В схеме концепта',
+        query: sparqlQuery,
+        result: individuals.length > 0
+            ? `Найдено ${individuals.length} индивидов: ${individuals.map(i => i.label || i.uri).join(', ')}`
+            : 'Индивиды в схеме не найдены'
+    });
+
+    // 2. Issue #217: Проверяем, используется ли сам концепт как индивид в ДРУГИХ TriG
+    const conceptAsIndividual = findConceptAsIndividualInTrigs(conceptUri);
+
+    const checkConceptAsIndividSparql = `
+PREFIX rdf: <http://www.w3.org/1999/02/22-rdf-syntax-ns#>
+PREFIX vad: <http://example.org/vad#>
+
+# Проверка: используется ли концепт как индивид (подпроцесс) в каких-либо TriG
+SELECT ?trig WHERE {
+    GRAPH ?trig {
+        <${conceptUri}> vad:isSubprocessTrig ?trig .
+    }
+}`;
+
+    delIntermediateSparqlQueries.push({
+        description: 'Проверка использования концепта как индивида в TriG',
+        query: checkConceptAsIndividSparql,
+        result: conceptAsIndividual.length > 0
+            ? `Концепт используется как индивид в ${conceptAsIndividual.length} TriG: ${conceptAsIndividual.map(i => typeof getPrefixedName === 'function' ? getPrefixedName(i.trig, currentPrefixes) : i.trig).join(', ')}`
+            : 'Концепт не используется как индивид'
+    });
+
+    // Объединяем результаты: возвращаем индивиды из схемы + использования концепта как индивида
+    return [...individuals, ...conceptAsIndividual];
+}
+
+/**
+ * Issue #221 Fix #2: Ручной поиск индивидов процесса для операции "Удалить индивид процесса"
+ *
+ * Индивид процесса - это использование концепта процесса (из ptree) в схеме процесса (TriG типа VADProcessDia).
+ * Индивид идентифицируется по предикату vad:isSubprocessTrig в TriG типа VADProcessDia.
+ *
+ * При выборе концепта процесса (например vad:p2.2) эта функция ищет ВСЕ использования
+ * данного концепта как индивида (подпроцесса) во всех TriG типа VADProcessDia.
+ *
+ * @param {string} conceptUri - URI концепта процесса
+ * @returns {Array} Найденные индивиды (использования концепта в схемах)
+ */
+function findProcessIndividualsManual(conceptUri) {
+    const individuals = [];
+    const isSubprocessTrigUri = 'http://example.org/vad#isSubprocessTrig';
+    const rdfTypeUri = 'http://www.w3.org/1999/02/22-rdf-syntax-ns#type';
+    const vadProcessDiaUri = 'http://example.org/vad#VADProcessDia';
+
+    // Issue #221 Fix #2: Отладочная информация (отключена по умолчанию)
+    const DEBUG_INDIVID_SEARCH = false;
+
+    // issue #326: Используем currentStore.getQuads() вместо currentQuads
+    if (currentStore) {
+        const quads = currentStore.getQuads(null, null, null, null);
+        if (DEBUG_INDIVID_SEARCH) {
+            console.log(`[findProcessIndividualsManual] Поиск индивидов для концепта: ${conceptUri}`);
+            console.log(`[findProcessIndividualsManual] Всего квадов: ${quads.length}`);
+        }
+
+        // Issue #221 Fix #2: Находим все TriG типа VADProcessDia
+        const vadProcessDiaTrigs = new Set();
+        quads.forEach(quad => {
+            if (quad.predicate.value === rdfTypeUri &&
+                quad.object.value === vadProcessDiaUri) {
+                vadProcessDiaTrigs.add(quad.subject.value);
+                if (DEBUG_INDIVID_SEARCH) {
+                    console.log(`[findProcessIndividualsManual] Найден TriG типа VADProcessDia: ${quad.subject.value}`);
+                }
+            }
+        });
+
+        if (DEBUG_INDIVID_SEARCH) {
+            console.log(`[findProcessIndividualsManual] Всего TriG типа VADProcessDia: ${vadProcessDiaTrigs.size}`);
+        }
+
+        // Issue #221 Fix #2: Ищем использования данного концепта как индивида (vad:isSubprocessTrig)
+        // во ВСЕХ TriG типа VADProcessDia
+        quads.forEach(quad => {
+            // Проверяем предикат vad:isSubprocessTrig
+            const predicateMatches = quad.predicate.value === isSubprocessTrigUri ||
+                quad.predicate.value.endsWith('#isSubprocessTrig');
+
+            if (!predicateMatches) return;
+
+            // Проверяем, что subject совпадает с искомым концептом
+            const subjectMatches = quad.subject.value === conceptUri ||
+                (typeof getPrefixedName === 'function' &&
+                 getPrefixedName(quad.subject.value, currentPrefixes) === getPrefixedName(conceptUri, currentPrefixes));
+
+            if (!subjectMatches) return;
+
+            // Проверяем, что граф является TriG типа VADProcessDia
+            if (quad.graph && vadProcessDiaTrigs.has(quad.graph.value)) {
+                individuals.push({
+                    uri: quad.subject.value,
+                    trig: quad.graph.value,
+                    label: typeof getPrefixedName === 'function'
+                        ? getPrefixedName(quad.subject.value, currentPrefixes)
+                        : quad.subject.value
+                });
+
+                if (DEBUG_INDIVID_SEARCH) {
+                    console.log(`[findProcessIndividualsManual] Найден индивид: ${quad.subject.value} в TriG: ${quad.graph.value}`);
+                }
+            }
+        });
+
+        if (DEBUG_INDIVID_SEARCH) {
+            console.log(`[findProcessIndividualsManual] Итого найдено индивидов: ${individuals.length}`);
+        }
+    }
+
+    return individuals;
+}
+
+/**
+ * Issue #217: Проверяет, используется ли концепт процесса как индивид (подпроцесс)
+ * в каких-либо TriG схемах (vad:isSubprocessTrig).
+ * Это проверка для операции "Удаление концепта" - нельзя удалить концепт,
+ * если он используется как индивид в схемах процессов.
+ * @param {string} conceptUri - URI концепта процесса
+ * @returns {Array} Найденные использования концепта как индивида
+ */
+function findConceptAsIndividualInTrigs(conceptUri) {
+    const usages = [];
+    const isSubprocessTrigUri = 'http://example.org/vad#isSubprocessTrig';
+
+    // Issue #219 Fix #1: Отладочная информация (отключена по умолчанию)
+    const DEBUG_INDIVID_DETECTION = false;
+
+    // issue #326: Используем currentStore.getQuads() вместо currentQuads
+    if (currentStore) {
+        const quads = currentStore.getQuads(null, null, null, null);
+        if (DEBUG_INDIVID_DETECTION) {
+            console.log(`[findConceptAsIndividualInTrigs] Поиск для концепта: ${conceptUri}`);
+            console.log(`[findConceptAsIndividualInTrigs] Всего квадов: ${quads.length}`);
+        }
+
+        // Ищем все случаи, где данный концепт используется как индивид (subject с isSubprocessTrig)
+        quads.forEach(quad => {
+            // Issue #219 Fix #1: Расширенная проверка - также поддерживаем сокращенные URI
+            const subjectMatches = quad.subject.value === conceptUri ||
+                (typeof getPrefixedName === 'function' &&
+                 getPrefixedName(quad.subject.value, currentPrefixes) === getPrefixedName(conceptUri, currentPrefixes));
+
+            const predicateMatches = quad.predicate.value === isSubprocessTrigUri ||
+                quad.predicate.value.endsWith('#isSubprocessTrig');
+
+            if (DEBUG_INDIVID_DETECTION && predicateMatches) {
+                console.log(`[findConceptAsIndividualInTrigs] Найден isSubprocessTrig: subject=${quad.subject.value}, graph=${quad.graph ? quad.graph.value : 'undefined'}`);
+            }
+
+            if (subjectMatches && predicateMatches && quad.graph) {
+                usages.push({
+                    uri: conceptUri,
+                    trig: quad.graph.value,
+                    label: typeof getPrefixedName === 'function'
+                        ? getPrefixedName(conceptUri, currentPrefixes)
+                        : conceptUri
+                });
+
+                if (DEBUG_INDIVID_DETECTION) {
+                    console.log(`[findConceptAsIndividualInTrigs] Добавлено использование в TriG: ${quad.graph.value}`);
+                }
+            }
+        });
+
+        if (DEBUG_INDIVID_DETECTION) {
+            console.log(`[findConceptAsIndividualInTrigs] Найдено использований: ${usages.length}`);
+        }
+    } else {
+        if (DEBUG_INDIVID_DETECTION) {
+            console.log(`[findConceptAsIndividualInTrigs] currentStore не определён`);
+        }
+    }
+
+    return usages;
+}
+
+/**
+ * Проверяет наличие схемы (hasTrig) для концепта
+ * Issue #252: Обновлён — сначала пробует funSPARQLvalues, затем manual fallback
+ * @param {string} conceptUri - URI концепта
+ * @returns {Array<string>} URI найденных TriG
+ */
+function checkProcessSchema(conceptUri) {
+    const sparqlQuery = DEL_CONCEPT_SPARQL.CHECK_PROCESS_SCHEMA(conceptUri);
+
+    let trigs = [];
+
+    // Issue #252: Пробуем через funSPARQLvalues (запрос простой, без OPTIONAL)
+    if (typeof funSPARQLvalues === 'function') {
+        const results = funSPARQLvalues(sparqlQuery, 'trig');
+        trigs = results.map(r => r.uri);
+    }
+
+    // Fallback на manual поиск при пустом результате
+    if (trigs.length === 0) {
+        const hasTrigUri = 'http://example.org/vad#hasTrig';
+        const ptreeUri = 'http://example.org/vad#ptree';
+
+        // issue #326: Используем currentStore.getQuads() вместо currentQuads
+    if (currentStore) {
+        const quads = currentStore.getQuads(null, null, null, null);
+            quads.forEach(quad => {
+                if (quad.subject.value === conceptUri &&
+                    quad.predicate.value === hasTrigUri &&
+                    quad.graph && quad.graph.value === ptreeUri) {
+                    trigs.push(quad.object.value);
+                }
+            });
+        }
+    }
+
+    delIntermediateSparqlQueries.push({
+        description: 'Проверка наличия схемы процесса (hasTrig)',
+        query: sparqlQuery,
+        result: trigs.length > 0
+            ? `Найдено ${trigs.length} схем: ${trigs.map(t => typeof getPrefixedName === 'function' ? getPrefixedName(t, currentPrefixes) : t).join(', ')}`
+            : 'Схемы не найдены'
+    });
+
+    return trigs;
+}
+
+/**
+ * Проверяет наличие дочерних элементов
+ * Issue #252: Обновлён — сначала пробует funSPARQLvalues, затем manual fallback
+ * @param {string} conceptUri - URI родительского концепта
+ * @param {string} graphUri - URI графа (ptree или rtree)
+ * @returns {Array<{uri: string, label: string}>} Найденные дочерние элементы
+ */
+function checkChildrenElements(conceptUri, graphUri) {
+    const isProcess = graphUri.includes('ptree');
+    const sparqlQuery = isProcess
+        ? DEL_CONCEPT_SPARQL.CHECK_CHILDREN_PROCESSES(conceptUri)
+        : DEL_CONCEPT_SPARQL.CHECK_CHILDREN_EXECUTORS(conceptUri);
+
+    let children = [];
+
+    // Issue #252: Пробуем через funSPARQLvalues
+    if (typeof funSPARQLvalues === 'function') {
+        const results = funSPARQLvalues(sparqlQuery, 'child');
+        children = results.map(r => ({
+            uri: r.uri,
+            label: r.label || (typeof getPrefixedName === 'function'
+                ? getPrefixedName(r.uri, currentPrefixes)
+                : r.uri)
+        }));
+    }
+
+    // Fallback на manual поиск при пустом результате
+    if (children.length === 0) {
+        const hasParentObjUri = 'http://example.org/vad#hasParentObj';
+
+        // issue #326: Используем currentStore.getQuads() вместо currentQuads
+    if (currentStore) {
+        const quads = currentStore.getQuads(null, null, null, null);
+            quads.forEach(quad => {
+                if (quad.predicate.value === hasParentObjUri &&
+                    quad.object.value === conceptUri &&
+                    quad.graph && quad.graph.value === graphUri) {
+                    children.push({
+                        uri: quad.subject.value,
+                        label: typeof getPrefixedName === 'function'
+                            ? getPrefixedName(quad.subject.value, currentPrefixes)
+                            : quad.subject.value
+                    });
+                }
+            });
+        }
+    }
+
+    delIntermediateSparqlQueries.push({
+        description: `Проверка наличия дочерних ${isProcess ? 'процессов' : 'исполнителей'}`,
+        query: sparqlQuery,
+        result: children.length > 0
+            ? `Найдено ${children.length} дочерних элементов: ${children.map(c => c.label).join(', ')}`
+            : 'Дочерние элементы не найдены'
+    });
+
+    return children;
+}
+
+/**
+ * Проверяет использование исполнителя в TriG
+ * Issue #252: Обновлён — сначала пробует funSPARQLvalues, затем manual fallback
+ * @param {string} executorUri - URI исполнителя
+ * @returns {Array<{trig: string, processIndivid: string}>} Найденные использования
+ */
+function checkExecutorUsage(executorUri) {
+    const sparqlQuery = DEL_CONCEPT_SPARQL.CHECK_EXECUTOR_USAGE(executorUri);
+
+    let usages = [];
+
+    // Issue #252: Пробуем через funSPARQLvalues
+    if (typeof funSPARQLvalues === 'function') {
+        const results = funSPARQLvalues(sparqlQuery, 'trig');
+        usages = results.map(r => ({
+            trig: r.uri,
+            processIndivid: r.label || r.uri // label содержит processIndivid если доступен
+        }));
+    }
+
+    // Fallback на manual поиск при пустом результате
+    if (usages.length === 0) {
+        const includesUri = 'http://example.org/vad#includes';
+
+        // issue #326: Используем currentStore.getQuads() вместо currentQuads
+    if (currentStore) {
+        const quads = currentStore.getQuads(null, null, null, null);
+            quads.forEach(quad => {
+                if (quad.predicate.value === includesUri &&
+                    quad.object.value === executorUri &&
+                    quad.graph) {
+                    usages.push({
+                        trig: quad.graph.value,
+                        processIndivid: quad.subject.value
+                    });
+                }
+            });
+        }
+    }
+
+    delIntermediateSparqlQueries.push({
+        description: 'Проверка использования исполнителя в TriG',
+        query: sparqlQuery,
+        result: usages.length > 0
+            ? `Найдено ${usages.length} использований в TriG: ${usages.map(u => typeof getPrefixedName === 'function' ? getPrefixedName(u.trig, currentPrefixes) : u.trig).join(', ')}`
+            : 'Исполнитель не используется'
+    });
+
+    return usages;
+}
+
+/**
+ * Получает все TriG типа VADProcessDia
+ * Issue #252: Обновлён — сначала пробует funSPARQLvalues, затем manual fallback
+ * @returns {Array<{uri: string, label: string}>} Массив TriG
+ */
+function getAllTrigs() {
+    const sparqlQuery = DEL_CONCEPT_SPARQL.GET_ALL_TRIGS;
+
+    let trigs = [];
+
+    // Issue #252: Пробуем через funSPARQLvalues
+    if (typeof funSPARQLvalues === 'function') {
+        const results = funSPARQLvalues(sparqlQuery, 'trig');
+        trigs = results.map(r => ({
+            uri: r.uri,
+            label: r.label || (typeof getPrefixedName === 'function'
+                ? getPrefixedName(r.uri, currentPrefixes)
+                : r.uri)
+        }));
+    }
+
+    // Fallback на manual поиск при пустом результате
+    if (trigs.length === 0) {
+        const rdfTypeUri = 'http://www.w3.org/1999/02/22-rdf-syntax-ns#type';
+        const vadProcessDiaUri = 'http://example.org/vad#VADProcessDia';
+
+        // issue #326: Используем currentStore.getQuads() вместо currentQuads
+    if (currentStore) {
+        const quads = currentStore.getQuads(null, null, null, null);
+            quads.forEach(quad => {
+                if (quad.predicate.value === rdfTypeUri &&
+                    quad.object.value === vadProcessDiaUri) {
+                    trigs.push({
+                        uri: quad.subject.value,
+                        label: typeof getPrefixedName === 'function'
+                            ? getPrefixedName(quad.subject.value, currentPrefixes)
+                            : quad.subject.value
+                    });
+                }
+            });
+        }
+    }
+
+    delIntermediateSparqlQueries.push({
+        description: 'Получение всех TriG типа VADProcessDia',
+        query: sparqlQuery,
+        result: trigs.length > 0
+            ? `Найдено ${trigs.length} TriG: ${trigs.map(t => t.label).join(', ')}`
+            : 'TriG не найдены'
+    });
+
+    return trigs;
+}
+
+/**
+ * Находит концепт процесса для указанного TriG
+ * @param {string} trigUri - URI TriG
+ * @returns {string|null} URI концепта или null
+ */
+function findConceptForTrig(trigUri) {
+    const hasTrigUri = 'http://example.org/vad#hasTrig';
+    const ptreeUri = 'http://example.org/vad#ptree';
+
+    // issue #326: Используем currentStore.getQuads() вместо currentQuads
+    if (currentStore) {
+        const quads = currentStore.getQuads(null, null, null, null);
+        for (const quad of quads) {
+            if (quad.predicate.value === hasTrigUri &&
+                quad.object.value === trigUri &&
+                quad.graph && quad.graph.value === ptreeUri) {
+                return quad.subject.value;
+            }
+        }
+    }
+
+    return null;
+}
+
+// ==============================================================================
+// ФУНКЦИИ UI: МОДАЛЬНОЕ ОКНО
+// ==============================================================================
+
+/**
+ * Открывает модальное окно удаления концепта/индивида
+ * Вызывается по клику на кнопку "Del Concept\Individ"
+ */
+function openDelConceptModal() {
+    // Issue #223, #282, #326: Проверяем, что данные загружены и распарсены
+    // issue #282: Удалено сообщение "нажмите кнопку Показать" - данные загружаются автоматически
+    // issue #326: Используем currentStore вместо currentQuads
+    if (!currentStore || currentStore.size === 0) {
+        alert('Данные quadstore пусты. Загрузите пример данных (Trig_VADv5 или Trig_VADv6) в разделе "Загрузить пример RDF данных".\n\nQuadstore is empty. Load example data (Trig_VADv5 or Trig_VADv6) in "Load example RDF data" section.');
+        return;
+    }
+
+    // Очищаем предыдущее состояние
+    delConceptState = {
+        isOpen: true,
+        selectedOperation: null,
+        selectedConcept: null,
+        selectedTrig: null,           // issue #311
+        selectedIndividuals: [],
+        foundIndividuals: [],
+        foundTrigs: [],
+        validationErrors: [],
+        intermediateSparql: ''
+    };
+    delIntermediateSparqlQueries = [];
+
+    const modal = document.getElementById('del-concept-modal');
+    if (modal) {
+        resetDelConceptForm();
+
+        // issue #293: Сбрасываем позицию модального окна
+        if (typeof resetModalPosition === 'function') {
+            resetModalPosition('del-concept-modal');
+        }
+
+        modal.style.display = 'block';
+
+        if (typeof updateSmartDesignFieldsState === 'function') {
+            updateSmartDesignFieldsState();
+        }
+    } else {
+        console.error('Модальное окно del-concept-modal не найдено');
+    }
+}
+
+/**
+ * Закрывает модальное окно удаления
+ */
+function closeDelConceptModal() {
+    const modal = document.getElementById('del-concept-modal');
+    if (modal) {
+        modal.style.display = 'none';
+    }
+
+    delConceptState.isOpen = false;
+
+    if (typeof updateSmartDesignFieldsState === 'function') {
+        updateSmartDesignFieldsState();
+    }
+}
+
+/**
+ * Сбрасывает форму удаления
+ */
+function resetDelConceptForm() {
+    const operationSelect = document.getElementById('del-concept-operation');
+    if (operationSelect) {
+        operationSelect.value = '';
+    }
+
+    const fieldsContainer = document.getElementById('del-concept-fields-container');
+    if (fieldsContainer) {
+        fieldsContainer.innerHTML = '<p class="del-concept-hint">Выберите тип операции для отображения полей</p>';
+    }
+
+    const resultsContainer = document.getElementById('del-concept-results-container');
+    if (resultsContainer) {
+        resultsContainer.style.display = 'none';
+        resultsContainer.innerHTML = '';
+    }
+
+    const intermediateSparqlContainer = document.getElementById('del-concept-intermediate-sparql');
+    if (intermediateSparqlContainer) {
+        intermediateSparqlContainer.style.display = 'none';
+        const textarea = intermediateSparqlContainer.querySelector('textarea');
+        if (textarea) {
+            textarea.value = '';
+        }
+    }
+
+    hideDelConceptMessage();
+    updateDelButtonsState();
+}
+
+/**
+ * Обработчик изменения типа операции
+ */
+function onDelOperationChange() {
+    const operationSelect = document.getElementById('del-concept-operation');
+    const selectedOperation = operationSelect ? operationSelect.value : null;
+
+    if (!selectedOperation || !DEL_CONCEPT_CONFIG[selectedOperation]) {
+        resetDelConceptForm();
+        return;
+    }
+
+    delConceptState.selectedOperation = selectedOperation;
+    delConceptState.selectedConcept = null;
+    delConceptState.foundIndividuals = [];
+    delConceptState.validationErrors = [];
+    delIntermediateSparqlQueries = [];
+
+    const config = DEL_CONCEPT_CONFIG[selectedOperation];
+
+    buildDelConceptForm(config, selectedOperation);
+    displayDelIntermediateSparql();
+    updateDelButtonsState();
+}
+
+/**
+ * Строит форму для выбранной операции удаления
+ * @param {Object} config - Конфигурация операции
+ * @param {string} operationType - Тип операции
+ */
+function buildDelConceptForm(config, operationType) {
+    const fieldsContainer = document.getElementById('del-concept-fields-container');
+    if (!fieldsContainer) return;
+
+    let html = '';
+
+    // Добавляем предупреждение, если функция не рекомендована
+    if (config && config.notRecommended && config.warningMessage) {
+        html += `<div class="del-concept-warning" style="background-color: #fff3cd; border: 1px solid #ffc107; color: #856404; padding: 10px; margin-bottom: 10px; border-radius: 4px;">
+            <strong>⚠️ Внимание:</strong> ${config.warningMessage}
+        </div>`;
+    }
+
+    switch (operationType) {
+        case DEL_OPERATION_TYPES.CONCEPT_PROCESS:
+        case DEL_OPERATION_TYPES.INDIVID_PROCESS:
+            // Dropdown для выбора концепта процесса
+            html += buildConceptSelector('process', 'Выберите концепт процесса:');
+            break;
+
+        case DEL_OPERATION_TYPES.CONCEPT_EXECUTOR:
+        case DEL_OPERATION_TYPES.INDIVID_EXECUTOR:
+            // Dropdown для выбора концепта исполнителя
+            html += buildConceptSelector('executor', 'Выберите концепт исполнителя:');
+            break;
+
+        case DEL_OPERATION_TYPES.TRIG_SCHEMA:
+            // Dropdown для выбора TriG
+            html += buildTrigSelector();
+            break;
+
+        // issue #311 п.3: Удаление индивида процесса в конкретной схеме
+        case DEL_OPERATION_TYPES.INDIVID_PROCESS_IN_SCHEMA:
+            html += buildTrigSelectorForIndivid('process');
+            break;
+
+        // issue #311 п.4: Удаление индивида исполнителя в конкретной схеме
+        case DEL_OPERATION_TYPES.INDIVID_EXECUTOR_IN_SCHEMA:
+            html += buildTrigSelectorForIndivid('executor');
+            break;
+    }
+
+    // Добавляем контейнер для результатов
+    html += '<div id="del-concept-results-container" style="display: none;"></div>';
+
+    fieldsContainer.innerHTML = html;
+
+    // Инициализируем dropdown после построения формы
+    initializeDelDropdowns(operationType);
+}
+
+/**
+ * Строит HTML для выбора концепта
+ * @param {string} type - Тип: 'process' или 'executor'
+ * @param {string} label - Текст label
+ * @returns {string} HTML
+ */
+function buildConceptSelector(type, label) {
+    return `
+        <div class="del-concept-field">
+            <label for="del-concept-select">${label}</label>
+            <select id="del-concept-select" onchange="onDelConceptSelect()">
+                <option value="">-- Выберите ${type === 'process' ? 'процесс' : 'исполнителя'} --</option>
+            </select>
+            <small class="field-hint">Выберите элемент для проверки и удаления</small>
+        </div>
+    `;
+}
+
+/**
+ * Строит HTML для выбора TriG
+ * @returns {string} HTML
+ */
+function buildTrigSelector() {
+    return `
+        <div class="del-concept-field">
+            <label for="del-trig-select">Выберите схему (TriG) для удаления:</label>
+            <select id="del-trig-select" onchange="onDelTrigSelect()">
+                <option value="">-- Выберите TriG --</option>
+            </select>
+            <small class="field-hint">Будет удалён весь граф TriG и связь vad:hasTrig</small>
+        </div>
+    `;
+}
+
+/**
+ * issue #311 п.3, п.4: Строит HTML для выбора схемы (TriG) и затем индивида в этой схеме
+ * @param {string} type - Тип: 'process' или 'executor'
+ * @returns {string} HTML
+ */
+function buildTrigSelectorForIndivid(type) {
+    const label = type === 'process'
+        ? 'Выберите схему процесса для удаления индивида:'
+        : 'Выберите схему процесса для удаления индивида исполнителя:';
+
+    return `
+        <div class="del-concept-field">
+            <label for="del-trig-select">${label}</label>
+            <select id="del-trig-select" onchange="onDelTrigSelectForIndivid()">
+                <option value="">-- Выберите схему (TriG) --</option>
+            </select>
+            <small class="field-hint">После выбора схемы отобразится список индивидов ${type === 'process' ? 'процессов' : 'исполнителей'} для удаления</small>
+        </div>
+        <div id="del-individ-in-schema-container" style="display: none;">
+            <div class="del-concept-field">
+                <label for="del-individ-in-schema-select">Выберите индивид для удаления:</label>
+                <select id="del-individ-in-schema-select" onchange="onDelIndividInSchemaSelect()">
+                    <option value="">-- Выберите индивид --</option>
+                </select>
+            </div>
+        </div>
+    `;
+}
+
+/**
+ * issue #311 п.3, п.4: Заполняет dropdown TriG для операций «в схеме»
+ */
+function fillTrigDropdownForIndivid() {
+    const select = document.getElementById('del-trig-select');
+    if (!select) return;
+
+    const trigs = getAllTrigs();
+
+    trigs.forEach(trig => {
+        const option = document.createElement('option');
+        option.value = trig.uri;
+        option.textContent = trig.label || trig.uri;
+        select.appendChild(option);
+    });
+}
+
+/**
+ * issue #311 п.3, п.4: Обработчик выбора TriG для операций «в схеме»
+ */
+function onDelTrigSelectForIndivid() {
+    const trigSelect = document.getElementById('del-trig-select');
+    const trigUri = trigSelect ? trigSelect.value : null;
+
+    if (!trigUri) {
+        // Скрываем выбор индивида
+        const container = document.getElementById('del-individ-in-schema-container');
+        if (container) container.style.display = 'none';
+        delConceptState.selectedConcept = null;
+        delConceptState.foundIndividuals = [];
+        hideDelResults();
+        updateDelButtonsState();
+        return;
+    }
+
+    // issue #311: Сохраняем выбранный TriG
+    delConceptState.selectedTrig = trigUri;
+    delConceptState.selectedConcept = null;
+    delConceptState.foundIndividuals = [];
+    delIntermediateSparqlQueries = [];
+
+    const operationType = delConceptState.selectedOperation;
+
+    // Заполняем список индивидов в выбранной схеме
+    const container = document.getElementById('del-individ-in-schema-container');
+    const individSelect = document.getElementById('del-individ-in-schema-select');
+    if (!container || !individSelect) return;
+
+    // Очищаем dropdown
+    individSelect.innerHTML = '<option value="">-- Выберите индивид --</option>';
+
+    if (operationType === DEL_OPERATION_TYPES.INDIVID_PROCESS_IN_SCHEMA) {
+        // issue #311 п.3: Находим индивидов процесса в выбранной схеме
+        const individuals = findProcessIndividualsInTrig(trigUri);
+
+        delIntermediateSparqlQueries.push({
+            description: 'Индивиды процессов в выбранной схеме',
+            query: DEL_CONCEPT_SPARQL.GET_PROCESS_INDIVIDUALS_IN_TRIG(trigUri),
+            result: individuals.length > 0
+                ? `Найдено ${individuals.length}: ${individuals.map(i => i.label || i.uri).join(', ')}`
+                : 'Индивиды не найдены'
+        });
+
+        individuals.forEach(individ => {
+            const option = document.createElement('option');
+            option.value = individ.uri;
+            option.textContent = individ.label || individ.uri;
+            individSelect.appendChild(option);
+        });
+    } else if (operationType === DEL_OPERATION_TYPES.INDIVID_EXECUTOR_IN_SCHEMA) {
+        // issue #311 п.4: Находим индивидов исполнителей в выбранной схеме
+        const executors = findExecutorIndividualsInTrig(trigUri);
+
+        delIntermediateSparqlQueries.push({
+            description: 'Индивиды исполнителей в выбранной схеме',
+            query: DEL_CONCEPT_SPARQL.GET_EXECUTOR_INDIVIDUALS_IN_TRIG(trigUri),
+            result: executors.length > 0
+                ? `Найдено ${executors.length}: ${executors.map(e => e.label || e.uri).join(', ')}`
+                : 'Индивиды не найдены'
+        });
+
+        executors.forEach(executor => {
+            const option = document.createElement('option');
+            option.value = executor.uri;
+            option.textContent = executor.label || executor.uri;
+            individSelect.appendChild(option);
+        });
+    }
+
+    container.style.display = 'block';
+    displayDelIntermediateSparql();
+    updateDelButtonsState();
+}
+
+/**
+ * issue #311 п.3, п.4: Обработчик выбора индивида для удаления из конкретной схемы
+ */
+function onDelIndividInSchemaSelect() {
+    const individSelect = document.getElementById('del-individ-in-schema-select');
+    const individUri = individSelect ? individSelect.value : null;
+
+    if (!individUri) {
+        delConceptState.selectedConcept = null;
+        delConceptState.foundIndividuals = [];
+        hideDelResults();
+        updateDelButtonsState();
+        return;
+    }
+
+    const operationType = delConceptState.selectedOperation;
+    const trigUri = delConceptState.selectedTrig;
+
+    delConceptState.selectedConcept = individUri;
+
+    if (operationType === DEL_OPERATION_TYPES.INDIVID_PROCESS_IN_SCHEMA) {
+        // issue #311 п.3: Формируем одного индивида для удаления в конкретной схеме
+        delConceptState.foundIndividuals = [{
+            uri: individUri,
+            trig: trigUri,
+            label: typeof getPrefixedName === 'function'
+                ? getPrefixedName(individUri, currentPrefixes)
+                : individUri
+        }];
+    } else if (operationType === DEL_OPERATION_TYPES.INDIVID_EXECUTOR_IN_SCHEMA) {
+        // issue #311 п.4: Формируем данные для удаления исполнителя в схеме
+        // Находим ExecutorGroup, в которой участвует данный исполнитель в выбранном TriG
+        const usages = findExecutorUsageInTrig(individUri, trigUri);
+        delConceptState.foundIndividuals = usages.map(u => ({
+            uri: u.executorGroupUri,
+            trig: trigUri,
+            executorUri: individUri,
+            label: typeof getPrefixedName === 'function'
+                ? getPrefixedName(u.executorGroupUri, currentPrefixes)
+                : u.executorGroupUri
+        }));
+    }
+
+    // Показываем результаты
+    const resultsContainer = document.getElementById('del-concept-results-container');
+    if (resultsContainer && delConceptState.foundIndividuals.length > 0) {
+        resultsContainer.innerHTML = buildFoundIndividualsHtml();
+        resultsContainer.style.display = 'block';
+    }
+
+    displayDelIntermediateSparql();
+    updateDelButtonsState();
+}
+
+/**
+ * issue #311 п.3: Находит индивидов процесса в конкретном TriG
+ * @param {string} trigUri - URI TriG
+ * @returns {Array<{uri: string, label: string}>} Массив индивидов
+ */
+function findProcessIndividualsInTrig(trigUri) {
+    const individuals = [];
+    const isSubprocessTrigUri = 'http://example.org/vad#isSubprocessTrig';
+    const seen = new Set();
+
+    // issue #326: Используем currentStore.getQuads() вместо currentQuads
+    if (currentStore) {
+        const quads = currentStore.getQuads(null, null, null, null);
+        quads.forEach(quad => {
+            const predicateMatches = quad.predicate.value === isSubprocessTrigUri ||
+                quad.predicate.value.endsWith('#isSubprocessTrig');
+
+            if (predicateMatches && quad.graph && quad.graph.value === trigUri && !seen.has(quad.subject.value)) {
+                seen.add(quad.subject.value);
+                individuals.push({
+                    uri: quad.subject.value,
+                    label: typeof getPrefixedName === 'function'
+                        ? getPrefixedName(quad.subject.value, currentPrefixes)
+                        : quad.subject.value
+                });
+            }
+        });
+    }
+
+    return individuals;
+}
+
+/**
+ * issue #311 п.4: Находит индивидов исполнителей (концепты из rtree, которые используются через vad:includes) в конкретном TriG
+ * @param {string} trigUri - URI TriG
+ * @returns {Array<{uri: string, label: string}>} Массив исполнителей
+ */
+function findExecutorIndividualsInTrig(trigUri) {
+    const executors = [];
+    const includesUri = 'http://example.org/vad#includes';
+    const seen = new Set();
+
+    // issue #326: Используем currentStore.getQuads() вместо currentQuads
+    if (currentStore) {
+        const quads = currentStore.getQuads(null, null, null, null);
+        quads.forEach(quad => {
+            const predicateMatches = quad.predicate.value === includesUri ||
+                quad.predicate.value.endsWith('#includes');
+
+            if (predicateMatches && quad.graph && quad.graph.value === trigUri && !seen.has(quad.object.value)) {
+                seen.add(quad.object.value);
+                executors.push({
+                    uri: quad.object.value,
+                    label: typeof getPrefixedName === 'function'
+                        ? getPrefixedName(quad.object.value, currentPrefixes)
+                        : quad.object.value
+                });
+            }
+        });
+    }
+
+    return executors;
+}
+
+/**
+ * issue #311 п.4: Находит использования исполнителя в конкретном TriG
+ * @param {string} executorUri - URI исполнителя
+ * @param {string} trigUri - URI TriG
+ * @returns {Array<{executorGroupUri: string}>} Массив ExecutorGroup
+ */
+function findExecutorUsageInTrig(executorUri, trigUri) {
+    const usages = [];
+    const includesUri = 'http://example.org/vad#includes';
+
+    // issue #326: Используем currentStore.getQuads() вместо currentQuads
+    if (currentStore) {
+        const quads = currentStore.getQuads(null, null, null, null);
+        quads.forEach(quad => {
+            const predicateMatches = quad.predicate.value === includesUri ||
+                quad.predicate.value.endsWith('#includes');
+
+            if (predicateMatches && quad.object.value === executorUri && quad.graph && quad.graph.value === trigUri) {
+                usages.push({
+                    executorGroupUri: quad.subject.value
+                });
+            }
+        });
+    }
+
+    return usages;
+}
+
+/**
+ * Инициализирует dropdowns для выбранной операции
+ * @param {string} operationType - Тип операции
+ */
+function initializeDelDropdowns(operationType) {
+    switch (operationType) {
+        case DEL_OPERATION_TYPES.CONCEPT_PROCESS:
+        case DEL_OPERATION_TYPES.INDIVID_PROCESS:
+            fillConceptDropdown('process');
+            break;
+
+        case DEL_OPERATION_TYPES.CONCEPT_EXECUTOR:
+        case DEL_OPERATION_TYPES.INDIVID_EXECUTOR:
+            fillConceptDropdown('executor');
+            break;
+
+        case DEL_OPERATION_TYPES.TRIG_SCHEMA:
+            fillTrigDropdown();
+            break;
+
+        // issue #311 п.3, п.4: Заполняем dropdown TriG для «в схеме»
+        case DEL_OPERATION_TYPES.INDIVID_PROCESS_IN_SCHEMA:
+        case DEL_OPERATION_TYPES.INDIVID_EXECUTOR_IN_SCHEMA:
+            fillTrigDropdownForIndivid();
+            break;
+    }
+
+    displayDelIntermediateSparql();
+}
+
+/**
+ * Заполняет dropdown концептов
+ * @param {string} type - Тип: 'process' или 'executor'
+ */
+function fillConceptDropdown(type) {
+    const select = document.getElementById('del-concept-select');
+    if (!select) return;
+
+    const concepts = type === 'process'
+        ? getProcessConceptsForDeletion()
+        : getExecutorConceptsForDeletion();
+
+    concepts.forEach(concept => {
+        const option = document.createElement('option');
+        option.value = concept.uri;
+        option.textContent = concept.label || concept.uri;
+        select.appendChild(option);
+    });
+}
+
+/**
+ * Заполняет dropdown TriG
+ */
+function fillTrigDropdown() {
+    const select = document.getElementById('del-trig-select');
+    if (!select) return;
+
+    const trigs = getAllTrigs();
+
+    trigs.forEach(trig => {
+        const option = document.createElement('option');
+        option.value = trig.uri;
+        option.textContent = trig.label || trig.uri;
+        select.appendChild(option);
+    });
+}
+
+/**
+ * Обработчик выбора концепта
+ */
+function onDelConceptSelect() {
+    const select = document.getElementById('del-concept-select');
+    const conceptUri = select ? select.value : null;
+
+    if (!conceptUri) {
+        delConceptState.selectedConcept = null;
+        hideDelResults();
+        updateDelButtonsState();
+        return;
+    }
+
+    delConceptState.selectedConcept = conceptUri;
+    delConceptState.validationErrors = [];
+    delConceptState.foundIndividuals = [];
+
+    // Выполняем проверки в зависимости от типа операции
+    performValidationChecks();
+    displayDelIntermediateSparql();
+    updateDelButtonsState();
+}
+
+/**
+ * Обработчик выбора TriG
+ */
+function onDelTrigSelect() {
+    const select = document.getElementById('del-trig-select');
+    const trigUri = select ? select.value : null;
+
+    if (!trigUri) {
+        delConceptState.selectedConcept = null;
+        hideDelResults();
+        updateDelButtonsState();
+        return;
+    }
+
+    delConceptState.selectedConcept = trigUri;
+    delConceptState.validationErrors = [];
+
+    displayDelIntermediateSparql();
+    updateDelButtonsState();
+}
+
+/**
+ * Выполняет проверки перед удалением
+ */
+function performValidationChecks() {
+    const operationType = delConceptState.selectedOperation;
+    const conceptUri = delConceptState.selectedConcept;
+    const config = DEL_CONCEPT_CONFIG[operationType];
+
+    if (!config || !conceptUri) return;
+
+    const resultsContainer = document.getElementById('del-concept-results-container');
+    if (!resultsContainer) return;
+
+    let resultsHtml = '';
+    delConceptState.validationErrors = [];
+
+    switch (operationType) {
+        case DEL_OPERATION_TYPES.CONCEPT_PROCESS:
+            // Issue #217: Проверка индивидов (включая проверку использования концепта как индивида)
+            const individuals = checkProcessIndividuals(conceptUri);
+            if (individuals.length > 0) {
+                // Разделяем индивиды на два типа для более понятного сообщения
+                const individualsInSchema = individuals.filter(i => i.uri !== conceptUri);
+                const conceptAsIndividual = individuals.filter(i => i.uri === conceptUri);
+
+                let errorMessage = '';
+                if (individualsInSchema.length > 0 && conceptAsIndividual.length > 0) {
+                    errorMessage = `Найдено ${individualsInSchema.length} индивидов в схеме концепта и концепт используется как индивид в ${conceptAsIndividual.length} TriG. Сначала удалите все индивиды и использования концепта.`;
+                } else if (conceptAsIndividual.length > 0) {
+                    errorMessage = `Концепт используется как индивид (подпроцесс) в ${conceptAsIndividual.length} TriG. Сначала удалите эти индивиды процесса из соответствующих схем.`;
+                } else {
+                    errorMessage = `Найдено ${individualsInSchema.length} индивидов процесса в схеме. Сначала удалите все индивиды.`;
+                }
+
+                delConceptState.validationErrors.push({
+                    type: 'individuals',
+                    message: errorMessage,
+                    items: individuals
+                });
+            }
+
+            // Проверка схемы
+            const schemas = checkProcessSchema(conceptUri);
+            if (schemas.length > 0) {
+                delConceptState.validationErrors.push({
+                    type: 'schema',
+                    message: `Найдено ${schemas.length} схем процесса. Сначала удалите все схемы.`,
+                    items: schemas.map(s => ({ uri: s }))
+                });
+            }
+
+            // Проверка дочерних элементов
+            const children = checkChildrenElements(conceptUri, config.targetGraphUri);
+            if (children.length > 0) {
+                delConceptState.validationErrors.push({
+                    type: 'children',
+                    message: `Найдено ${children.length} дочерних процессов. Сначала измените их vad:hasParentObj.`,
+                    items: children
+                });
+            }
+            break;
+
+        case DEL_OPERATION_TYPES.CONCEPT_EXECUTOR:
+            // Проверка использования в TriG
+            const usages = checkExecutorUsage(conceptUri);
+            if (usages.length > 0) {
+                delConceptState.validationErrors.push({
+                    type: 'usedInTrigs',
+                    message: `Исполнитель используется в ${usages.length} TriG. Сначала удалите эти индивиды исполнителя.`,
+                    items: usages.map(u => ({ uri: u.trig, processIndivid: u.processIndivid }))
+                });
+            }
+
+            // Проверка дочерних исполнителей
+            const childExecutors = checkChildrenElements(conceptUri, config.targetGraphUri);
+            if (childExecutors.length > 0) {
+                delConceptState.validationErrors.push({
+                    type: 'children',
+                    message: `Найдено ${childExecutors.length} дочерних исполнителей. Сначала измените их vad:hasParentObj.`,
+                    items: childExecutors
+                });
+            }
+            break;
+
+        case DEL_OPERATION_TYPES.INDIVID_PROCESS:
+            // issue #309: Для индивидов процесса показываем список найденных индивидов
+            // и список всех TriG, где обнаружен данный индивид
+            const processIndividuals = findProcessIndividualsManual(conceptUri);
+            delConceptState.foundIndividuals = processIndividuals;
+
+            // issue #309: Показываем список TriG, где найден индивид
+            if (processIndividuals.length > 0) {
+                const trigsList = processIndividuals.map(i => {
+                    const trigLabel = typeof getPrefixedName === 'function'
+                        ? getPrefixedName(i.trig, currentPrefixes)
+                        : i.trig;
+                    return trigLabel;
+                });
+                delIntermediateSparqlQueries.push({
+                    description: 'Список TriG, содержащих данный индивид процесса',
+                    query: DEL_CONCEPT_SPARQL.GET_PROCESS_INDIVIDUALS_FOR_CONCEPT(conceptUri),
+                    result: `Найден в ${trigsList.length} TriG: ${trigsList.join(', ')}`
+                });
+            }
+            break;
+
+        case DEL_OPERATION_TYPES.INDIVID_EXECUTOR:
+            // Для индивидов исполнителя показываем использования
+            const executorUsages = checkExecutorUsage(conceptUri);
+            delConceptState.foundIndividuals = executorUsages.map(u => ({
+                uri: u.processIndivid,
+                trig: u.trig,
+                label: typeof getPrefixedName === 'function'
+                    ? getPrefixedName(u.processIndivid, currentPrefixes)
+                    : u.processIndivid
+            }));
+            break;
+    }
+
+    // Формируем HTML для отображения результатов
+    if (delConceptState.validationErrors.length > 0) {
+        resultsHtml = buildValidationErrorsHtml();
+    } else if (delConceptState.foundIndividuals.length > 0) {
+        resultsHtml = buildFoundIndividualsHtml();
+    } else if (operationType === DEL_OPERATION_TYPES.CONCEPT_PROCESS ||
+               operationType === DEL_OPERATION_TYPES.CONCEPT_EXECUTOR) {
+        resultsHtml = '<div class="del-concept-success">Проверки пройдены. Концепт можно удалить.</div>';
+    }
+
+    if (resultsHtml) {
+        resultsContainer.innerHTML = resultsHtml;
+        resultsContainer.style.display = 'block';
+    } else {
+        resultsContainer.style.display = 'none';
+    }
+}
+
+/**
+ * Формирует HTML для ошибок валидации
+ * @returns {string} HTML
+ */
+function buildValidationErrorsHtml() {
+    let html = '<div class="del-concept-errors">';
+    html += '<h4>Удаление невозможно:</h4>';
+
+    delConceptState.validationErrors.forEach(error => {
+        html += `<div class="del-concept-error-item">`;
+        html += `<p class="error-message">${error.message}</p>`;
+
+        if (error.items && error.items.length > 0) {
+            html += '<ul class="error-items">';
+            error.items.forEach(item => {
+                const label = item.label || (typeof getPrefixedName === 'function'
+                    ? getPrefixedName(item.uri, currentPrefixes)
+                    : item.uri);
+                html += `<li>${label}</li>`;
+            });
+            html += '</ul>';
+        }
+
+        html += '</div>';
+    });
+
+    html += '</div>';
+    return html;
+}
+
+/**
+ * Формирует HTML для найденных индивидов
+ * issue #309: Добавлен список TriG, где обнаружен индивид
+ * @returns {string} HTML
+ */
+function buildFoundIndividualsHtml() {
+    const operationType = delConceptState.selectedOperation;
+    const config = DEL_CONCEPT_CONFIG[operationType];
+
+    let html = '<div class="del-concept-individuals">';
+
+    if (delConceptState.foundIndividuals.length === 0) {
+        html += '<p class="no-individuals">Индивиды не найдены</p>';
+    } else {
+        // issue #309, #311: Для INDIVID_PROCESS показываем сводку TriG
+        if (operationType === DEL_OPERATION_TYPES.INDIVID_PROCESS ||
+            operationType === DEL_OPERATION_TYPES.INDIVID_PROCESS_IN_SCHEMA) {
+            const uniqueTrigs = [...new Set(delConceptState.foundIndividuals.map(i => i.trig))];
+            const trigLabels = uniqueTrigs.map(t =>
+                typeof getPrefixedName === 'function'
+                    ? getPrefixedName(t, currentPrefixes)
+                    : t
+            );
+            html += `<div class="del-concept-trig-list" style="background-color: #e8f4fd; border: 1px solid #bee5eb; padding: 8px; margin-bottom: 10px; border-radius: 4px;">`;
+            html += `<strong>Индивид найден в ${uniqueTrigs.length} TriG:</strong> ${trigLabels.join(', ')}`;
+            html += `</div>`;
+        }
+
+        html += `<h4>Найденные индивиды (${delConceptState.foundIndividuals.length}):</h4>`;
+        html += '<ul class="individuals-list">';
+
+        delConceptState.foundIndividuals.forEach(individ => {
+            const label = individ.label || (typeof getPrefixedName === 'function'
+                ? getPrefixedName(individ.uri, currentPrefixes)
+                : individ.uri);
+
+            const trigLabel = individ.trig
+                ? (typeof getPrefixedName === 'function'
+                    ? getPrefixedName(individ.trig, currentPrefixes)
+                    : individ.trig)
+                : '';
+
+            html += `<li>`;
+            html += `<span class="individ-label">${label}</span>`;
+            if (trigLabel) {
+                html += ` <span class="individ-trig">(в ${trigLabel})</span>`;
+            }
+            html += `</li>`;
+        });
+
+        html += '</ul>';
+    }
+
+    html += '</div>';
+    return html;
+}
+
+/**
+ * Скрывает контейнер результатов
+ */
+function hideDelResults() {
+    const resultsContainer = document.getElementById('del-concept-results-container');
+    if (resultsContainer) {
+        resultsContainer.style.display = 'none';
+    }
+}
+
+/**
+ * Обновляет состояние кнопок
+ */
+function updateDelButtonsState() {
+    const showIndividualsBtn = document.getElementById('del-show-individuals-btn');
+    const createDeleteBtn = document.querySelector('.del-concept-create-btn');
+
+    const operationType = delConceptState.selectedOperation;
+    const hasSelectedConcept = delConceptState.selectedConcept != null;
+    const hasErrors = delConceptState.validationErrors.length > 0;
+    const config = operationType ? DEL_CONCEPT_CONFIG[operationType] : null;
+
+    // Кнопка "Показать индивиды"
+    // issue #311: Для «в схеме» кнопка не нужна — индивиды отображаются в dropdown после выбора TriG
+    if (showIndividualsBtn) {
+        const isInSchemaOp = operationType === DEL_OPERATION_TYPES.INDIVID_PROCESS_IN_SCHEMA ||
+                             operationType === DEL_OPERATION_TYPES.INDIVID_EXECUTOR_IN_SCHEMA;
+        const showButton = config && config.hasShowIndividualsButton && hasSelectedConcept && !isInSchemaOp;
+        showIndividualsBtn.style.display = showButton ? 'inline-block' : 'none';
+    }
+
+    // Кнопка "Создать запрос на удаление"
+    if (createDeleteBtn) {
+        // Для концептов - активна только если нет ошибок валидации
+        // Для индивидов - активна если есть найденные индивиды
+        // Для TriG - активна если выбран TriG
+        let canCreate = false;
+
+        switch (operationType) {
+            case DEL_OPERATION_TYPES.CONCEPT_PROCESS:
+            case DEL_OPERATION_TYPES.CONCEPT_EXECUTOR:
+                canCreate = hasSelectedConcept && !hasErrors;
+                break;
+
+            case DEL_OPERATION_TYPES.INDIVID_PROCESS:
+            case DEL_OPERATION_TYPES.INDIVID_EXECUTOR:
+                canCreate = hasSelectedConcept && delConceptState.foundIndividuals.length > 0;
+                break;
+
+            case DEL_OPERATION_TYPES.TRIG_SCHEMA:
+                canCreate = hasSelectedConcept;
+                break;
+
+            // issue #311 п.3, п.4: Для «в схеме» — активна если выбран индивид и есть данные
+            case DEL_OPERATION_TYPES.INDIVID_PROCESS_IN_SCHEMA:
+            case DEL_OPERATION_TYPES.INDIVID_EXECUTOR_IN_SCHEMA:
+                canCreate = hasSelectedConcept && delConceptState.foundIndividuals.length > 0;
+                break;
+        }
+
+        createDeleteBtn.disabled = !canCreate;
+        createDeleteBtn.title = canCreate ? '' : 'Сначала выберите элемент и пройдите проверки';
+    }
+}
+
+/**
+ * Обработчик кнопки "Показать индивиды"
+ * Issue #221 Fix #2: Обновлена логика для корректного поиска индивидов процесса
+ */
+function showIndividuals() {
+    const operationType = delConceptState.selectedOperation;
+    const conceptUri = delConceptState.selectedConcept;
+
+    if (!conceptUri) {
+        showDelConceptMessage('Сначала выберите концепт', 'error');
+        return;
+    }
+
+    // Перезапускаем поиск индивидов
+    if (operationType === DEL_OPERATION_TYPES.INDIVID_PROCESS) {
+        const individuals = findProcessIndividualsManual(conceptUri);
+        delConceptState.foundIndividuals = individuals;
+
+        // Issue #221 Fix #2: Добавляем промежуточный SPARQL для отображения
+        const sparqlQuery = DEL_CONCEPT_SPARQL.GET_PROCESS_INDIVIDUALS_FOR_CONCEPT(conceptUri);
+        delIntermediateSparqlQueries.push({
+            description: 'Поиск использований концепта как индивида в схемах процессов (VADProcessDia)',
+            query: sparqlQuery,
+            result: individuals.length > 0
+                ? `Найдено ${individuals.length} использований: ${individuals.map(i => {
+                    const trigLabel = typeof getPrefixedName === 'function'
+                        ? getPrefixedName(i.trig, currentPrefixes)
+                        : i.trig;
+                    return `${i.label || i.uri} в ${trigLabel}`;
+                }).join(', ')}`
+                : 'Индивиды не найдены'
+        });
+    } else if (operationType === DEL_OPERATION_TYPES.INDIVID_EXECUTOR) {
+        const usages = checkExecutorUsage(conceptUri);
+        delConceptState.foundIndividuals = usages.map(u => ({
+            uri: u.processIndivid,
+            trig: u.trig,
+            label: typeof getPrefixedName === 'function'
+                ? getPrefixedName(u.processIndivid, currentPrefixes)
+                : u.processIndivid
+        }));
+    }
+
+    // Обновляем отображение
+    const resultsContainer = document.getElementById('del-concept-results-container');
+    if (resultsContainer) {
+        resultsContainer.innerHTML = buildFoundIndividualsHtml();
+        resultsContainer.style.display = 'block';
+    }
+
+    displayDelIntermediateSparql();
+    updateDelButtonsState();
+}
+
+/**
+ * issue #309: Ручной поиск ExecutorGroup для индивида в TriG
+ * @param {string} individUri - URI индивида процесса
+ * @param {string} trigUri - URI TriG
+ * @returns {string|null} URI ExecutorGroup или null
+ */
+function findExecutorGroupForIndivid(individUri, trigUri) {
+    const hasExecutorUri = 'http://example.org/vad#hasExecutor';
+
+    // issue #309: Отладочная информация (отключена по умолчанию)
+    const DEBUG_EG_SEARCH = false;
+
+    // issue #326: Используем currentStore.getQuads() вместо currentQuads
+    if (currentStore) {
+        const quads = currentStore.getQuads(null, null, null, null);
+        for (const quad of quads) {
+            if (quad.subject.value === individUri &&
+                quad.predicate.value === hasExecutorUri &&
+                quad.graph && quad.graph.value === trigUri) {
+                if (DEBUG_EG_SEARCH) {
+                    console.log(`[findExecutorGroupForIndivid] Найдена ExecutorGroup: ${quad.object.value} для ${individUri} в ${trigUri}`);
+                }
+                return quad.object.value;
+            }
+        }
+    }
+
+    if (DEBUG_EG_SEARCH) {
+        console.log(`[findExecutorGroupForIndivid] ExecutorGroup не найдена для ${individUri} в ${trigUri}`);
+    }
+    return null;
+}
+
+/**
+ * issue #309: Ручной поиск входящих vad:hasNext на индивид в TriG
+ * @param {string} individUri - URI индивида процесса
+ * @param {string} trigUri - URI TriG
+ * @returns {Array<string>} Массив URI индивидов с входящими vad:hasNext
+ */
+function findIncomingHasNext(individUri, trigUri) {
+    const hasNextUri = 'http://example.org/vad#hasNext';
+    const sources = [];
+
+    // issue #309: Отладочная информация (отключена по умолчанию)
+    const DEBUG_HN_SEARCH = false;
+
+    // issue #326: Используем currentStore.getQuads() вместо currentQuads
+    if (currentStore) {
+        const quads = currentStore.getQuads(null, null, null, null);
+        quads.forEach(quad => {
+            if (quad.predicate.value === hasNextUri &&
+                quad.object.value === individUri &&
+                quad.graph && quad.graph.value === trigUri) {
+                sources.push(quad.subject.value);
+                if (DEBUG_HN_SEARCH) {
+                    console.log(`[findIncomingHasNext] Найдена входящая hasNext от ${quad.subject.value} для ${individUri} в ${trigUri}`);
+                }
+            }
+        });
+    }
+
+    if (DEBUG_HN_SEARCH) {
+        console.log(`[findIncomingHasNext] Найдено ${sources.length} входящих hasNext для ${individUri} в ${trigUri}`);
+    }
+    return sources;
+}
+
+/**
+ * Обработчик кнопки "Удалить индивиды"
+ * issue #309: Формирует полный SPARQL DELETE запрос для всех найденных индивидов,
+ * включая удаление ExecutorGroup и входящих vad:hasNext
+ */
+function deleteIndividuals() {
+    const operationType = delConceptState.selectedOperation;
+    const conceptUri = delConceptState.selectedConcept;
+
+    if (!conceptUri || delConceptState.foundIndividuals.length === 0) {
+        showDelConceptMessage('Нет индивидов для удаления', 'error');
+        return;
+    }
+
+    const prefixes = {
+        'rdf': 'http://www.w3.org/1999/02/22-rdf-syntax-ns#',
+        'rdfs': 'http://www.w3.org/2000/01/rdf-schema#',
+        'vad': 'http://example.org/vad#'
+    };
+
+    let sparqlQuery = '';
+
+    if (operationType === DEL_OPERATION_TYPES.INDIVID_PROCESS ||
+        operationType === DEL_OPERATION_TYPES.INDIVID_PROCESS_IN_SCHEMA) {
+        // issue #309, #311: Для каждого индивида находим ExecutorGroup и входящие hasNext,
+        // затем формируем полный DELETE запрос.
+        // Для INDIVID_PROCESS — удаляем из всех схем, для INDIVID_PROCESS_IN_SCHEMA — только из выбранной.
+        const queries = delConceptState.foundIndividuals.map(individ => {
+            // Ищем ExecutorGroup для данного индивида
+            const executorGroupUri = findExecutorGroupForIndivid(individ.uri, individ.trig);
+
+            // Ищем входящие vad:hasNext от других индивидов
+            const incomingHasNextUris = findIncomingHasNext(individ.uri, individ.trig);
+
+            // issue #309: Добавляем промежуточную информацию
+            const trigLabel = typeof getPrefixedName === 'function'
+                ? getPrefixedName(individ.trig, currentPrefixes)
+                : individ.trig;
+            const individLabel = individ.label || individ.uri;
+
+            if (executorGroupUri) {
+                const egLabel = typeof getPrefixedName === 'function'
+                    ? getPrefixedName(executorGroupUri, currentPrefixes)
+                    : executorGroupUri;
+                delIntermediateSparqlQueries.push({
+                    description: `ExecutorGroup для ${individLabel} в ${trigLabel}`,
+                    query: DEL_CONCEPT_SPARQL.FIND_EXECUTOR_GROUP_FOR_INDIVID(individ.uri, individ.trig),
+                    result: `Найдена: ${egLabel}`
+                });
+            }
+
+            if (incomingHasNextUris.length > 0) {
+                const sourceLabels = incomingHasNextUris.map(u =>
+                    typeof getPrefixedName === 'function'
+                        ? getPrefixedName(u, currentPrefixes)
+                        : u
+                );
+                delIntermediateSparqlQueries.push({
+                    description: `Входящие hasNext для ${individLabel} в ${trigLabel}`,
+                    query: DEL_CONCEPT_SPARQL.FIND_INCOMING_HAS_NEXT(individ.uri, individ.trig),
+                    result: `Найдено ${incomingHasNextUris.length}: ${sourceLabels.join(', ')}`
+                });
+            }
+
+            return DEL_CONCEPT_SPARQL.GENERATE_DELETE_PROCESS_INDIVID_QUERY(
+                individ.trig,
+                individ.uri,
+                prefixes,
+                executorGroupUri,
+                incomingHasNextUris
+            );
+        });
+        sparqlQuery = queries.join('\n;\n\n');
+    } else if (operationType === DEL_OPERATION_TYPES.INDIVID_EXECUTOR ||
+               operationType === DEL_OPERATION_TYPES.INDIVID_EXECUTOR_IN_SCHEMA) {
+        // issue #311: Формируем запросы на удаление vad:includes
+        // Для INDIVID_EXECUTOR — из всех схем, для INDIVID_EXECUTOR_IN_SCHEMA — только из выбранной.
+        const queries = delConceptState.foundIndividuals.map(individ => {
+            const executorUri = individ.executorUri || conceptUri;
+            return DEL_CONCEPT_SPARQL.GENERATE_DELETE_EXECUTOR_INDIVID_QUERY(
+                individ.trig,
+                individ.uri,
+                executorUri,
+                prefixes
+            );
+        });
+        sparqlQuery = queries.join('\n;\n\n');
+    }
+
+    displayDelIntermediateSparql();
+    outputDeleteSparql(sparqlQuery, `индивидов (${delConceptState.foundIndividuals.length})`);
+}
+
+/**
+ * Создаёт итоговый SPARQL DELETE запрос
+ */
+function createDeleteSparql() {
+    hideDelConceptMessage();
+
+    const operationType = delConceptState.selectedOperation;
+    const selectedUri = delConceptState.selectedConcept;
+
+    if (!operationType || !selectedUri) {
+        showDelConceptMessage('Выберите тип операции и элемент для удаления', 'error');
+        return;
+    }
+
+    // Проверяем ошибки валидации для концептов
+    if ((operationType === DEL_OPERATION_TYPES.CONCEPT_PROCESS ||
+         operationType === DEL_OPERATION_TYPES.CONCEPT_EXECUTOR) &&
+        delConceptState.validationErrors.length > 0) {
+        showDelConceptMessage('Невозможно удалить концепт. Сначала устраните найденные проблемы.', 'error');
+        return;
+    }
+
+    const config = DEL_CONCEPT_CONFIG[operationType];
+    const prefixes = {
+        'rdf': 'http://www.w3.org/1999/02/22-rdf-syntax-ns#',
+        'rdfs': 'http://www.w3.org/2000/01/rdf-schema#',
+        'vad': 'http://example.org/vad#'
+    };
+
+    let sparqlQuery = '';
+    let elementDescription = '';
+
+    switch (operationType) {
+        case DEL_OPERATION_TYPES.CONCEPT_PROCESS:
+        case DEL_OPERATION_TYPES.CONCEPT_EXECUTOR:
+            sparqlQuery = DEL_CONCEPT_SPARQL.GENERATE_DELETE_CONCEPT_QUERY(
+                config.targetGraph,
+                selectedUri,
+                prefixes
+            );
+            elementDescription = `концепта ${operationType === DEL_OPERATION_TYPES.CONCEPT_PROCESS ? 'процесса' : 'исполнителя'}`;
+            break;
+
+        case DEL_OPERATION_TYPES.INDIVID_PROCESS:
+            if (delConceptState.foundIndividuals.length === 0) {
+                showDelConceptMessage('Сначала нажмите "Показать индивиды"', 'error');
+                return;
+            }
+            // Используем deleteIndividuals для генерации
+            deleteIndividuals();
+            return;
+
+        case DEL_OPERATION_TYPES.INDIVID_EXECUTOR:
+            if (delConceptState.foundIndividuals.length === 0) {
+                showDelConceptMessage('Сначала нажмите "Показать индивиды"', 'error');
+                return;
+            }
+            // Используем deleteIndividuals для генерации
+            deleteIndividuals();
+            return;
+
+        case DEL_OPERATION_TYPES.TRIG_SCHEMA:
+            const conceptForTrig = findConceptForTrig(selectedUri);
+            if (!conceptForTrig) {
+                showDelConceptMessage('Не найден концепт процесса для данного TriG', 'warning');
+            }
+            sparqlQuery = DEL_CONCEPT_SPARQL.GENERATE_DELETE_TRIG_QUERY(
+                selectedUri,
+                conceptForTrig || 'UNKNOWN_CONCEPT',
+                prefixes
+            );
+            elementDescription = 'схемы процесса (TriG)';
+            break;
+
+        // issue #311 п.3: Удаление индивида процесса в конкретной схеме
+        case DEL_OPERATION_TYPES.INDIVID_PROCESS_IN_SCHEMA:
+            if (delConceptState.foundIndividuals.length === 0) {
+                showDelConceptMessage('Сначала выберите индивид процесса для удаления', 'error');
+                return;
+            }
+            // Используем deleteIndividuals для генерации (он обрабатывает foundIndividuals)
+            deleteIndividuals();
+            return;
+
+        // issue #311 п.4: Удаление индивида исполнителя в конкретной схеме
+        case DEL_OPERATION_TYPES.INDIVID_EXECUTOR_IN_SCHEMA:
+            if (delConceptState.foundIndividuals.length === 0) {
+                showDelConceptMessage('Сначала выберите индивид исполнителя для удаления', 'error');
+                return;
+            }
+            deleteIndividuals();
+            return;
+    }
+
+    outputDeleteSparql(sparqlQuery, elementDescription);
+}
+
+/**
+ * Выводит SPARQL DELETE запрос в "Result in SPARQL"
+ * @param {string} sparqlQuery - SPARQL запрос
+ * @param {string} elementDescription - Описание удаляемого элемента
+ */
+function outputDeleteSparql(sparqlQuery, elementDescription) {
+    const resultTextarea = document.getElementById('result-sparql-query');
+    if (resultTextarea) {
+        resultTextarea.value = sparqlQuery;
+    }
+
+    // Отмечаем что это запрос удаления
+    window.isDeleteQuery = true;
+
+    showDelConceptMessage(
+        `SPARQL DELETE запрос для ${elementDescription} успешно сгенерирован. ` +
+        `Запрос выведен в "Result in SPARQL".`,
+        'success'
+    );
+
+    closeDelConceptModal();
+}
+
+/**
+ * Отображает промежуточные SPARQL запросы
+ */
+function displayDelIntermediateSparql() {
+    const container = document.getElementById('del-concept-intermediate-sparql');
+    const textarea = container ? container.querySelector('textarea') : null;
+
+    if (!container || !textarea) return;
+
+    if (delIntermediateSparqlQueries.length === 0) {
+        container.style.display = 'none';
+        return;
+    }
+
+    let sparqlText = '# ===== Промежуточные SPARQL запросы и результаты =====\n\n';
+
+    delIntermediateSparqlQueries.forEach((query, index) => {
+        sparqlText += `# --- ${index + 1}. ${query.description} ---\n`;
+        sparqlText += query.query.trim() + '\n';
+        if (query.result) {
+            sparqlText += `\n# Результат:\n# ${query.result}\n`;
+        }
+        sparqlText += '\n';
+    });
+
+    textarea.value = sparqlText;
+    delConceptState.intermediateSparql = sparqlText;
+
+    container.style.display = 'block';
+}
+
+/**
+ * Переключает видимость промежуточного SPARQL
+ */
+function toggleDelIntermediateSparql() {
+    const container = document.getElementById('del-concept-intermediate-sparql');
+    if (container) {
+        const isVisible = container.style.display !== 'none';
+        container.style.display = isVisible ? 'none' : 'block';
+    }
+}
+
+// ==============================================================================
+// ФУНКЦИИ СООБЩЕНИЙ
+// ==============================================================================
+
+/**
+ * Показывает сообщение в модальном окне
+ * @param {string} message - Текст сообщения
+ * @param {string} type - Тип: 'success', 'error', 'warning'
+ */
+function showDelConceptMessage(message, type = 'info') {
+    const messageDiv = document.getElementById('del-concept-message');
+    if (messageDiv) {
+        messageDiv.textContent = message;
+        messageDiv.className = `del-concept-message ${type}`;
+        messageDiv.style.display = 'block';
+    }
+}
+
+/**
+ * Скрывает сообщение
+ */
+function hideDelConceptMessage() {
+    const messageDiv = document.getElementById('del-concept-message');
+    if (messageDiv) {
+        messageDiv.style.display = 'none';
+    }
+}
+
+// ==============================================================================
+// issue #309: HELP BUTTON
+// ==============================================================================
+
+/**
+ * issue #309: Показывает справку по удалению индивида процесса
+ * По аналогии с showNewConceptHelp() в модуле создания концептов
+ */
+function showDelIndividProcessHelp() {
+    const helpText = `Удаление индивида процесса — основные этапы:
+
+1. Выбор концепта процесса:
+   Из справочника концептов процессов (vad:ptree) выберите концепт,
+   индивид которого нужно удалить.
+
+2. Поиск индивидов:
+   Система автоматически находит все использования данного концепта
+   как индивида (подпроцесса) во всех TriG типа VADProcessDia
+   по предикату vad:isSubprocessTrig.
+   Отображается список TriG, где обнаружен индивид.
+
+3. Генерация DELETE запроса (по каждому TriG):
+   a) Удаление ВСЕХ исходящих триплетов индивида:
+      DELETE WHERE { GRAPH <trig> { <individ> ?p ?o . } }
+      Удаляются все предикаты без явного перечисления,
+      что обеспечивает расширяемость при добавлении
+      новых предикатов индивида.
+
+   b) Удаление объекта ExecutorGroup (все триплеты):
+      DELETE WHERE { GRAPH <trig> { <ExecutorGroup> ?p ?o . } }
+      ExecutorGroup автоматически определяется по vad:hasExecutor.
+
+   c) Удаление входящих связей vad:hasNext:
+      Из других индивидов процесса в данном TriG,
+      ссылающихся на удаляемый индивид.
+
+4. Применение SPARQL:
+   Сгенерированный запрос выводится в "Result in SPARQL"
+   для просмотра и применения.
+
+Примечание: После применения SPARQL Virtual TriG пересчитывается
+автоматически. Кнопка "Показать Virtual TriG" в Result in SPARQL
+отображает результат пересчёта.`;
+
+    alert(helpText);
+}

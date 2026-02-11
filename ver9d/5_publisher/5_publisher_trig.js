@@ -1,0 +1,1061 @@
+// Ссылка на issue: https://github.com/bpmbpm/rdf-grapher/issues/232
+// 5_publisher_trig.js - Функции отображения TriG дерева модуля Publisher
+
+        // ==============================================================================
+        // issue #336: Функции для кнопки Методы и выпадающего списка методов
+        // ==============================================================================
+
+        /**
+         * Показывает/скрывает выпадающий список методов для объекта
+         * @param {Event} event - Событие клика
+         * @param {string} objectUri - URI объекта
+         * @param {string} trigUri - URI текущего TriG
+         * @param {string} objectMethodType - Тип объекта ('isSubprocessTrig' или 'ExecutorGroup')
+         */
+        async function toggleMethodsDropdown(event, objectUri, trigUri, objectMethodType) {
+            event.stopPropagation();
+
+            // Закрываем существующий dropdown если есть
+            const existingDropdown = document.querySelector('.methods-dropdown.visible');
+            if (existingDropdown) {
+                existingDropdown.remove();
+            }
+
+            const button = event.target;
+            const buttonRect = button.getBoundingClientRect();
+
+            // Создаём dropdown
+            const dropdown = document.createElement('div');
+            dropdown.className = 'methods-dropdown visible';
+            dropdown.style.position = 'fixed';
+            dropdown.style.left = buttonRect.left + 'px';
+            dropdown.style.top = (buttonRect.bottom + 2) + 'px';
+
+            // Получаем методы для данного типа объекта через SPARQL
+            const methods = await getMethodsForType(objectMethodType);
+
+            if (methods.length === 0) {
+                dropdown.innerHTML = '<div class="methods-dropdown-empty">Нет доступных методов</div>';
+            } else {
+                methods.forEach(method => {
+                    const item = document.createElement('div');
+                    item.className = 'methods-dropdown-item';
+                    item.textContent = method.label;
+                    item.onclick = (e) => {
+                        e.stopPropagation();
+                        dropdown.remove();
+                        executeObjectMethod(method.functionId, objectUri, trigUri);
+                    };
+                    dropdown.appendChild(item);
+                });
+            }
+
+            document.body.appendChild(dropdown);
+
+            // Закрываем dropdown при клике вне его
+            const closeDropdown = (e) => {
+                if (!dropdown.contains(e.target) && e.target !== button) {
+                    dropdown.remove();
+                    document.removeEventListener('click', closeDropdown);
+                }
+            };
+            setTimeout(() => document.addEventListener('click', closeDropdown), 0);
+        }
+
+        /**
+         * Получает список методов для указанного типа объекта через SPARQL
+         * @param {string} objectMethodType - Тип объекта ('isSubprocessTrig' или 'ExecutorGroup')
+         * @returns {Promise<Array>} - Массив объектов { label, functionId }
+         */
+        async function getMethodsForType(objectMethodType) {
+            // Формируем URI типа для SPARQL запроса
+            const typeUri = objectMethodType === 'ExecutorGroup'
+                ? 'http://example.org/vad#ExecutorGroup'
+                : 'http://example.org/vad#isSubprocessTrig';
+
+            // issue #336: Запрос методов из графа vad:techtree (технологическое приложение)
+            const query = `
+                PREFIX rdf: <http://www.w3.org/1999/02/22-rdf-syntax-ns#>
+                PREFIX rdfs: <http://www.w3.org/2000/01/rdf-schema#>
+                PREFIX vad: <http://example.org/vad#>
+
+                SELECT ?method ?label ?functionId WHERE {
+                    GRAPH vad:techtree {
+                        ?method rdf:type vad:ObjectMethod .
+                        ?method vad:methodForType <${typeUri}> .
+                        ?method rdfs:label ?label .
+                        ?method vad:methodFunction ?functionId .
+                    }
+                }
+            `;
+
+            try {
+                // Используем funSPARQLvaluesComunica для выполнения запроса
+                if (typeof funSPARQLvaluesComunica === 'function') {
+                    const results = await funSPARQLvaluesComunica(query, currentPrefixes);
+                    return results.map(row => ({
+                        uri: row.method,
+                        label: row.label,
+                        functionId: row.functionId
+                    }));
+                } else {
+                    console.warn('funSPARQLvaluesComunica not available');
+                    return [];
+                }
+            } catch (error) {
+                console.error('getMethodsForType error:', error);
+                return [];
+            }
+        }
+
+        /**
+         * Выполняет метод объекта
+         * @param {string} functionId - Идентификатор функции ('deleteIndividProcess' или 'deleteIndividExecutor')
+         * @param {string} objectUri - URI объекта
+         * @param {string} trigUri - URI текущего TriG
+         */
+        function executeObjectMethod(functionId, objectUri, trigUri) {
+            console.log(`Executing method: ${functionId} for ${objectUri} in ${trigUri}`);
+
+            switch (functionId) {
+                case 'deleteIndividProcess':
+                    deleteIndividProcessFromTrig(objectUri, trigUri);
+                    break;
+                case 'deleteIndividExecutor':
+                    deleteIndividExecutorFromTrig(objectUri, trigUri);
+                    break;
+                default:
+                    console.warn(`Unknown method function: ${functionId}`);
+                    alert(`Метод "${functionId}" не реализован`);
+            }
+        }
+
+        /**
+         * Удаляет индивид процесса из указанного TriG
+         * issue #336: Реализация метода Delete Individ Process
+         * @param {string} processUri - URI процесса
+         * @param {string} trigUri - URI TriG
+         */
+        function deleteIndividProcessFromTrig(processUri, trigUri) {
+            // Проверяем, доступна ли функция удаления индивида
+            if (typeof openDeleteModal === 'function') {
+                // Устанавливаем контекст для удаления
+                // Используем существующую логику из 3_sd_del_concept_individ
+                const prefixedProcessUri = getPrefixedName(processUri, currentPrefixes);
+                const prefixedTrigUri = getPrefixedName(trigUri, currentPrefixes);
+
+                // Вызываем окно удаления с предустановленными значениями
+                openDeleteModal('individ', prefixedTrigUri, prefixedProcessUri);
+            } else {
+                // Fallback: выполняем удаление напрямую через SPARQL
+                const confirmMsg = `Удалить индивид процесса ${getPrefixedName(processUri, currentPrefixes)} из схемы ${getPrefixedName(trigUri, currentPrefixes)}?`;
+                if (confirm(confirmMsg)) {
+                    performDeleteIndividProcess(processUri, trigUri);
+                }
+            }
+        }
+
+        /**
+         * Удаляет все предикаты vad:includes для ExecutorGroup из указанного TriG
+         * issue #336: Реализация метода Delete Individ Executor
+         * @param {string} executorGroupUri - URI ExecutorGroup
+         * @param {string} trigUri - URI TriG
+         */
+        function deleteIndividExecutorFromTrig(executorGroupUri, trigUri) {
+            const prefixedUri = getPrefixedName(executorGroupUri, currentPrefixes);
+            const prefixedTrigUri = getPrefixedName(trigUri, currentPrefixes);
+
+            const confirmMsg = `Удалить всех исполнителей из группы ${prefixedUri}?`;
+            if (confirm(confirmMsg)) {
+                performDeleteIndividExecutor(executorGroupUri, trigUri);
+            }
+        }
+
+        /**
+         * Выполняет фактическое удаление индивида процесса через SPARQL DELETE
+         * @param {string} processUri - URI процесса
+         * @param {string} trigUri - URI TriG
+         */
+        async function performDeleteIndividProcess(processUri, trigUri) {
+            const prefixedProcess = getPrefixedName(processUri, currentPrefixes);
+            const prefixedTrig = getPrefixedName(trigUri, currentPrefixes);
+
+            // Формируем SPARQL DELETE запрос для удаления всех триплетов процесса из TriG
+            const deleteQuery = `
+DELETE WHERE {
+    GRAPH <${trigUri}> {
+        <${processUri}> ?p ?o .
+    }
+}`;
+
+            try {
+                // Применяем запрос через существующую функцию
+                if (typeof applyTripleToRdfInput === 'function') {
+                    await applyTripleToRdfInput(deleteQuery, 'delete');
+                    console.log(`Deleted individ process ${prefixedProcess} from ${prefixedTrig}`);
+
+                    // issue #338: Восстанавливаем selectedTrigUri после applyTripleToRdfInput,
+                    // так как она сбрасывает selectedTrigUri в null (issue #274).
+                    // Это позволяет refreshVisualization корректно отобразить текущую схему.
+                    selectedTrigUri = trigUri;
+
+                    // Обновляем визуализацию
+                    if (typeof refreshVisualization === 'function') {
+                        refreshVisualization();
+                    }
+                } else {
+                    alert('Функция удаления недоступна');
+                }
+            } catch (error) {
+                console.error('Error deleting individ process:', error);
+                alert('Ошибка при удалении индивида процесса: ' + error.message);
+            }
+        }
+
+        /**
+         * Выполняет фактическое удаление предикатов vad:includes для ExecutorGroup
+         * @param {string} executorGroupUri - URI ExecutorGroup
+         * @param {string} trigUri - URI TriG
+         */
+        async function performDeleteIndividExecutor(executorGroupUri, trigUri) {
+            const prefixedGroup = getPrefixedName(executorGroupUri, currentPrefixes);
+            const prefixedTrig = getPrefixedName(trigUri, currentPrefixes);
+
+            // Формируем SPARQL DELETE запрос для удаления всех vad:includes
+            const deleteQuery = `
+DELETE WHERE {
+    GRAPH <${trigUri}> {
+        <${executorGroupUri}> <http://example.org/vad#includes> ?executor .
+    }
+}`;
+
+            try {
+                // Применяем запрос через существующую функцию
+                if (typeof applyTripleToRdfInput === 'function') {
+                    await applyTripleToRdfInput(deleteQuery, 'delete');
+                    console.log(`Deleted all executors from ${prefixedGroup} in ${prefixedTrig}`);
+
+                    // issue #338: Восстанавливаем selectedTrigUri после applyTripleToRdfInput,
+                    // так как она сбрасывает selectedTrigUri в null (issue #274).
+                    // Это позволяет refreshVisualization корректно отобразить текущую схему.
+                    selectedTrigUri = trigUri;
+
+                    // Обновляем визуализацию
+                    if (typeof refreshVisualization === 'function') {
+                        refreshVisualization();
+                    }
+                } else {
+                    alert('Функция удаления недоступна');
+                }
+            } catch (error) {
+                console.error('Error deleting executors:', error);
+                alert('Ошибка при удалении исполнителей: ' + error.message);
+            }
+        }
+
+        // ==============================================================================
+        // Конец функций для кнопки Методы
+        // ==============================================================================
+
+        /**
+         * Получает метаданные процесса из vad:ptree (rdfs:label, dcterms:description, vad:hasTrig)
+         * @param {string} processUri - URI процесса
+         * @param {Object} prefixes - Словарь префиксов
+         * @returns {Object} - { label: string|null, description: string|null, hasTrig: string|null }
+         */
+        function getProcessMetadataFromPtree(processUri, prefixes) {
+            const result = { label: null, description: null, hasTrig: null };
+
+            // Если нет trigHierarchy или нет vad:ptree, возвращаем пустой результат
+            if (!trigHierarchy || !trigHierarchy[PTREE_GRAPH_URI]) {
+                return result;
+            }
+
+            const ptreeQuads = trigHierarchy[PTREE_GRAPH_URI].quads;
+
+            ptreeQuads.forEach(quad => {
+                if (quad.subject.value !== processUri) return;
+
+                const predicateUri = quad.predicate.value;
+                const predicateLabel = getPrefixedName(predicateUri, prefixes);
+
+                if (predicateLabel === 'rdfs:label' || predicateUri === 'http://www.w3.org/2000/01/rdf-schema#label') {
+                    result.label = quad.object.value;
+                }
+                if (predicateLabel === 'dcterms:description' || predicateUri === 'http://purl.org/dc/terms/description') {
+                    result.description = quad.object.value;
+                }
+                if (predicateLabel === 'vad:hasTrig' || predicateUri === 'http://example.org/vad#hasTrig') {
+                    result.hasTrig = quad.object.value;
+                }
+            });
+
+            return result;
+        }
+
+        /**
+         * Получает имя исполнителя (rdfs:label) из vad:rtree
+         * @param {string} executorUri - URI исполнителя
+         * @param {Object} prefixes - Словарь префиксов
+         * @returns {string|null} - rdfs:label исполнителя или null
+         */
+        function getExecutorNameFromRtree(executorUri, prefixes) {
+            // Если нет trigHierarchy или нет vad:rtree, возвращаем null
+            if (!trigHierarchy || !trigHierarchy[RTREE_GRAPH_URI]) {
+                return null;
+            }
+
+            const rtreeQuads = trigHierarchy[RTREE_GRAPH_URI].quads;
+
+            for (const quad of rtreeQuads) {
+                if (quad.subject.value !== executorUri) continue;
+
+                const predicateUri = quad.predicate.value;
+                const predicateLabel = getPrefixedName(predicateUri, prefixes);
+
+                if (predicateLabel === 'rdfs:label' || predicateUri === 'http://www.w3.org/2000/01/rdf-schema#label') {
+                    return quad.object.value;
+                }
+            }
+
+            return null;
+        }
+
+        /**
+         * Строит HTML дерево для отображения иерархии TriG графов
+         * @param {string} objUri - URI текущего объекта
+         * @param {Object} hierarchy - Иерархия объектов
+         * @param {Object} prefixes - Словарь префиксов
+         * @param {number} level - Уровень вложенности (для отступов)
+         * @returns {string} - HTML дерева
+         */
+        function buildTriGTreeHtml(objUri, hierarchy, prefixes, level = 0, parentIsPtree = false) {
+            const objInfo = hierarchy[objUri];
+            if (!objInfo) return '';
+
+            // issue #262: TechnoTree типы не отображаются в Publisher treeview
+            if (objInfo.isTechnoTree) {
+                return '';
+            }
+
+            const prefixedUri = getPrefixedName(objUri, prefixes);
+            const localName = getLocalName(objUri);
+            const displayLabel = objInfo.label || localName;
+            const isSelected = objUri === selectedTrigUri;
+            const hasChildren = objInfo.children && objInfo.children.length > 0;
+            const hasProcesses = objInfo.processes && objInfo.processes.length > 0;
+            const hasExpandableContent = hasChildren || hasProcesses;
+            const isTrig = objInfo.isTrig;  // Объект типа TriG отображается жирным
+
+            // Определяем, является ли текущий объект ptree (Дерево Процессов)
+            const isPtree = objUri === PTREE_GRAPH_URI || objUri.endsWith('#ptree');
+
+            // Определяем, должен ли узел быть раскрыт по умолчанию:
+            // - ptree раскрыт на один уровень (сам ptree раскрыт, но его дети - нет)
+            // - Остальные TriG деревья свернуты по умолчанию
+            const shouldBeExpanded = isPtree;  // Only ptree is expanded by default
+
+            // Генерируем уникальные ID для переключения свертывания/развертывания
+            const childrenId = `tree-children-${escapeHtml(objUri).replace(/[^a-zA-Z0-9]/g, '_')}`;
+            const toggleId = `tree-toggle-${escapeHtml(objUri).replace(/[^a-zA-Z0-9]/g, '_')}`;
+
+            let html = '';
+
+            // Элемент дерева
+            // Для объектов типа TriG (VADProcessDia, ObjectTree) - кликабельные, можно выбрать для отображения схемы
+            // Для других объектов (TypeProcess, TypeExecutor) - кликабельные для отображения свойств
+            const isTriGClickable = isTrig && objInfo.quads && objInfo.quads.length > 0;
+            let clickHandler;
+            if (isTriGClickable) {
+                // Клик по TriG - выбираем его для отображения схемы
+                clickHandler = `onclick="selectTriG('${escapeHtml(objUri)}')"`;
+            } else {
+                // Клик по не-TriG объекту - показываем свойства объекта
+                clickHandler = `onclick="selectTreeObject('${escapeHtml(objUri)}')"`;
+            }
+            const trigClass = isTrig ? 'trig-item-bold' : 'trig-item-normal';
+
+            html += `<div class="trig-tree-item ${isSelected ? 'selected active' : ''} ${trigClass}"
+                         data-trig-uri="${escapeHtml(objUri)}"
+                         ${clickHandler}>`;
+
+            // Значок раскрытия/закрытия (кликабельный для свертывания/развертывания)
+            // По умолчанию свернуто (>), кроме ptree (v)
+            if (hasExpandableContent) {
+                const toggleIcon = shouldBeExpanded ? '\u25BC' : '\u25B6';
+                html += `<span class="trig-tree-toggle" id="${toggleId}" onclick="event.stopPropagation(); toggleTreeNode('${childrenId}', '${toggleId}')">${toggleIcon}</span>`;
+            } else {
+                html += `<span class="trig-tree-toggle"></span>`;
+            }
+
+            // Метка с id (жирный текст для TriG объектов)
+            if (isTrig) {
+                html += `<span class="trig-tree-label" style="font-weight: bold;">${escapeHtml(displayLabel)}</span>`;
+            } else {
+                html += `<span class="trig-tree-label">${escapeHtml(displayLabel)}</span>`;
+            }
+            html += `<span class="trig-tree-id">(${escapeHtml(localName)})</span>`;
+            html += `</div>`;
+
+            // Содержимое дерева (дочерние объекты и состав объектов)
+            // По умолчанию скрыто (display: none), кроме ptree
+            if (hasExpandableContent) {
+                const displayStyle = shouldBeExpanded ? '' : 'style="display: none;"';
+                html += `<div class="trig-tree-children" id="${childrenId}" ${displayStyle}>`;
+
+                // Сначала показываем дочерние объекты
+                // Дети ptree передаются с флагом parentIsPtree=true, чтобы они были свернуты
+                if (hasChildren) {
+                    objInfo.children.forEach(childUri => {
+                        html += buildTriGTreeHtml(childUri, hierarchy, prefixes, level + 1, isPtree);
+                    });
+                }
+
+                // Для VADProcessDia показываем "Состав объектов" с процессами (индивиды)
+                if (hasProcesses && isTrig) {
+                    html += buildObjectCompositionHtml(objUri, objInfo.processes, prefixes);
+                }
+
+                html += `</div>`;
+            }
+
+            return html;
+        }
+
+        /**
+         * Переключает видимость дочерних элементов в дереве TriG
+         * @param {string} childrenId - ID контейнера с дочерними элементами
+         * @param {string} toggleId - ID значка переключения
+         */
+        function toggleTreeNode(childrenId, toggleId) {
+            const children = document.getElementById(childrenId);
+            const toggle = document.getElementById(toggleId);
+
+            if (children && toggle) {
+                if (children.style.display === 'none') {
+                    children.style.display = 'block';
+                    toggle.textContent = '\u25BC';
+                } else {
+                    children.style.display = 'none';
+                    toggle.textContent = '\u25B6';
+                }
+            }
+        }
+
+        /**
+         * Строит HTML для раздела "Состав объектов" с процессами
+         * @param {string} trigUri - URI TriG, которому принадлежат процессы
+         * @param {Array} processes - Массив URI процессов
+         * @param {Object} prefixes - Словарь префиксов
+         * @returns {string} - HTML раздела
+         */
+        function buildObjectCompositionHtml(trigUri, processes, prefixes) {
+            const objectCompositionId = `obj-comp-${escapeHtml(trigUri).replace(/[^a-zA-Z0-9]/g, '_')}`;
+
+            let html = '';
+
+            // Заголовок "Состав объектов"
+            html += `<div class="trig-tree-item object-composition-header"
+                         onclick="toggleObjectComposition('${objectCompositionId}')">`;
+            html += `<span class="trig-tree-toggle object-composition-toggle" id="${objectCompositionId}-toggle">\u25B6</span>`;
+            html += `<span class="trig-tree-label object-composition-label">Состав объектов</span>`;
+            html += `<span class="trig-tree-id">(${processes.length})</span>`;
+            html += `</div>`;
+
+            // Список процессов (скрыт по умолчанию)
+            html += `<div class="trig-tree-children object-composition-list" id="${objectCompositionId}" style="display: none;">`;
+
+            processes.forEach(processUri => {
+                const processLabel = getPrefixedName(processUri, prefixes);
+                const processLocalName = getLocalName(processUri);
+
+                // Ищем rdfs:label процесса - сначала в текущем TriG, затем в vad:ptree
+                let processDisplayName = processLocalName;
+                if (trigHierarchy && trigHierarchy[trigUri]) {
+                    const graphQuads = trigHierarchy[trigUri].quads;
+                    const labelQuad = graphQuads.find(q =>
+                        q.subject.value === processUri &&
+                        (q.predicate.value === 'http://www.w3.org/2000/01/rdf-schema#label' ||
+                         getPrefixedName(q.predicate.value, prefixes) === 'rdfs:label')
+                    );
+                    if (labelQuad) {
+                        processDisplayName = labelQuad.object.value;
+                    } else {
+                        // Fallback: ищем в vad:ptree
+                        const ptreeMetadata = getProcessMetadataFromPtree(processUri, prefixes);
+                        if (ptreeMetadata.label) {
+                            processDisplayName = ptreeMetadata.label;
+                        }
+                    }
+                }
+
+                html += `<div class="trig-tree-item process-item"
+                             data-process-uri="${escapeHtml(processUri)}"
+                             data-trig-uri="${escapeHtml(trigUri)}"
+                             onclick="event.stopPropagation(); selectProcess('${escapeHtml(processUri)}', '${escapeHtml(trigUri)}')">`;
+                html += `<span class="trig-tree-toggle"></span>`;
+                html += `<span class="process-icon">\u2699</span>`;
+                html += `<span class="trig-tree-label">${escapeHtml(processDisplayName)}</span>`;
+                html += `</div>`;
+            });
+
+            html += `</div>`;
+
+            return html;
+        }
+
+        /**
+         * Переключает видимость списка объектов (Состав объектов)
+         * @param {string} listId - ID списка для переключения
+         */
+        function toggleObjectComposition(listId) {
+            const list = document.getElementById(listId);
+            const toggle = document.getElementById(listId + '-toggle');
+
+            if (list && toggle) {
+                if (list.style.display === 'none') {
+                    list.style.display = 'block';
+                    toggle.textContent = '\u25BC';
+                } else {
+                    list.style.display = 'none';
+                    toggle.textContent = '\u25B6';
+                }
+            }
+        }
+
+        /**
+         * Обработчик выбора процесса в дереве
+         * @param {string} processUri - URI выбранного процесса
+         * @param {string} trigUri - URI TriG, содержащего процесс
+         */
+        function selectProcess(processUri, trigUri) {
+            // Если выбранный процесс из другого TriG, сначала переключаемся на этот TriG
+            if (selectedTrigUri !== trigUri) {
+                selectTriG(trigUri);
+            }
+
+            // Подсвечиваем процесс на диаграмме
+            highlightProcessOnDiagram(processUri);
+
+            // Отображаем свойства выбранного объекта
+            displayObjectProperties(processUri, trigUri, currentPrefixes);
+        }
+
+        /**
+         * Отображает свойства любого объекта (не только TriG) в панели свойств
+         * Разделяет свойства на три блока:
+         * 1. Свойства индивида из текущего TriG (IndividProcessPredicate)
+         * 2. VirtualTriG - вычисляемые свойства (отделённые горизонтальной линией)
+         * 3. Свойства концепта из ptree (ConceptProcessPredicate)
+         *
+         * @param {string} objectUri - URI объекта
+         * @param {string} contextTrigUri - URI TriG контекста (может быть null)
+         * @param {Object} prefixes - Словарь префиксов
+         */
+        function displayObjectProperties(objectUri, contextTrigUri, prefixes) {
+            const propertiesContent = document.getElementById('trig-properties-content');
+            if (!propertiesContent) return;
+
+            const prefixedUri = getPrefixedName(objectUri, prefixes);
+
+            // Предикаты для концепта процесса (из vad:ConceptProcessPredicate)
+            // Эти свойства хранятся в ptree
+            const conceptPredicates = [
+                'http://www.w3.org/1999/02/22-rdf-syntax-ns#type',
+                'http://www.w3.org/2000/01/rdf-schema#label',
+                'http://purl.org/dc/terms/description',
+                'http://example.org/vad#hasTrig',
+                'http://example.org/vad#hasParentObj'
+            ];
+
+            // Собираем свойства из текущего TriG контекста (индивидуальные свойства)
+            const trigProperties = [];
+            // Собираем свойства из ptree (свойства концепта)
+            const conceptProperties = [];
+            // Наборы для дедупликации свойств
+            const seenTrigProps = new Set();
+            const seenConceptProps = new Set();
+            let objectLabel = null;
+
+            // issue #336: Определяем тип объекта для кнопки Методы
+            let objectMethodType = null;  // 'isSubprocessTrig' или 'ExecutorGroup'
+
+            // issue #324: Используем currentStore вместо currentQuads
+            const allQuads = currentStore ? currentStore.getQuads(null, null, null, null) : [];
+            allQuads.forEach(quad => {
+                if (quad.subject.value === objectUri) {
+                    const predicateUri = quad.predicate.value;
+                    const predicateLabel = getPrefixedName(predicateUri, prefixes);
+                    const objectValue = quad.object.termType === 'Literal'
+                        ? `"${quad.object.value}"`
+                        : getPrefixedName(quad.object.value, prefixes);
+                    const isLiteral = quad.object.termType === 'Literal';
+                    const graphUri = quad.graph ? quad.graph.value : null;
+
+                    // Запоминаем rdfs:label для отображения в заголовке
+                    if (predicateLabel === 'rdfs:label' || predicateUri === 'http://www.w3.org/2000/01/rdf-schema#label') {
+                        objectLabel = quad.object.value;
+                    }
+
+                    // issue #336: Определяем тип объекта по предикатам
+                    if (predicateUri === 'http://example.org/vad#isSubprocessTrig' || predicateLabel === 'vad:isSubprocessTrig') {
+                        objectMethodType = 'isSubprocessTrig';
+                    }
+                    if (predicateUri === 'http://www.w3.org/1999/02/22-rdf-syntax-ns#type') {
+                        if (quad.object.value === 'http://example.org/vad#ExecutorGroup' ||
+                            objectValue === 'vad:ExecutorGroup') {
+                            objectMethodType = 'ExecutorGroup';
+                        }
+                    }
+
+                    const propInfo = {
+                        predicate: predicateLabel,
+                        predicateUri: predicateUri,
+                        value: objectValue,
+                        valueUri: quad.object.termType === 'Literal' ? null : quad.object.value,
+                        isLiteral: isLiteral,
+                        graphUri: graphUri
+                    };
+
+                    // Создаём уникальный ключ для дедупликации
+                    const propKey = `${predicateLabel}|${objectValue}`;
+
+                    // Разделяем свойства по источнику с дедупликацией
+                    if (graphUri === PTREE_GRAPH_URI) {
+                        // Свойства из ptree (концепт)
+                        if (!seenConceptProps.has(propKey)) {
+                            seenConceptProps.add(propKey);
+                            conceptProperties.push(propInfo);
+                        }
+                    } else if (contextTrigUri && graphUri === contextTrigUri) {
+                        // Свойства из текущего TriG (индивид)
+                        if (!seenTrigProps.has(propKey)) {
+                            seenTrigProps.add(propKey);
+                            trigProperties.push(propInfo);
+                        }
+                    }
+                }
+            });
+
+            let html = '';
+
+            // ============================================================================
+            // БЛОК 1: Свойства индивида из текущего TriG
+            // ============================================================================
+            html += `<div class="trig-property-section">`;
+
+            // Заголовок - URI объекта с кнопкой копирования и Методы
+            html += `<div class="trig-property-item">`;
+            html += `<div class="trig-property-predicate">URI</div>`;
+            html += `<div class="trig-property-value-container">`;
+            html += `<div class="trig-property-value uri">${escapeHtml(prefixedUri)}</div>`;
+            html += `<div class="trig-property-buttons">`;
+            html += `<button class="copy-id-btn" onclick="copyObjectId('${escapeHtml(objectUri)}', this)">Копировать</button>`;
+            // issue #336: Кнопка Методы (только если объект имеет тип с методами)
+            if (objectMethodType && contextTrigUri) {
+                const escapedObjectUri = escapeHtml(objectUri).replace(/'/g, "\\'");
+                const escapedTrigUri = escapeHtml(contextTrigUri).replace(/'/g, "\\'");
+                html += `<button class="methods-btn" onclick="toggleMethodsDropdown(event, '${escapedObjectUri}', '${escapedTrigUri}', '${objectMethodType}')">Методы</button>`;
+            }
+            html += `</div>`;
+            html += `</div>`;
+            html += `</div>`;
+
+            // Свойства из текущего TriG
+            trigProperties.forEach(prop => {
+                html += `<div class="trig-property-item">`;
+                html += `<div class="trig-property-predicate">${escapeHtml(prop.predicate)}</div>`;
+                if (prop.isLiteral) {
+                    html += `<div class="trig-property-value literal">${escapeHtml(prop.value)}</div>`;
+                } else {
+                    html += `<div class="trig-property-value uri">${escapeHtml(prop.value)}</div>`;
+                }
+                html += `</div>`;
+            });
+
+            html += `</div>`; // end section 1
+
+            // ============================================================================
+            // issue #324: БЛОК 2: VirtualTriG - вычисляемые свойства (отделённые линией)
+            // ============================================================================
+            let processSubtype = null;
+            if (contextTrigUri && currentStore) {
+                // Формируем URI виртуального TriG
+                const virtualTrigUri = contextTrigUri.replace('#t_', '#vt_');
+                const PROCESS_SUBTYPE_URI = 'http://example.org/vad#processSubtype';
+
+                // Получаем processSubtype для данного объекта из Virtual TriG
+                const subtypeQuads = currentStore.getQuads(objectUri, PROCESS_SUBTYPE_URI, null, virtualTrigUri);
+                if (subtypeQuads.length > 0) {
+                    const subtypeUri = subtypeQuads[0].object.value;
+                    processSubtype = subtypeUri.split('#').pop();
+                }
+            }
+
+            if (processSubtype) {
+                // Добавляем разделитель
+                html += `<div class="trig-property-separator">`;
+                html += `<div class="separator-line"></div>`;
+                html += `<div class="separator-text">VirtualTriG</div>`;
+                html += `<div class="separator-line"></div>`;
+                html += `</div>`;
+
+                html += `<div class="trig-property-section">`;
+                html += `<div class="trig-property-item virtual-property">`;
+                html += `<div class="trig-property-predicate">vad:processSubtype</div>`;
+                html += `<div class="trig-property-value uri virtual">vad:${escapeHtml(processSubtype)}</div>`;
+                html += `</div>`;
+                html += `</div>`; // end section 2
+            }
+
+            // ============================================================================
+            // БЛОК 3: Свойства концепта из ptree (отделённые линией)
+            // ============================================================================
+            if (conceptProperties.length > 0) {
+                // Добавляем разделитель
+                html += `<div class="trig-property-separator">`;
+                html += `<div class="separator-line"></div>`;
+                html += `<div class="separator-text">Свойства концепта (ptree)</div>`;
+                html += `<div class="separator-line"></div>`;
+                html += `</div>`;
+
+                html += `<div class="trig-property-section concept-section">`;
+
+                conceptProperties.forEach(prop => {
+                    html += `<div class="trig-property-item concept-property">`;
+                    html += `<div class="trig-property-predicate">${escapeHtml(prop.predicate)}</div>`;
+                    if (prop.isLiteral) {
+                        html += `<div class="trig-property-value literal">${escapeHtml(prop.value)}</div>`;
+                    } else {
+                        html += `<div class="trig-property-value uri">${escapeHtml(prop.value)}</div>`;
+                    }
+                    html += `</div>`;
+                });
+
+                html += `</div>`; // end section 3
+            }
+
+            // Если нет свойств вообще
+            if (trigProperties.length === 0 && conceptProperties.length === 0 && !virtualData) {
+                html = `<div class="trig-properties-empty">Нет свойств для объекта ${escapeHtml(prefixedUri)}</div>`;
+            }
+
+            propertiesContent.innerHTML = html;
+        }
+
+        /**
+         * Обработчик выбора объекта в дереве (для не-TriG объектов)
+         * Отображает свойства объекта без изменения выбранного TriG
+         * @param {string} objectUri - URI выбранного объекта
+         */
+        function selectTreeObject(objectUri) {
+            // Выделяем элемент в дереве
+            const treeItems = document.querySelectorAll('.trig-tree-item');
+            treeItems.forEach(item => {
+                if (item.getAttribute('data-trig-uri') === objectUri) {
+                    item.classList.add('selected');
+                } else {
+                    // Не снимаем выделение с активного TriG, только с других не-TriG элементов
+                    if (!item.classList.contains('active')) {
+                        item.classList.remove('selected');
+                    }
+                }
+            });
+
+            // Отображаем свойства объекта
+            displayObjectProperties(objectUri, selectedTrigUri, currentPrefixes);
+        }
+
+        /**
+         * Подсвечивает процесс на диаграмме
+         * @param {string} processUri - URI процесса для подсветки
+         */
+        function highlightProcessOnDiagram(processUri) {
+            // Снимаем предыдущее выделение
+            const previouslySelected = document.querySelectorAll('#vad-trig-output .node.process-highlighted');
+            previouslySelected.forEach(node => {
+                node.classList.remove('process-highlighted');
+            });
+
+            // Находим узел процесса по его ID (используем nodeLabelToUri для поиска)
+            const prefixedUri = getPrefixedName(processUri, currentPrefixes);
+            const nodeId = generateVadNodeId(processUri, currentPrefixes);
+
+            // Ищем узел SVG по ID или по тексту
+            const output = document.getElementById('vad-trig-output');
+            if (!output) return;
+
+            const nodes = output.querySelectorAll('.node');
+            nodes.forEach(node => {
+                const titleElement = node.querySelector('title');
+                if (titleElement) {
+                    const nodeTitle = titleElement.textContent.trim();
+                    // Проверяем, совпадает ли ID узла или его метка с URI процесса
+                    if (nodeTitle === nodeId || nodeLabelToUri[nodeTitle] === processUri) {
+                        node.classList.add('process-highlighted');
+                        // Прокручиваем к выбранному элементу
+                        node.scrollIntoView({ behavior: 'smooth', block: 'center' });
+                    }
+                }
+            });
+
+            // Также выделяем элемент в дереве
+            const processItems = document.querySelectorAll('.process-item');
+            processItems.forEach(item => {
+                if (item.getAttribute('data-process-uri') === processUri) {
+                    item.classList.add('process-selected');
+                } else {
+                    item.classList.remove('process-selected');
+                }
+            });
+        }
+
+        /**
+         * Отображает дерево TriG
+         * @param {Object} hierarchy - Иерархия TriG
+         * @param {string} rootUri - URI корневого TriG
+         * @param {Object} prefixes - Словарь префиксов
+         */
+        function displayTriGTree(hierarchy, rootUris, prefixes) {
+            const treeContent = document.getElementById('trig-tree-content');
+            if (!treeContent) return;
+
+            if (!rootUris || rootUris.length === 0) {
+                treeContent.innerHTML = '<div class="trig-properties-empty">Нет доступных TriG графов</div>';
+                return;
+            }
+
+            // issue #262: фильтруем TechnoTree типы из корневых элементов
+            const filteredRootUris = rootUris.filter(rootUri => {
+                const objInfo = hierarchy[rootUri];
+                return objInfo && !objInfo.isTechnoTree;
+            });
+
+            if (filteredRootUris.length === 0) {
+                treeContent.innerHTML = '<div class="trig-properties-empty">Нет доступных TriG графов</div>';
+                return;
+            }
+
+            let html = '';
+            filteredRootUris.forEach(rootUri => {
+                if (hierarchy[rootUri]) {
+                    html += buildTriGTreeHtml(rootUri, hierarchy, prefixes, 0);
+                }
+            });
+            treeContent.innerHTML = html;
+        }
+
+        /**
+         * Отображает свойства выбранного TriG
+         * @param {string} trigUri - URI TriG
+         * @param {Object} hierarchy - Иерархия TriG
+         * @param {Object} prefixes - Словарь префиксов
+         */
+        function displayTriGProperties(trigUri, hierarchy, prefixes) {
+            const propertiesContent = document.getElementById('trig-properties-content');
+            if (!propertiesContent) return;
+
+            const graphInfo = hierarchy[trigUri];
+            if (!graphInfo) {
+                propertiesContent.innerHTML = '<div class="trig-properties-empty">Выберите TriG в дереве</div>';
+                return;
+            }
+
+            let html = '';
+
+            // Основные свойства TriG
+            const prefixedUri = getPrefixedName(trigUri, prefixes);
+
+            // URI with copy button
+            html += `<div class="trig-property-item">`;
+            html += `<div class="trig-property-predicate">URI</div>`;
+            html += `<div class="trig-property-value-container">`;
+            html += `<div class="trig-property-value uri">${escapeHtml(prefixedUri)}</div>`;
+            html += `<button class="copy-id-btn" onclick="copyObjectId('${escapeHtml(trigUri)}', this)">Копировать</button>`;
+            html += `</div>`;
+            html += `</div>`;
+
+            // Label
+            if (graphInfo.label) {
+                html += `<div class="trig-property-item">`;
+                html += `<div class="trig-property-predicate">rdfs:label</div>`;
+                html += `<div class="trig-property-value literal">"${escapeHtml(graphInfo.label)}"</div>`;
+                html += `</div>`;
+            }
+
+            // hasParent
+            if (graphInfo.hasParent) {
+                const parentLabel = getPrefixedName(graphInfo.hasParent, prefixes);
+                html += `<div class="trig-property-item">`;
+                html += `<div class="trig-property-predicate">vad:hasParentObj</div>`;
+                html += `<div class="trig-property-value uri">${escapeHtml(parentLabel)}</div>`;
+                html += `</div>`;
+            }
+
+            // Количество процессов
+            html += `<div class="trig-property-item">`;
+            html += `<div class="trig-property-predicate">Процессы (vad:TypeProcess)</div>`;
+            html += `<div class="trig-property-value">${graphInfo.processes.length} шт.</div>`;
+            html += `</div>`;
+
+            // Количество дочерних TriG
+            if (graphInfo.children.length > 0) {
+                html += `<div class="trig-property-item">`;
+                html += `<div class="trig-property-predicate">Дочерние TriG</div>`;
+                html += `<div class="trig-property-value">${graphInfo.children.length} шт.</div>`;
+                html += `</div>`;
+            }
+
+            // Количество триплетов
+            // issue #270: Проверка наличия quads перед обращением к length
+            html += `<div class="trig-property-item">`;
+            html += `<div class="trig-property-predicate">Триплеты</div>`;
+            html += `<div class="trig-property-value">${graphInfo.quads?.length || 0} шт.</div>`;
+            html += `</div>`;
+
+            propertiesContent.innerHTML = html;
+        }
+
+        /**
+         * Обработчик выбора TriG в дереве
+         * issue #301: Добавлена поддержка навигационной истории и синхронизации TreeView
+         * @param {string} trigUri - URI выбранного TriG
+         * @param {boolean} skipHistoryUpdate - Пропустить обновление истории (используется при навигации назад/вперёд)
+         */
+        function selectTriG(trigUri, skipHistoryUpdate = false) {
+            selectedTrigUri = trigUri;
+
+            // issue #301: Обновляем историю навигации (если это не навигация по истории)
+            if (!skipHistoryUpdate && trigUri) {
+                addToNavigationHistory(trigUri);
+            }
+
+            // issue #301: Обновляем выделение в дереве и раскрываем путь к элементу
+            highlightAndExpandTreePath(trigUri);
+
+            // Отображаем свойства выбранного TriG
+            displayTriGProperties(trigUri, trigHierarchy, currentPrefixes);
+
+            // Перевизуализируем граф для выбранного TriG
+            revisualizeTrigVAD(trigUri);
+
+            // Обновляем SPARQL запрос для выбранного TriG
+            updateSparqlQueryForTriG();
+        }
+
+        /**
+         * issue #301: Добавляет TriG в историю навигации
+         * @param {string} trigUri - URI TriG для добавления в историю
+         */
+        function addToNavigationHistory(trigUri) {
+            // Если мы в середине истории, удаляем всё после текущей позиции
+            if (diagramNavigationIndex < diagramNavigationHistory.length - 1) {
+                diagramNavigationHistory = diagramNavigationHistory.slice(0, diagramNavigationIndex + 1);
+            }
+
+            // Добавляем только если это не дубликат последнего элемента
+            if (diagramNavigationHistory.length === 0 ||
+                diagramNavigationHistory[diagramNavigationHistory.length - 1] !== trigUri) {
+                diagramNavigationHistory.push(trigUri);
+                diagramNavigationIndex = diagramNavigationHistory.length - 1;
+            }
+
+            // Обновляем состояние кнопок навигации
+            updateNavigationButtons();
+        }
+
+        /**
+         * issue #301: Обновляет состояние кнопок навигации (активность/неактивность)
+         */
+        function updateNavigationButtons() {
+            const backBtn = document.getElementById('diagram-nav-back');
+            const forwardBtn = document.getElementById('diagram-nav-forward');
+
+            if (backBtn) {
+                backBtn.disabled = diagramNavigationIndex <= 0;
+            }
+            if (forwardBtn) {
+                forwardBtn.disabled = diagramNavigationIndex >= diagramNavigationHistory.length - 1;
+            }
+        }
+
+        /**
+         * issue #301: Навигация назад по истории диаграмм
+         */
+        function navigateDiagramBack() {
+            if (diagramNavigationIndex > 0) {
+                diagramNavigationIndex--;
+                const trigUri = diagramNavigationHistory[diagramNavigationIndex];
+                selectTriG(trigUri, true);  // skipHistoryUpdate = true
+                updateNavigationButtons();
+            }
+        }
+
+        /**
+         * issue #301: Навигация вперёд по истории диаграмм
+         */
+        function navigateDiagramForward() {
+            if (diagramNavigationIndex < diagramNavigationHistory.length - 1) {
+                diagramNavigationIndex++;
+                const trigUri = diagramNavigationHistory[diagramNavigationIndex];
+                selectTriG(trigUri, true);  // skipHistoryUpdate = true
+                updateNavigationButtons();
+            }
+        }
+
+        /**
+         * issue #301: Сбрасывает историю навигации (вызывается при загрузке новых данных)
+         */
+        function resetNavigationHistory() {
+            diagramNavigationHistory = [];
+            diagramNavigationIndex = -1;
+            updateNavigationButtons();
+        }
+
+        /**
+         * issue #301: Подсвечивает элемент в TreeView и раскрывает путь к нему
+         * @param {string} trigUri - URI TriG для подсветки
+         */
+        function highlightAndExpandTreePath(trigUri) {
+            // Обновляем выделение в дереве
+            const treeItems = document.querySelectorAll('.trig-tree-item');
+            treeItems.forEach(item => {
+                if (item.getAttribute('data-trig-uri') === trigUri) {
+                    item.classList.add('selected', 'active');
+
+                    // Раскрываем все родительские узлы до этого элемента
+                    expandParentNodes(item);
+
+                    // Прокручиваем к выбранному элементу
+                    item.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+                } else {
+                    item.classList.remove('selected', 'active');
+                }
+            });
+        }
+
+        /**
+         * issue #301: Раскрывает все родительские узлы до указанного элемента
+         * issue #305: Исключаем object-composition-list из автоматического раскрытия
+         * @param {HTMLElement} element - Элемент дерева
+         */
+        function expandParentNodes(element) {
+            let parent = element.parentElement;
+
+            while (parent) {
+                // Если родитель - это контейнер дочерних элементов (.trig-tree-children), раскрываем его
+                // issue #305: Исключаем object-composition-list - "Состав объектов" не должен раскрываться автоматически
+                if (parent.classList && parent.classList.contains('trig-tree-children') &&
+                    !parent.classList.contains('object-composition-list')) {
+                    parent.style.display = 'block';
+
+                    // Также обновляем иконку переключателя (toggle)
+                    const toggleId = parent.id.replace('tree-children-', 'tree-toggle-');
+                    const toggle = document.getElementById(toggleId);
+                    if (toggle) {
+                        toggle.textContent = '\u25BC';  // ▼ (развёрнуто)
+                    }
+                }
+                parent = parent.parentElement;
+            }
+        }
