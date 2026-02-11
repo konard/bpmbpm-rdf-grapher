@@ -248,7 +248,17 @@ async function applyTripleToRdfInput(sparqlQuery, mode) {
         const storeSize = currentStore ? currentStore.size : 0;
         console.log(`issue #254: SPARQL UPDATE выполнен через Comunica, ${storeSize} триплетов в store`);
         console.log('issue #274: trigHierarchy инвалидирован для обновления диаграммы');
-        showResultSparqlMessage(message + '. Нажмите "Обновить" для отображения в treeview.', 'success');
+
+        // issue #378: Автоматически обновляем визуализацию после SPARQL UPDATE
+        // Это гарантирует, что схема обновится без потери фокуса на treeview
+        // (если удалённый элемент не был в фокусе)
+        if (typeof refreshVisualization === 'function') {
+            console.log('issue #378: Автоматическое обновление визуализации после SPARQL UPDATE');
+            await refreshVisualization();
+            showResultSparqlMessage(message, 'success');
+        } else {
+            showResultSparqlMessage(message + '. Нажмите "Обновить" для отображения в treeview.', 'success');
+        }
 
     } catch (error) {
         console.error('issue #254: Ошибка выполнения SPARQL UPDATE:', error);
