@@ -4,7 +4,7 @@
 Комментарии в коде и файлы md создавай на русском языке.  
 
 #### js
-- браузерный js (node.js не используем)
+- только браузерный js (node.js не используем)
 #### programming concept
 - Максимальное использование в коде SPARQL-запросов, см. [SPARQL-driven Programming Guide](https://github.com/bpmbpm/rdf-grapher/blob/main/ver9c/requirements/sparql-driven-programming_min1.md)
 - Формирование наборов SPARQL-запросов в отдельных файлах *sparql.js
