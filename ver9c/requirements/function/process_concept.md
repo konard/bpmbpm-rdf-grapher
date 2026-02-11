@@ -13,18 +13,22 @@
 #### N1.1
 
 При создании Индивида процесса:
+```
 vad:t_p1 {
 vad:t_p1 a vad:VADProcessDia;
     rdfs:label "Схема t_p1 процесса p1";
     vad:hasParentObj vad:p1.
+```
 Добавляется:
+```
 vad:p1_1_1 vad:isSubprocessTrig vad:t_p1;
     vad:hasExecutor vad:ExecutorGroup_p1_1_1;
-
+```
 и в конец:
+```
 vad:ExecutorGroup_p1_1_1 a vad:ExecutorGroup;
     dcterms:description "Группа исполнителей процесса p1_1_1"
-
+```
 
 #### requirements arc
 - https://github.com/bpmbpm/rdf-grapher/blob/main/ver8tree/requirements/business-requirements.md
