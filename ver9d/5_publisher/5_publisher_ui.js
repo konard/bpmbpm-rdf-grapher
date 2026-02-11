@@ -539,7 +539,7 @@ function showNodeProperties(nodeUri, nodeLabel) {
         <div class="properties-panel visible" id="${panelId}" style="right: ${rightOffset}px; top: ${topOffset}px;">
             <div class="properties-header" onmousedown="startDragPanel(event, '${panelId}')">
                 <div class="properties-header-content">
-                    <div class="properties-header-title">Свойства объекта</div>
+                    <div class="properties-header-title">Свойство объекта диаграммы</div>
                     <div class="properties-header-row">
                         <h3>${nodeLabel}</h3>
                         <button class="properties-copy-btn" onclick="event.stopPropagation(); copyObjectId('${escapedNodeLabel}', this)">Копировать</button>

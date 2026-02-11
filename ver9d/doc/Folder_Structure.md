@@ -1,6 +1,7 @@
 <!-- Ссылка на issue: https://github.com/bpmbpm/rdf-grapher/issues/252 -->
 <!-- Обновлено: PR #273 по issue #272, дата 2026-02-04 -->
 <!-- Обновлено: issue #317 - добавлены модули 10_virtualTriG и 11_reasoning, дата 2026-02-08 -->
+<!-- Обновлено: issue #368 - реструктуризация: 5_publisher_treeview, 5_publisher_exportview, 12_method, vadlib_logic/vadlib_ui, дата 2026-02-11 -->
 
 # Структура папок проекта RDF Grapher ver9d
 
@@ -54,8 +55,12 @@ ver9d/
 │   ├── 5_publisher_ui.js         (799 строк)  - UI функции визуализации
 │   ├── 5_publisher_logic.js      (1460 строк) - Логика генерации графов
 │   ├── 5_publisher_sparql.js     (39 строк)   - SPARQL запросы Publisher
-│   ├── 5_publisher_trig.js       (638 строк)  - Работа с деревом TriG
-│   └── 5_publisher.css           (5 строк)    - Стили модуля
+│   ├── 5_publisher.css           (5 строк)    - Стили модуля
+│   ├── 5_publisher_treeview/     - Подмодуль TreeView (issue #368)
+│   │   └── 5_publisher_treeview_ui.js - Дерево TriG и Карточка объекта treeview
+│   └── 5_publisher_exportview/   - Подмодуль ExportView (issue #368)
+│       ├── 5_publisher_exportview_logic.js - Экспорт SVG, PNG, открытие во внешних сервисах
+│       └── 5_publisher_exportview.css - Стили подмодуля
 ├── 6_legend/                     - Модуль легенды стилей
 │   ├── 6_legend_ui.js            (337 строк)  - UI генерации легенды
 │   └── 6_legend.css              (5 строк)    - Стили модуля
@@ -67,7 +72,8 @@ ver9d/
 │   ├── 8_infoSPARQL_sparql.js    (4 строки)   - Предустановленные запросы
 │   └── 8_infoSPARQL.css          (5 строк)    - Стили модуля
 ├── 9_vadlib/                     - Общая библиотека
-│   ├── vadlib.js                 (619 строк)  - Основные утилиты и конфигурация
+│   ├── vadlib_logic.js           - Бизнес-логика: конфигурация, утилиты, алгоритмы (issue #368)
+│   ├── vadlib_ui.js              - UI функции: диалоги, уведомления (issue #368)
 │   └── vadlib_sparql.js          (274 строки)  - SPARQL движок (funSPARQLvalues)
 ├── 10_virtualTriG/               - Модуль Virtual TriG (issue #317)
 │   ├── 10_virtualTriG_logic.js   - Логика вычисления и управления Virtual TriG
@@ -78,6 +84,11 @@ ver9d/
 │   ├── 11_reasoning_logic.js     - Логика reasoning и inference
 │   ├── 11_reasoning_sparql.js    - SPARQL запросы для reasoning
 │   └── 11_reasoning.css          - Стили (резерв)
+├── 12_method/                    - Модуль Методы (issue #368)
+│   ├── 12_method_ui.js           - UI: кнопка Методы, выпадающий список
+│   ├── 12_method_logic.js        - Логика выполнения методов объектов
+│   ├── 12_method_sparql.js       - SPARQL запросы для получения методов
+│   └── 12_method.css             - Стили модуля
 ├── doc/                          - Документация
 ├── ontology/                     - Файлы онтологии
 ├── requirements/                 - Требования к проекту
@@ -162,10 +173,11 @@ ver9d/
 
 ### 9_vadlib/ -- Общая библиотека утилит
 
-Общая библиотека, используемая всеми модулями. Содержит конфигурацию (фильтры, режимы, типы VAD), глобальные переменные, вспомогательные функции и SPARQL движок.
+Общая библиотека, используемая всеми модулями. Содержит конфигурацию (фильтры, режимы, типы VAD), глобальные переменные, вспомогательные функции и SPARQL движок. issue #368: Разделена на vadlib_logic.js (логика) и vadlib_ui.js (UI) согласно File naming conventions.
 
 **Файлы:**
-- `vadlib.js` (619 строк) -- Конфигурация: `Mode`, `Filter`, `VAD_ALLOWED_TYPES`, `PROCESS_SUBTYPES`; вспомогательные функции: `getPrefixedName()`, `getLocalName()`, `escapeDotString()`, `generateNodeId()` и другие
+- `vadlib_logic.js` -- Конфигурация: `Mode`, `Filter`, `VAD_ALLOWED_TYPES`, `PROCESS_SUBTYPES`; вспомогательные функции: `getPrefixedName()`, `getLocalName()`, `escapeDotString()`, `generateNodeId()`, загрузка технологического приложения и базовой онтологии
+- `vadlib_ui.js` -- UI функции: `showFileNotFoundDialog()`, `showSuccessNotification()`, `showErrorNotification()`, `copyObjectId()` -- диалоги, уведомления, взаимодействие с DOM
 - `vadlib_sparql.js` -- SPARQL движок: `funSPARQLvalues()`, `funSPARQLvaluesComunica()`, `parseTriplePatterns()`, `executeSimpleSelect()`, `resolveValue()`, `matchQuadToPattern()`
 
 ### 10_virtualTriG/ -- Модуль Virtual TriG (issue #317)
@@ -190,6 +202,16 @@ ver9d/
 - `11_reasoning.css` -- Стили (резерв для будущих UI компонентов)
 
 **Документация:** [doc/11_reasoning.md](11_reasoning.md)
+
+### 12_method/ -- Модуль Методы (issue #368)
+
+Модуль обработки кнопки «Методы» в окне «Свойство объекта диаграммы». Позволяет выполнять действия над объектами диаграммы (удаление индивидов процессов и исполнителей).
+
+**Файлы:**
+- `12_method_ui.js` -- UI функции: `toggleMethodsDropdown()` -- отображение выпадающего списка методов
+- `12_method_logic.js` -- Логика выполнения методов: `executeObjectMethod()`, `deleteIndividProcessFromTrig()`, `deleteIndividExecutorFromTrig()`, `performDeleteIndividProcess()`, `performDeleteIndividExecutor()`
+- `12_method_sparql.js` -- SPARQL запросы: `getMethodsForType()` -- получение списка методов из vad:techtree
+- `12_method.css` -- Стили модуля (используются стили из styles.css)
 
 ## 3. Описание подпапок
 
@@ -227,4 +249,23 @@ ver9d/
 ### 3_sd_create_new_trig/ -- Подмодуль создания TriG
 
 Реализует функциональность кнопки "New TriG (VADProcessDia)". Создает новые TriG графы типа `vad:VADProcessDia` с привязкой к концепту процесса через `vad:hasTrig`.
+
+### 5_publisher_treeview/ -- Подмодуль TreeView (issue #368)
+
+Реализует функциональность дерева TriG графов и окна «Карточка объекта treeview». Отображает иерархию TriG, навигацию по дереву, свойства выбранных объектов.
+
+**Файлы:**
+- `5_publisher_treeview_ui.js` -- UI функции: `buildTriGTreeHtml()`, `displayTriGTree()`, `displayTriGProperties()`, `displayObjectProperties()`, `selectTriG()`, `selectProcess()`, `selectTreeObject()`, навигация по истории диаграмм
+
+**Связь с родительским модулем:** Использует глобальные переменные из `vadlib_logic.js` (`trigHierarchy`, `selectedTrigUri`, `currentPrefixes`), функции из `5_publisher_logic.js` (`revisualizeTrigVAD`).
+
+### 5_publisher_exportview/ -- Подмодуль ExportView (issue #368)
+
+Реализует функциональность кнопок экспорта: «Скачать SVG», «Скачать PNG», «Показать в окне github», «Показать в окне ldf.fi», «Показать в окне ldf.fi (TriG)», «Показать в окне GraphvizOnline».
+
+**Файлы:**
+- `5_publisher_exportview_logic.js` -- Логика экспорта: `svgToPng()`, `downloadSVG()`, `downloadPNG()`, `openInNewWindowLdfFi()`, `openInNewWindowLdfFiTrig()`, `openInNewWindowGitHub()`, `openInNewWindowGraphvizOnline()`
+- `5_publisher_exportview.css` -- Стили подмодуля (используются стили из styles.css)
+
+**Связь с родительским модулем:** Использует глобальные переменные `currentSvgElement`, `currentDotCode`, `formatMapping`.
 
