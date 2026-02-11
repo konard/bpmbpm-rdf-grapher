@@ -1,0 +1,170 @@
+@prefix rdf: <http://www.w3.org/1999/02/22-rdf-syntax-ns#>.
+@prefix rdfs: <http://www.w3.org/2000/01/rdf-schema#>.
+@prefix dcterms: <http://purl.org/dc/terms/>.
+@prefix vad: <http://example.org/vad#>.
+
+vad:root {
+vad:root a vad:TechTree;
+    rdfs:label "Корень Дерева"
+}
+vad:ptree {
+vad:ptree a vad:ObjectTree;
+    rdfs:label "Дерево Процессов (TriG)";
+    vad:hasParentObj vad:root.
+vad:p1 a vad:TypeProcess;
+    rdfs:label "p1 Процесс 1";
+    vad:hasParentObj vad:ptree;
+    dcterms:description "p1 Процесс 1";
+    vad:hasTrig vad:t_p1.
+<http://example.org/vad#p1.1> a vad:TypeProcess;
+    rdfs:label "p1.1 Процесс 1.1";
+    vad:hasParentObj vad:p1;
+    dcterms:description "Первый процесс в цепочке добавленной стоимости";
+    vad:hasTrig <http://example.org/vad#t_p1.1>.
+<http://example.org/vad#p1.2> a vad:TypeProcess;
+    rdfs:label "Процесс 1.2";
+    vad:hasParentObj vad:p1;
+    dcterms:description "Второй процесс, выполняется после Процесса 1".
+<http://example.org/vad#p1.1.1> a vad:TypeProcess;
+    rdfs:label "p1.1.1 Процесс 1.1.1";
+    vad:hasParentObj <http://example.org/vad#p1.1>;
+    dcterms:description "Первый процесс в цепочке добавленной стоимости".
+<http://example.org/vad#p1.1.2> a vad:TypeProcess;
+    rdfs:label "p1.1.2 Процесс 1_1_2";
+    vad:hasParentObj <http://example.org/vad#p1.1>;
+    dcterms:description "Второй процесс в цепочке добавленной стоимости".
+vad:p2 a vad:TypeProcess;
+    rdfs:label "p2 Процесс 2";
+    vad:hasParentObj vad:ptree;
+    dcterms:description "p2 Процесс 2";
+    vad:hasTrig vad:t_p2.
+<http://example.org/vad#p2.1> a vad:TypeProcess;
+    rdfs:label "p2.1 Процесс 2.1";
+    vad:hasParentObj vad:p2;
+    dcterms:description "Первый процесс в цепочке добавленной стоимости".
+<http://example.org/vad#p2.2> a vad:TypeProcess;
+    rdfs:label "p2.2 Процесс 2.2";
+    vad:hasParentObj vad:p2;
+    dcterms:description "Второй процесс".
+<http://example.org/vad#pх.х> a vad:TypeProcess;
+    rdfs:label "pх.х Процесс х.х";
+    vad:hasParentObj vad:pNotDefined;
+    dcterms:description "Какой-то процесс".
+vad:pNotDefined a vad:TypeProcess;
+    rdfs:label "pNotDefined Процесс";
+    vad:hasParentObj vad:ptree;
+    dcterms:description "Какой-то процесс".
+vad:pDel a vad:TypeProcess;
+    rdfs:label "Процесс pDel на удаление";
+    vad:hasParentObj vad:ptree;
+    dcterms:description "Какой-то процесс"
+}
+vad:rtree {
+vad:rtree a vad:ObjectTree;
+    rdfs:label "Дерево Исполнителей (TriG)";
+    vad:hasParentObj vad:root.
+vad:Org-structure a vad:TypeExecutor;
+    rdfs:label "Исполнитель Org-structure";
+    vad:hasParentObj vad:rtree.
+vad:Executor1 a vad:TypeExecutor;
+    rdfs:label "Исполнитель 1";
+    vad:hasParentObj vad:Department1.
+vad:Department1 a vad:TypeExecutor;
+    rdfs:label "Department1";
+    vad:hasParentObj vad:Org-structure.
+vad:Executor2 a vad:TypeExecutor;
+    rdfs:label "Исполнитель 2";
+    vad:hasParentObj vad:Department1.
+vad:Executor3 a vad:TypeExecutor;
+    rdfs:label "Исполнитель 3";
+    vad:hasParentObj vad:Department1.
+vad:Executor4 a vad:TypeExecutor;
+    rdfs:label "Исполнитель 4";
+    vad:hasParentObj vad:Department1.
+vad:Executor5 a vad:TypeExecutor;
+    rdfs:label "Исполнитель 5";
+    vad:hasParentObj vad:Department1.
+vad:Executor6 a vad:TypeExecutor;
+    rdfs:label "Исполнитель 6";
+    vad:hasParentObj vad:Department1.
+vad:Executor7 a vad:TypeExecutor;
+    rdfs:label "Исполнитель 7";
+    vad:hasParentObj vad:Department1.
+vad:Executor8 a vad:TypeExecutor;
+    rdfs:label "Исполнитель 8";
+    vad:hasParentObj vad:Department1.
+vad:Executor21 a vad:TypeExecutor;
+    rdfs:label "Исполнитель 21";
+    vad:hasParentObj vad:Department2.
+vad:Department2 a vad:TypeExecutor;
+    rdfs:label "Department2";
+    vad:hasParentObj vad:Org-structure.
+vad:Executor22 a vad:TypeExecutor;
+    rdfs:label "Исполнитель 22";
+    vad:hasParentObj vad:Department2
+}
+vad:t_p1 {
+vad:t_p1 a vad:VADProcessDia;
+    rdfs:label "Схема t_p1 процесса p1";
+    vad:hasParentObj vad:p1.
+<http://example.org/vad#p1.1> vad:isSubprocessTrig vad:t_p1;
+    vad:hasExecutor <http://example.org/vad#ExecutorGroup_p1.1>;
+    vad:hasNext <http://example.org/vad#p1.2>.
+<http://example.org/vad#p1.2> vad:isSubprocessTrig vad:t_p1;
+    vad:hasExecutor <http://example.org/vad#ExecutorGroup_p1.2>.
+<http://example.org/vad#ExecutorGroup_p1.1> a vad:ExecutorGroup;
+    rdfs:label "Группа исполнителей процесса p1.1";
+    vad:includes vad:Executor1.
+<http://example.org/vad#ExecutorGroup_p1.2> a vad:ExecutorGroup;
+    rdfs:label "Группа исполнителей процесса p1.2";
+    vad:includes vad:Executor1, vad:Executor2
+}
+<http://example.org/vad#t_p1.1> {
+<http://example.org/vad#t_p1.1> a vad:VADProcessDia;
+    rdfs:label "Схема t_p1.1 процесса p1.1";
+    vad:hasParentObj <http://example.org/vad#p1.1>.
+<http://example.org/vad#p1.1.1> vad:isSubprocessTrig <http://example.org/vad#t_p1.1>;
+    vad:hasExecutor <http://example.org/vad#ExecutorGroup_p1.1.1>;
+    vad:hasNext vad:p1_1_2.
+<http://example.org/vad#ExecutorGroup_p1.1.1> a vad:ExecutorGroup;
+    rdfs:label "Группа исполнителей процесса p1.1.1";
+    vad:includes vad:Executor21.
+vad:p1_1_2 vad:isSubprocessTrig <http://example.org/vad#t_p1.1>;
+    vad:hasExecutor vad:ExecutorGroup_p1_1_2.
+vad:ExecutorGroup_p1_1_2 a vad:ExecutorGroup;
+    rdfs:label "Группа исполнителей процесса p1_1_2";
+    vad:includes vad:Executor21, vad:Executor22
+}
+vad:t_p2 {
+<http://example.org/vad#p1.1> vad:isSubprocessTrig vad:t_p2;
+    vad:hasExecutor vad:ExecutorGroup_p1_1;
+    vad:hasNext vad:p1_1_1.
+vad:t_p2 a vad:VADProcessDia;
+    rdfs:label "Схема t_p2 процесса p2";
+    vad:hasParentObj vad:p2.
+<http://example.org/vad#pх.х> vad:isSubprocessTrig vad:t_p2;
+    vad:hasExecutor <http://example.org/vad#ExecutorGroup_pх.х>.
+vad:p2_1 vad:isSubprocessTrig vad:t_p2;
+    vad:hasExecutor vad:ExecutorGroup_p2_1;
+    vad:hasNext <http://example.org/vad#p1.1>, vad:p2_2.
+vad:ExecutorGroup_p2_1 a vad:ExecutorGroup;
+    rdfs:label "Группа исполнителей процесса p2_1";
+    vad:includes vad:Executor1.
+vad:p2_2 vad:isSubprocessTrig vad:t_p2;
+    vad:hasExecutor vad:ExecutorGroup_p2_2.
+vad:ExecutorGroup_p2_2 a vad:ExecutorGroup;
+    rdfs:label "Группа исполнителей процесса p2_2";
+    vad:includes vad:Executor1, vad:Executor2.
+vad:ExecutorGroup_p1_1 a vad:ExecutorGroup;
+    rdfs:label "Группа исполнителей процесса p1_1";
+    vad:includes vad:Executor1, vad:Executor2.
+vad:p1_1_1 vad:isSubprocessTrig vad:t_p2;
+    vad:hasExecutor vad:ExecutorGroup_p1_1_1;
+    vad:hasNext <http://example.org/vad#pх.х>.
+vad:ExecutorGroup_p1_1_1 a vad:ExecutorGroup;
+    rdfs:label "Группа исполнителей процесса p1_1_1";
+    vad:includes vad:Executor1, vad:Executor2.
+<http://example.org/vad#ExecutorGroup_pх.х> a vad:ExecutorGroup;
+    rdfs:label "Группа исполнителей процесса pх.х";
+    vad:includes vad:Executor1, vad:Executor2
+}
