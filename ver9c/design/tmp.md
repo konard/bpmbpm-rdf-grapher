@@ -18,3 +18,13 @@ proj вкладка - раобраться
 
 ## 3
 добавить - объединить Deta \ notDeta см. [vad-basic-ontology_tech_Appendix_nav.](https://github.com/bpmbpm/rdf-grapher/blob/main/ver9c/ontology/vad-basic-ontology_tech_Appendix_nav.md#4-%D1%81%D1%85%D0%B5%D0%BC%D0%B0-%D0%B2%D0%B7%D0%B0%D0%B8%D0%BC%D0%BE%D1%81%D0%B2%D1%8F%D0%B7%D0%B5%D0%B9-mermaid)
+
+### SHACL
+3 Проверка .ttl на допустимые объекты и предикаты
+Нужно сделать проверку на дублирование вычисляемых значений в Virtual TriG и аналогичных триплетов (утверждений) файла .ttl  (не должно быть vad:DetailedExternal, или rdfs:label для объектов ExecutorGroup и т.п. в RDF-данных из файла .ttl).
+В окне quadstore рядом с кнопкой «Тест» добавь кнопку «Valid.ttl».
+В ней должно проверяться содержимое загруженного файла, например, Trig_VADv8.ttl. Правила задаются в файле https://github.com/bpmbpm/rdf-grapher/tree/main/ver9c/ontology/valid_SHACL.ttl SHACL правилами.
+Правила должны включать отсутствие в загруженном .ttl vad:DetailedExternal, vad:notDetailedExternal и подобных, которые вычисляются автоматически в рамках Virtual TriG. 
+Не должно быть в проверяемом файле также предиката rdfs:label для объектов ExecutorGroup (они тоже формируются в virtual TriG). 
+Логику проверки сформируй в 2_triplestore_test_valid_logic.js и 2_triplestore_test_valid_sparql.js (или 2_triplestore_test_valid_shacl.js) в папке https://github.com/bpmbpm/rdf-grapher/tree/main/ver9c/2_triplestore/2_triplestore_test в соответствии с [4. Соглашения по именованию файлов]( https://github.com/bpmbpm/rdf-grapher/blob/main/ver9c/doc/Folder_Structure.md#4-%D1%81%D0%BE%D0%B3%D0%BB%D0%B0%D1%88%D0%B5%D0%BD%D0%B8%D1%8F-%D0%BF%D0%BE-%D0%B8%D0%BC%D0%B5%D0%BD%D0%BE%D0%B2%D0%B0%D0%BD%D0%B8%D1%8E-%D1%84%D0%B0%D0%B9%D0%BB%D0%BE%D0%B2)
+
