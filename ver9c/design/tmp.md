@@ -28,3 +28,19 @@ proj вкладка - раобраться
 Не должно быть в проверяемом файле также предиката rdfs:label для объектов ExecutorGroup (они тоже формируются в virtual TriG). 
 Логику проверки сформируй в 2_triplestore_test_valid_logic.js и 2_triplestore_test_valid_sparql.js (или 2_triplestore_test_valid_shacl.js) в папке https://github.com/bpmbpm/rdf-grapher/tree/main/ver9c/2_triplestore/2_triplestore_test в соответствии с [4. Соглашения по именованию файлов]( https://github.com/bpmbpm/rdf-grapher/blob/main/ver9c/doc/Folder_Structure.md#4-%D1%81%D0%BE%D0%B3%D0%BB%D0%B0%D1%88%D0%B5%D0%BD%D0%B8%D1%8F-%D0%BF%D0%BE-%D0%B8%D0%BC%D0%B5%D0%BD%D0%BE%D0%B2%D0%B0%D0%BD%D0%B8%D1%8E-%D1%84%D0%B0%D0%B9%D0%BB%D0%BE%D0%B2)
 
+## hasNext 
+Add vad:hasNext 
+Add hasNext Dia
+Add hasNext any
+
+Есть 
+Метод (функция)
+Схема (dia)
+Элемент схемы (индивид процесса)
+Нужно вывести справочник имеющихся hasNext (указать чек-боками) + список всех индивидов схемы 
+(посмотреть как это сделано)
+Получить выбор пользователя и сформировать SPARQL
+По кнопке применить - Применить SPARQL. или отказ. 
+
+Добавлять дочерние процессы.
+Нет, лучше вывести пред заполненный экран? 
