@@ -888,6 +888,12 @@
             font-weight: normal;
         }
 
+        /* issue #376: Стиль для кнопки Домой в заголовке Диаграммы */
+        .diagram-home-btn {
+            font-size: 16px;
+            font-weight: normal;
+        }
+
         .diagram-panel-content {
             flex: 1;
             overflow: auto;

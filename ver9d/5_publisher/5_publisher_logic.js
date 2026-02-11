@@ -430,6 +430,9 @@
             const previousSelectedTrigUri = selectedTrigUri;
             console.log('issue #276: refreshVisualization - remembering selectedTrigUri:', previousSelectedTrigUri);
 
+            // issue #376: Сохраняем состояние раскрытия TreeView перед перестроением
+            const previousTreeViewState = typeof saveTreeViewState === 'function' ? saveTreeViewState() : null;
+
             const maxLabelLengthInput = document.getElementById('max-label-length');
             const maxLabelLengthValue = parseInt(maxLabelLengthInput.value, 10);
             if (!isNaN(maxLabelLengthValue) && maxLabelLengthValue >= 5 && maxLabelLengthValue <= 200) {
@@ -569,6 +572,12 @@
 
                     // Отображаем дерево TriG (передаём массив всех корневых TriG)
                     displayTriGTree(trigHierarchy, hierarchyResult.rootTrigUris, prefixes);
+
+                    // issue #376: Восстанавливаем состояние раскрытия TreeView после перестроения
+                    // Это гарантирует, что дерево не сворачивается при обновлении
+                    if (previousTreeViewState && typeof restoreTreeViewState === 'function') {
+                        restoreTreeViewState(previousTreeViewState);
+                    }
 
                     // issue #276: Выделяем выбранный TriG в дереве
                     if (selectedTrigUri) {

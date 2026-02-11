@@ -814,3 +814,107 @@
                 parent = parent.parentElement;
             }
         }
+
+        /**
+         * issue #376: Сохраняет состояние раскрытия/свёртки дерева TreeView
+         * @returns {Object} - Объект с состоянием: { expandedNodes: Set, expandedCompositions: Set }
+         */
+        function saveTreeViewState() {
+            const state = {
+                expandedNodes: new Set(),
+                expandedCompositions: new Set()
+            };
+
+            // Сохраняем раскрытые узлы дерева (.trig-tree-children)
+            const treeChildren = document.querySelectorAll('.trig-tree-children');
+            treeChildren.forEach(child => {
+                if (child.style.display !== 'none' && child.id) {
+                    if (child.classList.contains('object-composition-list')) {
+                        state.expandedCompositions.add(child.id);
+                    } else {
+                        state.expandedNodes.add(child.id);
+                    }
+                }
+            });
+
+            console.log('issue #376: Saved TreeView state -', state.expandedNodes.size, 'nodes,', state.expandedCompositions.size, 'compositions');
+            return state;
+        }
+
+        /**
+         * issue #376: Восстанавливает состояние раскрытия/свёртки дерева TreeView
+         * @param {Object} state - Объект с состоянием от saveTreeViewState()
+         */
+        function restoreTreeViewState(state) {
+            if (!state) return;
+
+            let restoredNodes = 0;
+            let restoredCompositions = 0;
+
+            // Восстанавливаем раскрытые узлы дерева
+            state.expandedNodes.forEach(id => {
+                const child = document.getElementById(id);
+                if (child) {
+                    child.style.display = 'block';
+                    restoredNodes++;
+
+                    // Обновляем иконку переключателя
+                    const toggleId = id.replace('tree-children-', 'tree-toggle-');
+                    const toggle = document.getElementById(toggleId);
+                    if (toggle) {
+                        toggle.textContent = '\u25BC';  // ▼ (развёрнуто)
+                    }
+                }
+            });
+
+            // Восстанавливаем раскрытые секции "Состав объектов"
+            state.expandedCompositions.forEach(id => {
+                const child = document.getElementById(id);
+                if (child) {
+                    child.style.display = 'block';
+                    restoredCompositions++;
+
+                    // Обновляем иконку переключателя
+                    const toggle = document.getElementById(id + '-toggle');
+                    if (toggle) {
+                        toggle.textContent = '\u25BC';  // ▼ (развёрнуто)
+                    }
+                }
+            });
+
+            console.log('issue #376: Restored TreeView state -', restoredNodes, 'nodes,', restoredCompositions, 'compositions');
+        }
+
+        /**
+         * issue #376: Сбрасывает TreeView в исходное состояние (как при старте программы)
+         * Сворачивает все узлы, кроме ptree (который раскрыт по умолчанию)
+         */
+        function resetTreeViewToInitialState() {
+            // Сворачиваем все узлы дерева
+            const treeChildren = document.querySelectorAll('.trig-tree-children');
+            treeChildren.forEach(child => {
+                // ptree остаётся раскрытым по умолчанию
+                const isPtree = child.id && child.id.includes('ptree');
+                child.style.display = isPtree ? 'block' : 'none';
+
+                // Обновляем иконку переключателя
+                let toggleId;
+                if (child.classList.contains('object-composition-list')) {
+                    toggleId = child.id + '-toggle';
+                } else {
+                    toggleId = child.id.replace('tree-children-', 'tree-toggle-');
+                }
+                const toggle = document.getElementById(toggleId);
+                if (toggle) {
+                    toggle.textContent = isPtree ? '\u25BC' : '\u25B6';  // ▼ или ▶
+                }
+            });
+
+            // Снимаем выделение со всех элементов
+            const treeItems = document.querySelectorAll('.trig-tree-item');
+            treeItems.forEach(item => {
+                item.classList.remove('selected', 'active', 'process-selected');
+            });
+
+            console.log('issue #376: TreeView reset to initial state');
+        }
