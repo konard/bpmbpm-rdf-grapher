@@ -378,6 +378,16 @@
                             seenTrigProps.add(propKey);
                             trigProperties.push(propInfo);
                         }
+                    } else {
+                        // issue #374: Fallback - показываем свойства из других графов (rtree, etc.)
+                        // когда нет выбранного TriG или объект находится в специальном графе
+                        // Это позволяет отображать свойства объектов вроде vad:Executor3 из vad:rtree
+                        if (!contextTrigUri || graphUri === RTREE_GRAPH_URI) {
+                            if (!seenTrigProps.has(propKey)) {
+                                seenTrigProps.add(propKey);
+                                trigProperties.push(propInfo);
+                            }
+                        }
                     }
                 }
             });
