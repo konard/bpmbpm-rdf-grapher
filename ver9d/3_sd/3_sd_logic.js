@@ -232,7 +232,10 @@ async function applyTripleToRdfInput(sparqlQuery, mode) {
         // Это необходимо, чтобы при следующем нажатии "Показать" данные были перепарсены
         // и обновленные rdfs:label отобразились на диаграмме
         trigHierarchy = {};
-        selectedTrigUri = null;
+        // issue #376: НЕ сбрасываем selectedTrigUri, чтобы кнопка "Методы" в панели свойств
+        // продолжала работать до нажатия "Обновить". При обновлении selectedTrigUri
+        // будет правильно восстановлен в refreshVisualization().
+        // selectedTrigUri = null;  // Удалено в issue #376
         // issue #324: virtualRDFdata удалён - данные хранятся в store
 
         // issue #278: Обновляем отображение quadstore после SPARQL UPDATE
