@@ -423,15 +423,14 @@ function isVADOntologyLoaded() {
  * @returns {Promise<boolean>} - true если инициализация успешна
  */
 async function initializeReasoner(reasonerType = 'comunica') {
+    // issue #372: SPARQL-Driven подход — инициализация Comunica
     try {
         if (reasonerType === 'comunica') {
-            // Проверяем доступность comunica-feature-reasoning
+            // Проверяем доступность Comunica
             if (typeof Comunica !== 'undefined' && Comunica.QueryEngine) {
-                // Используем comunica-feature-reasoning если доступен
-                // В текущей версии используем стандартный Comunica с RDFS reasoning
                 reasonerEngine = new Comunica.QueryEngine();
                 reasonerInitialized = true;
-                console.log('Reasoner initialized: comunica-sparql-rdfjs');
+                console.log('Reasoner initialized: comunica-sparql-rdfjs (issue #372: SPARQL-Driven)');
                 return true;
             }
         } else if (reasonerType === 'eye-js') {
@@ -444,15 +443,9 @@ async function initializeReasoner(reasonerType = 'comunica') {
             }
         }
 
-        // Fallback: используем стандартный Comunica
-        if (typeof Comunica !== 'undefined' && Comunica.QueryEngine) {
-            reasonerEngine = new Comunica.QueryEngine();
-            reasonerInitialized = true;
-            console.log('Reasoner initialized: comunica (fallback)');
-            return true;
-        }
-
-        console.warn('No reasoner engine available');
+        // issue #372: Если Comunica недоступен — логируем ошибку (без fallback)
+        console.error('Reasoner initialization failed: Comunica not available');
+        console.error('SPARQL-Driven approach requires Comunica. Please ensure comunica-browser.js is loaded.');
         return false;
 
     } catch (error) {
@@ -482,33 +475,20 @@ function isReasonerInitialized() {
  * @returns {Promise<Array>} - Массив выведенных квадов
  */
 async function performInference(store, rules = INFERENCE_RULES_N3) {
-    // issue #322: Используем SPARQL CONSTRUCT как основной метод reasoning
-    if (forceSemanticReasoning) {
-        try {
-            console.log('performInference: Using SPARQL CONSTRUCT reasoning');
-            return await performSemanticReasoning(store);
-        } catch (error) {
-            console.error('Semantic reasoning error:', error);
-            console.warn('Falling back to JavaScript implementation');
-            return performInferenceFallback(store);
-        }
-    }
+    // issue #372: SPARQL-Driven подход — без JavaScript fallback
+    // Используем только SPARQL CONSTRUCT для semantic reasoning
 
-    // Fallback для случаев без forceSemanticReasoning
-    if (!isReasonerInitialized()) {
-        console.warn('Reasoner not initialized, using fallback logic');
-        return performInferenceFallback(store);
-    }
+    console.log('performInference: Using SPARQL-Driven reasoning (issue #372)');
 
     try {
-        if (reasonerEngine.type === 'eye-js') {
-            return await performInferenceEyeJS(store, rules);
-        } else {
-            return await performInferenceComunica(store);
-        }
+        // Основной метод: SPARQL CONSTRUCT reasoning
+        return await performSemanticReasoning(store);
     } catch (error) {
-        console.error('Inference error:', error);
-        return performInferenceFallback(store);
+        console.error('Semantic reasoning error:', error);
+        // issue #372: Вместо fallback на JavaScript возвращаем пустой результат
+        // и логируем ошибку для отладки
+        console.error('SPARQL reasoning failed. No fallback to JavaScript.');
+        return [];
     }
 }
 
@@ -761,44 +741,9 @@ async function performInferenceEyeJS(store, rules) {
     });
 }
 
-/**
- * Fallback inference через JavaScript (для совместимости)
- * Используется, если Reasoner недоступен
- *
- * @param {N3.Store} store - N3.Store с данными
- * @returns {Array} - Массив выведенных квадов
- */
-function performInferenceFallback(store) {
-    console.log('Using fallback inference (JavaScript implementation)');
-
-    // Используем существующую функцию calculateProcessSubtypes
-    // Это обеспечивает совместимость с текущей реализацией
-    if (typeof calculateProcessSubtypes === 'function' && typeof trigHierarchy !== 'undefined') {
-        const virtualData = calculateProcessSubtypes(trigHierarchy, currentPrefixes);
-        const inferredQuads = [];
-
-        const factory = N3.DataFactory;
-        const { namedNode } = factory;
-
-        for (const [trigUri, processes] of Object.entries(virtualData)) {
-            for (const [processUri, processInfo] of Object.entries(processes)) {
-                const subtype = processInfo.processSubtype;
-                if (subtype) {
-                    inferredQuads.push(factory.quad(
-                        namedNode(processUri),
-                        namedNode(REASONING_NS.VAD + 'processSubtype'),
-                        namedNode(REASONING_NS.VAD + subtype),
-                        namedNode(trigUri.replace('#t_', '#vt_'))
-                    ));
-                }
-            }
-        }
-
-        return inferredQuads;
-    }
-
-    return [];
-}
+// issue #372: Функция performInferenceFallback удалена
+// Реализован SPARQL-Driven подход — без JavaScript fallback
+// Все вычисления выполняются через SPARQL CONSTRUCT в функции performSemanticReasoning
 
 // ============================================================================
 // МАТЕРИАЛИЗАЦИЯ ВИРТУАЛЬНЫХ ДАННЫХ
@@ -812,12 +757,13 @@ function performInferenceFallback(store) {
  * @returns {Promise<Object>} - Статистика { inferredQuads, virtualTrigsCreated, errors }
  */
 async function materializeVirtualData(prefixes) {
+    // issue #372: SPARQL-Driven подход — всегда semantic-reasoning
     const stats = {
         inferredQuads: 0,
         virtualTrigsCreated: 0,
         removedQuads: 0,
         errors: [],
-        method: forceSemanticReasoning ? 'semantic-reasoning' : 'fallback'
+        method: 'semantic-reasoning'
     };
 
     if (!currentStore) {
