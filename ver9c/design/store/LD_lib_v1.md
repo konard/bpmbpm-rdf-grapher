@@ -273,3 +273,8 @@ try {
 ---
 
 *Документация создана для issue #363: Приведи описание всех функций (с указанием модуля), используемых в проекте, из Linked Data библиотек.*
+
+## Problem
+Ранее вроде comunica reasoning использовался (она только под Node?), но потом видимо от нее отказались. 
+- https://www.npmjs.com/package/@comunica/query-sparql-reasoning
+- https://github.com/comunica/comunica-feature-reasoning (Для работы Comunica требуется Node.JS 8.0 или выше и менеджер пакетов Yarn) 
