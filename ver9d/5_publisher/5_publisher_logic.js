@@ -584,15 +584,22 @@
                         // Отображаем свойства выбранного TriG
                         displayTriGProperties(selectedTrigUri, trigHierarchy, prefixes);
 
-                        // Выделяем элемент в дереве
-                        const treeItems = document.querySelectorAll('.trig-tree-item');
-                        treeItems.forEach(item => {
-                            if (item.getAttribute('data-trig-uri') === selectedTrigUri) {
-                                item.classList.add('selected', 'active');
-                            } else {
-                                item.classList.remove('selected', 'active');
-                            }
-                        });
+                        // issue #378: Раскрываем путь к текущей диаграмме в TreeView
+                        // Это гарантирует, что ветвь с текущей диаграммой всегда раскрыта после обновления
+                        if (typeof highlightAndExpandTreePath === 'function') {
+                            highlightAndExpandTreePath(selectedTrigUri);
+                            console.log('issue #378: Раскрыт путь к текущей диаграмме:', selectedTrigUri);
+                        } else {
+                            // Fallback: выделяем элемент в дереве
+                            const treeItems = document.querySelectorAll('.trig-tree-item');
+                            treeItems.forEach(item => {
+                                if (item.getAttribute('data-trig-uri') === selectedTrigUri) {
+                                    item.classList.add('selected', 'active');
+                                } else {
+                                    item.classList.remove('selected', 'active');
+                                }
+                            });
+                        }
                     }
 
                     // Валидация VAD для квадов выбранного графа
