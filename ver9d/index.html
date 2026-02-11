@@ -528,9 +528,9 @@
                             </div>
                         </div>
 
-                        <!-- Панель свойств объекта -->
+                        <!-- Панель свойств объекта (issue #368: переименовано) -->
                         <div class="trig-properties-panel">
-                            <div class="trig-properties-header">Карточка объекта</div>
+                            <div class="trig-properties-header">Карточка объекта treeview</div>
                             <div class="trig-properties-content" id="trig-properties-content">
                                 <div class="trig-properties-empty">Выберите TriG в дереве</div>
                             </div>
@@ -629,8 +629,10 @@ WHERE {
     <!-- МОДУЛЬ 9: БАЗОВАЯ БИБЛИОТЕКА (загружается первой)                          -->
     <!-- ========================================================================== -->
 
-    <!-- issue #232: Базовые константы, глобальные переменные, утилиты -->
-    <script src="9_vadlib/vadlib.js"></script>
+    <!-- issue #232, #368: Базовые константы, глобальные переменные, утилиты -->
+    <script src="9_vadlib/vadlib_logic.js"></script>
+    <!-- issue #368: UI функции общей библиотеки (диалоги, уведомления) -->
+    <script src="9_vadlib/vadlib_ui.js"></script>
     <!-- issue #232: SPARQL движок (funSPARQLvalues) -->
     <script src="9_vadlib/vadlib_sparql.js"></script>
 
@@ -667,7 +669,10 @@ WHERE {
     <!-- Модуль 5: Publisher (визуализация) -->
     <script src="5_publisher/5_publisher_sparql.js"></script>
     <script src="5_publisher/5_publisher_logic.js"></script>
-    <script src="5_publisher/5_publisher_trig.js"></script>
+    <!-- issue #368: Подмодуль TreeView (дерево TriG и Карточка объекта treeview) -->
+    <script src="5_publisher/5_publisher_treeview/5_publisher_treeview_ui.js"></script>
+    <!-- issue #368: Подмодуль ExportView (экспорт SVG, PNG, открытие во внешних сервисах) -->
+    <script src="5_publisher/5_publisher_exportview/5_publisher_exportview_logic.js"></script>
     <script src="5_publisher/5_publisher_ui.js"></script>
 
     <!-- Модуль 6: Легенда -->
@@ -688,6 +693,11 @@ WHERE {
     <!-- issue #317: Модуль 11: Reasoning -->
     <script src="11_reasoning/11_reasoning_sparql.js"></script>
     <script src="11_reasoning/11_reasoning_logic.js"></script>
+
+    <!-- issue #368: Модуль 12: Методы (обработка кнопки Методы в окне Свойство объекта диаграммы) -->
+    <script src="12_method/12_method_sparql.js"></script>
+    <script src="12_method/12_method_logic.js"></script>
+    <script src="12_method/12_method_ui.js"></script>
 
     <!-- ========================================================================== -->
     <!-- ИНИЦИАЛИЗАЦИЯ                                                              -->
