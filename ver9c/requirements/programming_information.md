@@ -24,3 +24,5 @@
   - вместо "a" используй полную запись предиката rdf:type 
 - используй quadstore in-memory для хранения TriG 
 
+### File naming conventions
+Используй Соглашение по именованию файлов https://github.com/bpmbpm/rdf-grapher/blob/main/ver9c/requirements/file_naming.md
