@@ -145,28 +145,30 @@ function smartDesignClear() {
 /**
  * Применяет SPARQL запрос как Simple Triple (полная форма)
  * Вставляет триплет непосредственно в текстовое поле RDF данных
+ * issue #380: Сделано async для корректной обработки ошибок
  */
-function smartDesignApply() {
+async function smartDesignApply() {
     const resultTextarea = document.getElementById('result-sparql-query');
     if (!resultTextarea || !resultTextarea.value.trim()) {
         showResultSparqlMessage('Нет SPARQL запроса для применения', 'error');
         return;
     }
-    
-    applyTripleToRdfInput(resultTextarea.value, 'simple');
+
+    await applyTripleToRdfInput(resultTextarea.value, 'simple');
 }
 
 /**
  * Применяет SPARQL запрос как Shorthand Triple (сокращённая форма)
+ * issue #380: Сделано async для корректной обработки ошибок
  */
-function smartDesignApplyShorthand() {
+async function smartDesignApplyShorthand() {
     const resultTextarea = document.getElementById('result-sparql-query');
     if (!resultTextarea || !resultTextarea.value.trim()) {
         showResultSparqlMessage('Нет SPARQL запроса для применения', 'error');
         return;
     }
-    
-    applyTripleToRdfInput(resultTextarea.value, 'shorthand');
+
+    await applyTripleToRdfInput(resultTextarea.value, 'shorthand');
 }
 
 /**
@@ -252,11 +254,20 @@ async function applyTripleToRdfInput(sparqlQuery, mode) {
         // issue #378: Автоматически обновляем визуализацию после SPARQL UPDATE
         // Это гарантирует, что схема обновится без потери фокуса на treeview
         // (если удалённый элемент не был в фокусе)
+        // issue #380: Улучшено логирование для диагностики
+        console.log('issue #380: Проверка доступности refreshVisualization:', typeof refreshVisualization);
         if (typeof refreshVisualization === 'function') {
             console.log('issue #378: Автоматическое обновление визуализации после SPARQL UPDATE');
-            await refreshVisualization();
-            showResultSparqlMessage(message, 'success');
+            try {
+                await refreshVisualization();
+                console.log('issue #380: refreshVisualization выполнен успешно');
+                showResultSparqlMessage(message, 'success');
+            } catch (refreshError) {
+                console.error('issue #380: Ошибка при refreshVisualization:', refreshError);
+                showResultSparqlMessage(message + '. Нажмите "Обновить" для обновления treeview.', 'success');
+            }
         } else {
+            console.warn('issue #380: refreshVisualization не определена');
             showResultSparqlMessage(message + '. Нажмите "Обновить" для отображения в treeview.', 'success');
         }
 

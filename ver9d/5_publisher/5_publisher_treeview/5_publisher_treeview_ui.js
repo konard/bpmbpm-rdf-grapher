@@ -888,6 +888,7 @@
         /**
          * issue #376: Сбрасывает TreeView в исходное состояние (как при старте программы)
          * Сворачивает все узлы, кроме ptree (который раскрыт по умолчанию)
+         * issue #380: Также сбрасывает диаграмму на ptree (Дерево Процессов)
          */
         function resetTreeViewToInitialState() {
             // Сворачиваем все узлы дерева
@@ -915,6 +916,25 @@
             treeItems.forEach(item => {
                 item.classList.remove('selected', 'active', 'process-selected');
             });
+
+            // issue #380: Находим и выбираем ptree для отображения начальной диаграммы
+            const ptreeUri = 'http://example.org/vad#ptree';
+            if (trigHierarchy && trigHierarchy[ptreeUri]) {
+                // Выбираем ptree и отображаем его диаграмму
+                selectTriG(ptreeUri, true); // skipHistoryUpdate = true чтобы не засорять историю
+                console.log('issue #380: Diagram reset to ptree (Дерево Процессов)');
+            } else {
+                // Fallback: если ptree не найден, ищем первый корневой TriG
+                const rootUri = Object.keys(trigHierarchy || {}).find(uri => {
+                    const info = trigHierarchy[uri];
+                    return info && (info.hasParent === 'http://example.org/vad#root' ||
+                                   (info.hasParent && info.hasParent.endsWith('#root')));
+                });
+                if (rootUri) {
+                    selectTriG(rootUri, true);
+                    console.log('issue #380: Diagram reset to first root TriG:', rootUri);
+                }
+            }
 
             console.log('issue #376: TreeView reset to initial state');
         }
