@@ -192,26 +192,28 @@ ver9d/
 
 **Документация:** [doc/10_virtualTriG.md](10_virtualTriG.md)
 
-### 11_reasoning/ -- Модуль Semantic Reasoning (issue #317)
+### 11_reasoning/ -- Модуль Semantic Reasoning (issue #317, #372)
 
-Модуль семантического вывода (reasoning) для вычисления Virtual TriG. Реализует механизм inference на базе comunica-feature-reasoning с fallback на JavaScript-реализацию.
+Модуль семантического вывода (reasoning) для вычисления Virtual TriG. Реализует механизм inference на базе SPARQL CONSTRUCT (issue #372: SPARQL-Driven подход без JavaScript fallback).
 
 **Файлы:**
-- `11_reasoning_logic.js` -- Логика reasoning: `initializeReasoner()`, `performInference()`, `materializeVirtualData()`, `validateInferredData()`, правила вывода в формате N3
+- `11_reasoning_logic.js` -- Логика reasoning: `initializeReasoner()`, `performInference()`, `performSemanticReasoning()`, `materializeVirtualData()`, `validateInferredData()`, правила вывода в формате N3
 - `11_reasoning_sparql.js` -- Коллекция SPARQL запросов `REASONING_SPARQL`: CONSTRUCT_PROCESS_SUBTYPES, GET_PROCESSES_FOR_REASONING, INSERT_INFERRED_SUBTYPES и др.
 - `11_reasoning.css` -- Стили (резерв для будущих UI компонентов)
 
 **Документация:** [doc/11_reasoning.md](11_reasoning.md)
 
-### 12_method/ -- Модуль Методы (issue #368)
+### 12_method/ -- Модуль Методы (issue #368, #372)
 
-Модуль обработки кнопки «Методы» в окне «Свойство объекта диаграммы». Позволяет выполнять действия над объектами диаграммы (удаление индивидов процессов и исполнителей).
+Модуль обработки кнопки «Методы» в окне «Свойство объекта диаграммы». Позволяет выполнять действия над объектами диаграммы. Issue #372: SPARQL-Driven подход — удаление через модальное окно с генерацией SPARQL.
 
 **Файлы:**
 - `12_method_ui.js` -- UI функции: `toggleMethodsDropdown()` -- отображение выпадающего списка методов
-- `12_method_logic.js` -- Логика выполнения методов: `executeObjectMethod()`, `deleteIndividProcessFromTrig()`, `deleteIndividExecutorFromTrig()`, `performDeleteIndividProcess()`, `performDeleteIndividExecutor()`
+- `12_method_logic.js` -- Логика выполнения методов: `executeObjectMethod()`, `deleteIndividProcessFromTrig()`, `deleteIndividExecutorFromTrig()`, `openHasNextDiaModal()`, `createHasNextDiaSparql()`
 - `12_method_sparql.js` -- SPARQL запросы: `getMethodsForType()` -- получение списка методов из vad:techtree
 - `12_method.css` -- Стили модуля (используются стили из styles.css)
+
+**Документация:** [doc/function/deleteIndividProcessFromTrig.md](function/deleteIndividProcessFromTrig.md)
 
 ## 3. Описание подпапок
 

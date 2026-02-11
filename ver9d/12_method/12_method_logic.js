@@ -47,125 +47,56 @@
         /**
          * Удаляет индивид процесса из указанного TriG
          * issue #336: Реализация метода Delete Individ Process
+         * issue #372: Переработан на SPARQL-Driven подход (без JavaScript fallback)
+         *
+         * Алгоритм работы (аналогично Add hasNext Dia):
+         * 1. Вызывается окно «Удалить индивид процесса в схеме» (openDeleteModal)
+         * 2. Значения «Схема процесса» и «Индивид процесса» подставляются из текущей схемы
+         * 3. По кнопке «Создать запрос на удаление» SPARQL-запрос передаётся в Result in SPARQL
+         * 4. Пользователь применяет запрос через стандартную процедуру
+         *
          * @param {string} processUri - URI процесса
          * @param {string} trigUri - URI TriG
          */
         function deleteIndividProcessFromTrig(processUri, trigUri) {
-            // Проверяем, доступна ли функция удаления индивида
-            if (typeof openDeleteModal === 'function') {
-                // Устанавливаем контекст для удаления
-                // Используем существующую логику из 3_sd_del_concept_individ
-                const prefixedProcessUri = getPrefixedName(processUri, currentPrefixes);
-                const prefixedTrigUri = getPrefixedName(trigUri, currentPrefixes);
+            // issue #372: SPARQL-Driven подход — всегда используем модальное окно
+            // Преобразуем URI в prefixed формат для отображения в UI
+            const prefixedProcessUri = getPrefixedName(processUri, currentPrefixes);
+            const prefixedTrigUri = getPrefixedName(trigUri, currentPrefixes);
 
-                // Вызываем окно удаления с предустановленными значениями
-                openDeleteModal('individ', prefixedTrigUri, prefixedProcessUri);
-            } else {
-                // Fallback: выполняем удаление напрямую через SPARQL
-                const confirmMsg = `Удалить индивид процесса ${getPrefixedName(processUri, currentPrefixes)} из схемы ${getPrefixedName(trigUri, currentPrefixes)}?`;
-                if (confirm(confirmMsg)) {
-                    performDeleteIndividProcess(processUri, trigUri);
-                }
-            }
+            // Вызываем окно удаления индивида в схеме с предустановленными значениями
+            // Функция openDeleteModal определена в 3_sd_del_concept_individ_logic.js
+            openDeleteModal('individ', prefixedTrigUri, prefixedProcessUri);
         }
 
         /**
          * Удаляет все предикаты vad:includes для ExecutorGroup из указанного TriG
          * issue #336: Реализация метода Delete Individ Executor
+         * issue #372: Переработан на SPARQL-Driven подход (без JavaScript fallback)
+         *
+         * Алгоритм работы (аналогично deleteIndividProcessFromTrig):
+         * 1. Вызывается окно «Удалить индивид исполнителя в схеме» (openDeleteModal)
+         * 2. Значения «Схема» и «Исполнитель» подставляются из текущего контекста
+         * 3. По кнопке «Создать запрос на удаление» SPARQL-запрос передаётся в Result in SPARQL
+         *
          * @param {string} executorGroupUri - URI ExecutorGroup
          * @param {string} trigUri - URI TriG
          */
         function deleteIndividExecutorFromTrig(executorGroupUri, trigUri) {
+            // issue #372: SPARQL-Driven подход — всегда используем модальное окно
             const prefixedUri = getPrefixedName(executorGroupUri, currentPrefixes);
             const prefixedTrigUri = getPrefixedName(trigUri, currentPrefixes);
 
-            const confirmMsg = `Удалить всех исполнителей из группы ${prefixedUri}?`;
-            if (confirm(confirmMsg)) {
-                performDeleteIndividExecutor(executorGroupUri, trigUri);
-            }
+            // Вызываем окно удаления индивида исполнителя в схеме с предустановленными значениями
+            openDeleteModal('executor', prefixedTrigUri, prefixedUri);
         }
 
-        /**
-         * Выполняет фактическое удаление индивида процесса через SPARQL DELETE
-         * @param {string} processUri - URI процесса
-         * @param {string} trigUri - URI TriG
-         */
-        async function performDeleteIndividProcess(processUri, trigUri) {
-            const prefixedProcess = getPrefixedName(processUri, currentPrefixes);
-            const prefixedTrig = getPrefixedName(trigUri, currentPrefixes);
-
-            // Формируем SPARQL DELETE запрос для удаления всех триплетов процесса из TriG
-            const deleteQuery = `
-DELETE WHERE {
-    GRAPH <${trigUri}> {
-        <${processUri}> ?p ?o .
-    }
-}`;
-
-            try {
-                // Применяем запрос через существующую функцию
-                if (typeof applyTripleToRdfInput === 'function') {
-                    await applyTripleToRdfInput(deleteQuery, 'delete');
-                    console.log(`Deleted individ process ${prefixedProcess} from ${prefixedTrig}`);
-
-                    // issue #338: Восстанавливаем selectedTrigUri после applyTripleToRdfInput,
-                    // так как она сбрасывает selectedTrigUri в null (issue #274).
-                    // Это позволяет refreshVisualization корректно отобразить текущую схему.
-                    selectedTrigUri = trigUri;
-
-                    // Обновляем визуализацию
-                    if (typeof refreshVisualization === 'function') {
-                        refreshVisualization();
-                    }
-                } else {
-                    alert('Функция удаления недоступна');
-                }
-            } catch (error) {
-                console.error('Error deleting individ process:', error);
-                alert('Ошибка при удалении индивида процесса: ' + error.message);
-            }
-        }
-
-        /**
-         * Выполняет фактическое удаление предикатов vad:includes для ExecutorGroup
-         * @param {string} executorGroupUri - URI ExecutorGroup
-         * @param {string} trigUri - URI TriG
-         */
-        async function performDeleteIndividExecutor(executorGroupUri, trigUri) {
-            const prefixedGroup = getPrefixedName(executorGroupUri, currentPrefixes);
-            const prefixedTrig = getPrefixedName(trigUri, currentPrefixes);
-
-            // Формируем SPARQL DELETE запрос для удаления всех vad:includes
-            const deleteQuery = `
-DELETE WHERE {
-    GRAPH <${trigUri}> {
-        <${executorGroupUri}> <http://example.org/vad#includes> ?executor .
-    }
-}`;
-
-            try {
-                // Применяем запрос через существующую функцию
-                if (typeof applyTripleToRdfInput === 'function') {
-                    await applyTripleToRdfInput(deleteQuery, 'delete');
-                    console.log(`Deleted all executors from ${prefixedGroup} in ${prefixedTrig}`);
-
-                    // issue #338: Восстанавливаем selectedTrigUri после applyTripleToRdfInput,
-                    // так как она сбрасывает selectedTrigUri в null (issue #274).
-                    // Это позволяет refreshVisualization корректно отобразить текущую схему.
-                    selectedTrigUri = trigUri;
-
-                    // Обновляем визуализацию
-                    if (typeof refreshVisualization === 'function') {
-                        refreshVisualization();
-                    }
-                } else {
-                    alert('Функция удаления недоступна');
-                }
-            } catch (error) {
-                console.error('Error deleting executors:', error);
-                alert('Ошибка при удалении исполнителей: ' + error.message);
-            }
-        }
+        // ==============================================================================
+        // issue #372: Удалены функции performDeleteIndividProcess и performDeleteIndividExecutor
+        // Теперь используется SPARQL-Driven подход — удаление выполняется через
+        // модальное окно Del Concept\Individ\Schema, которое генерирует SPARQL запрос
+        // для применения через стандартную процедуру в Result in SPARQL.
+        // ==============================================================================
 
         // ==============================================================================
         // issue #370: ФУНКЦИИ МОДУЛЯ РЕДАКТИРОВАНИЯ vad:hasNext (Add hasNext Dia)

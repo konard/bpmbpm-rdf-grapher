@@ -174,7 +174,7 @@ let delIntermediateSparqlQueries = [];
 
 /**
  * Получает концепты процессов из ptree для dropdown
- * Issue #252: Обновлена цепочка вызовов — funSPARQLvaluesComunica → funSPARQLvalues → manual fallback
+ * issue #372: SPARQL-Driven подход — без JavaScript fallback
  * @returns {Array<{uri: string, label: string}>} Массив концептов
  */
 function getProcessConceptsForDeletion() {
@@ -182,15 +182,11 @@ function getProcessConceptsForDeletion() {
 
     let concepts = [];
 
-    // Issue #252: Пробуем сначала через funSPARQLvalues (синхронный)
+    // issue #372: SPARQL-Driven подход — используем только funSPARQLvalues
     if (typeof funSPARQLvalues === 'function') {
         concepts = funSPARQLvalues(sparqlQuery, 'concept');
-    }
-
-    // Issue #252: Если funSPARQLvalues вернул пустой результат, используем ручной поиск
-    // (funSPARQLvaluesComunica async — для полной поддержки OPTIONAL требуется async pipeline)
-    if (concepts.length === 0) {
-        concepts = getConceptsManual('http://example.org/vad#TypeProcess', 'http://example.org/vad#ptree');
+    } else {
+        console.error('getProcessConceptsForDeletion: funSPARQLvalues not available');
     }
 
     delIntermediateSparqlQueries.push({
@@ -206,7 +202,7 @@ function getProcessConceptsForDeletion() {
 
 /**
  * Получает концепты исполнителей из rtree для dropdown
- * Issue #252: Обновлена цепочка вызовов — funSPARQLvaluesComunica → funSPARQLvalues → manual fallback
+ * issue #372: SPARQL-Driven подход — без JavaScript fallback
  * @returns {Array<{uri: string, label: string}>} Массив концептов
  */
 function getExecutorConceptsForDeletion() {
@@ -214,14 +210,11 @@ function getExecutorConceptsForDeletion() {
 
     let concepts = [];
 
-    // Issue #252: Пробуем сначала через funSPARQLvalues (синхронный)
+    // issue #372: SPARQL-Driven подход — используем только funSPARQLvalues
     if (typeof funSPARQLvalues === 'function') {
         concepts = funSPARQLvalues(sparqlQuery, 'concept');
-    }
-
-    // Issue #252: Если funSPARQLvalues вернул пустой результат, используем ручной поиск
-    if (concepts.length === 0) {
-        concepts = getConceptsManual('http://example.org/vad#TypeExecutor', 'http://example.org/vad#rtree');
+    } else {
+        console.error('getExecutorConceptsForDeletion: funSPARQLvalues not available');
     }
 
     delIntermediateSparqlQueries.push({
@@ -236,7 +229,11 @@ function getExecutorConceptsForDeletion() {
 }
 
 /**
- * Ручное получение концептов (fallback)
+ * issue #372: DEPRECATED — эта функция больше не используется
+ * Оставлена для обратной совместимости, но не вызывается из основного кода
+ *
+ * Ручное получение концептов (устаревший fallback)
+ * @deprecated Используйте funSPARQLvalues вместо этой функции
  * @param {string} typeUri - URI типа концепта
  * @param {string} graphUri - URI графа
  * @returns {Array<{uri: string, label: string}>} Массив концептов
@@ -487,28 +484,12 @@ function checkProcessSchema(conceptUri) {
 
     let trigs = [];
 
-    // Issue #252: Пробуем через funSPARQLvalues (запрос простой, без OPTIONAL)
+    // issue #372: SPARQL-Driven подход — используем только funSPARQLvalues
     if (typeof funSPARQLvalues === 'function') {
         const results = funSPARQLvalues(sparqlQuery, 'trig');
         trigs = results.map(r => r.uri);
-    }
-
-    // Fallback на manual поиск при пустом результате
-    if (trigs.length === 0) {
-        const hasTrigUri = 'http://example.org/vad#hasTrig';
-        const ptreeUri = 'http://example.org/vad#ptree';
-
-        // issue #326: Используем currentStore.getQuads() вместо currentQuads
-    if (currentStore) {
-        const quads = currentStore.getQuads(null, null, null, null);
-            quads.forEach(quad => {
-                if (quad.subject.value === conceptUri &&
-                    quad.predicate.value === hasTrigUri &&
-                    quad.graph && quad.graph.value === ptreeUri) {
-                    trigs.push(quad.object.value);
-                }
-            });
-        }
+    } else {
+        console.error('checkProcessSchema: funSPARQLvalues not available');
     }
 
     delIntermediateSparqlQueries.push({
@@ -524,7 +505,7 @@ function checkProcessSchema(conceptUri) {
 
 /**
  * Проверяет наличие дочерних элементов
- * Issue #252: Обновлён — сначала пробует funSPARQLvalues, затем manual fallback
+ * issue #372: SPARQL-Driven подход — без JavaScript fallback
  * @param {string} conceptUri - URI родительского концепта
  * @param {string} graphUri - URI графа (ptree или rtree)
  * @returns {Array<{uri: string, label: string}>} Найденные дочерние элементы
@@ -537,7 +518,7 @@ function checkChildrenElements(conceptUri, graphUri) {
 
     let children = [];
 
-    // Issue #252: Пробуем через funSPARQLvalues
+    // issue #372: SPARQL-Driven подход — используем только funSPARQLvalues
     if (typeof funSPARQLvalues === 'function') {
         const results = funSPARQLvalues(sparqlQuery, 'child');
         children = results.map(r => ({
@@ -546,28 +527,8 @@ function checkChildrenElements(conceptUri, graphUri) {
                 ? getPrefixedName(r.uri, currentPrefixes)
                 : r.uri)
         }));
-    }
-
-    // Fallback на manual поиск при пустом результате
-    if (children.length === 0) {
-        const hasParentObjUri = 'http://example.org/vad#hasParentObj';
-
-        // issue #326: Используем currentStore.getQuads() вместо currentQuads
-    if (currentStore) {
-        const quads = currentStore.getQuads(null, null, null, null);
-            quads.forEach(quad => {
-                if (quad.predicate.value === hasParentObjUri &&
-                    quad.object.value === conceptUri &&
-                    quad.graph && quad.graph.value === graphUri) {
-                    children.push({
-                        uri: quad.subject.value,
-                        label: typeof getPrefixedName === 'function'
-                            ? getPrefixedName(quad.subject.value, currentPrefixes)
-                            : quad.subject.value
-                    });
-                }
-            });
-        }
+    } else {
+        console.error('checkChildrenElements: funSPARQLvalues not available');
     }
 
     delIntermediateSparqlQueries.push({
@@ -583,7 +544,7 @@ function checkChildrenElements(conceptUri, graphUri) {
 
 /**
  * Проверяет использование исполнителя в TriG
- * Issue #252: Обновлён — сначала пробует funSPARQLvalues, затем manual fallback
+ * issue #372: SPARQL-Driven подход — без JavaScript fallback
  * @param {string} executorUri - URI исполнителя
  * @returns {Array<{trig: string, processIndivid: string}>} Найденные использования
  */
@@ -592,33 +553,15 @@ function checkExecutorUsage(executorUri) {
 
     let usages = [];
 
-    // Issue #252: Пробуем через funSPARQLvalues
+    // issue #372: SPARQL-Driven подход — используем только funSPARQLvalues
     if (typeof funSPARQLvalues === 'function') {
         const results = funSPARQLvalues(sparqlQuery, 'trig');
         usages = results.map(r => ({
             trig: r.uri,
-            processIndivid: r.label || r.uri // label содержит processIndivid если доступен
+            processIndivid: r.label || r.uri
         }));
-    }
-
-    // Fallback на manual поиск при пустом результате
-    if (usages.length === 0) {
-        const includesUri = 'http://example.org/vad#includes';
-
-        // issue #326: Используем currentStore.getQuads() вместо currentQuads
-    if (currentStore) {
-        const quads = currentStore.getQuads(null, null, null, null);
-            quads.forEach(quad => {
-                if (quad.predicate.value === includesUri &&
-                    quad.object.value === executorUri &&
-                    quad.graph) {
-                    usages.push({
-                        trig: quad.graph.value,
-                        processIndivid: quad.subject.value
-                    });
-                }
-            });
-        }
+    } else {
+        console.error('checkExecutorUsage: funSPARQLvalues not available');
     }
 
     delIntermediateSparqlQueries.push({
@@ -634,7 +577,7 @@ function checkExecutorUsage(executorUri) {
 
 /**
  * Получает все TriG типа VADProcessDia
- * Issue #252: Обновлён — сначала пробует funSPARQLvalues, затем manual fallback
+ * issue #372: SPARQL-Driven подход — без JavaScript fallback
  * @returns {Array<{uri: string, label: string}>} Массив TriG
  */
 function getAllTrigs() {
@@ -642,7 +585,7 @@ function getAllTrigs() {
 
     let trigs = [];
 
-    // Issue #252: Пробуем через funSPARQLvalues
+    // issue #372: SPARQL-Driven подход — используем только funSPARQLvalues
     if (typeof funSPARQLvalues === 'function') {
         const results = funSPARQLvalues(sparqlQuery, 'trig');
         trigs = results.map(r => ({
@@ -651,28 +594,8 @@ function getAllTrigs() {
                 ? getPrefixedName(r.uri, currentPrefixes)
                 : r.uri)
         }));
-    }
-
-    // Fallback на manual поиск при пустом результате
-    if (trigs.length === 0) {
-        const rdfTypeUri = 'http://www.w3.org/1999/02/22-rdf-syntax-ns#type';
-        const vadProcessDiaUri = 'http://example.org/vad#VADProcessDia';
-
-        // issue #326: Используем currentStore.getQuads() вместо currentQuads
-    if (currentStore) {
-        const quads = currentStore.getQuads(null, null, null, null);
-            quads.forEach(quad => {
-                if (quad.predicate.value === rdfTypeUri &&
-                    quad.object.value === vadProcessDiaUri) {
-                    trigs.push({
-                        uri: quad.subject.value,
-                        label: typeof getPrefixedName === 'function'
-                            ? getPrefixedName(quad.subject.value, currentPrefixes)
-                            : quad.subject.value
-                    });
-                }
-            });
-        }
+    } else {
+        console.error('getAllTrigs: funSPARQLvalues not available');
     }
 
     delIntermediateSparqlQueries.push({
@@ -758,6 +681,148 @@ function openDelConceptModal() {
     } else {
         console.error('Модальное окно del-concept-modal не найдено');
     }
+}
+
+/**
+ * issue #372: Открывает модальное окно удаления с предустановленными значениями
+ * SPARQL-Driven подход — вызывается из метода Delete Individ Process (12_method)
+ *
+ * Аналогично Add hasNext Dia — подставляются значения из текущей схемы,
+ * пользователь получает готовый SPARQL-запрос для применения.
+ *
+ * @param {string} type - Тип удаления: 'individ' для индивида процесса, 'executor' для исполнителя
+ * @param {string} prefixedTrigUri - Prefixed URI схемы (TriG), например 'vad:t_p1'
+ * @param {string} prefixedIndividUri - Prefixed URI индивида, например 'vad:p1.1'
+ */
+function openDeleteModal(type, prefixedTrigUri, prefixedIndividUri) {
+    // Проверяем наличие данных
+    if (!currentStore || currentStore.size === 0) {
+        alert('Данные quadstore пусты. Загрузите пример данных.\n\nQuadstore is empty. Load example data.');
+        return;
+    }
+
+    // Очищаем предыдущее состояние
+    delConceptState = {
+        isOpen: true,
+        selectedOperation: null,
+        selectedConcept: null,
+        selectedTrig: null,
+        selectedIndividuals: [],
+        foundIndividuals: [],
+        foundTrigs: [],
+        validationErrors: [],
+        intermediateSparql: ''
+    };
+    delIntermediateSparqlQueries = [];
+
+    const modal = document.getElementById('del-concept-modal');
+    if (!modal) {
+        console.error('Модальное окно del-concept-modal не найдено');
+        return;
+    }
+
+    // Сбрасываем форму
+    resetDelConceptForm();
+
+    // Выбираем тип операции в зависимости от параметра type
+    const operationType = type === 'executor'
+        ? DEL_OPERATION_TYPES.INDIVID_EXECUTOR_IN_SCHEMA
+        : DEL_OPERATION_TYPES.INDIVID_PROCESS_IN_SCHEMA;
+
+    const operationSelect = document.getElementById('del-concept-operation');
+    if (operationSelect) {
+        operationSelect.value = operationType;
+    }
+
+    // Устанавливаем состояние
+    delConceptState.selectedOperation = operationType;
+
+    // Преобразуем prefixed URI в полные URI
+    const trigUri = expandPrefixedName(prefixedTrigUri, currentPrefixes);
+    const individUri = expandPrefixedName(prefixedIndividUri, currentPrefixes);
+
+    delConceptState.selectedTrig = trigUri;
+
+    // Строим форму для выбранной операции
+    const config = DEL_CONCEPT_CONFIG[operationType];
+    buildDelConceptForm(config, operationType);
+
+    // Инициализируем dropdowns
+    initializeDelDropdowns(operationType);
+
+    // После рендеринга формы — заполняем dropdowns предустановленными значениями
+    setTimeout(() => {
+        // Выбираем TriG
+        const trigSelect = document.getElementById('del-trig-select');
+        if (trigSelect) {
+            trigSelect.value = trigUri;
+            // Эмулируем событие выбора TriG
+            onDelTrigSelectForIndivid();
+
+            // После загрузки индивидов — выбираем нужный индивид
+            setTimeout(() => {
+                const individSelect = document.getElementById('del-individ-in-schema-select');
+                if (individSelect) {
+                    individSelect.value = individUri;
+                    // Эмулируем событие выбора индивида
+                    onDelIndividInSchemaSelect();
+                }
+            }, 100);
+        }
+    }, 50);
+
+    // Сбрасываем позицию модального окна
+    if (typeof resetModalPosition === 'function') {
+        resetModalPosition('del-concept-modal');
+    }
+
+    modal.style.display = 'block';
+
+    if (typeof updateSmartDesignFieldsState === 'function') {
+        updateSmartDesignFieldsState();
+    }
+}
+
+/**
+ * issue #372: Раскрывает prefixed URI в полный URI
+ * @param {string} prefixedUri - Prefixed URI, например 'vad:t_p1'
+ * @param {Object} prefixes - Словарь префиксов
+ * @returns {string} Полный URI
+ */
+function expandPrefixedName(prefixedUri, prefixes) {
+    if (!prefixedUri) return prefixedUri;
+
+    // Если уже полный URI
+    if (prefixedUri.startsWith('http://') || prefixedUri.startsWith('https://')) {
+        return prefixedUri;
+    }
+
+    // Разбираем prefix:localName
+    const colonIndex = prefixedUri.indexOf(':');
+    if (colonIndex === -1) return prefixedUri;
+
+    const prefix = prefixedUri.substring(0, colonIndex);
+    const localName = prefixedUri.substring(colonIndex + 1);
+
+    // Ищем namespace для prefix
+    if (prefixes && prefixes[prefix]) {
+        return prefixes[prefix] + localName;
+    }
+
+    // Стандартные префиксы
+    const standardPrefixes = {
+        'vad': 'http://example.org/vad#',
+        'rdf': 'http://www.w3.org/1999/02/22-rdf-syntax-ns#',
+        'rdfs': 'http://www.w3.org/2000/01/rdf-schema#',
+        'owl': 'http://www.w3.org/2002/07/owl#',
+        'xsd': 'http://www.w3.org/2001/XMLSchema#'
+    };
+
+    if (standardPrefixes[prefix]) {
+        return standardPrefixes[prefix] + localName;
+    }
+
+    return prefixedUri;
 }
 
 /**
