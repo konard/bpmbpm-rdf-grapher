@@ -11,8 +11,8 @@
 - периодически в promt добавлять: Напоминаю о приоритете SPARQL-driven Programming (Программирование на основе SPARQL).
   
 ### Ontology 
-- [Basic VAD Ontology - Базовая онтология верхнеуровневых процессов](https://github.com/bpmbpm/rdf-grapher/blob/main/ver9c/ontology/vad-basic-ontology.trig), ранее .ttl
-- Технологическая часть онтологии [Tech Appendix - Технологические классы и объекты](https://github.com/bpmbpm/rdf-grapher/blob/main/ver9c/ontology/vad-basic-ontology_tech_Appendix.trig), ранее .ttl
+- [Basic VAD Ontology - Базовая онтология верхнеуровневых процессов](https://github.com/bpmbpm/rdf-grapher/blob/main/ver9c/ontology/vad-basic-ontology.trig) (ранее .ttl)
+- Технологическая часть онтологии [Tech Appendix - Технологические классы и объекты](https://github.com/bpmbpm/rdf-grapher/blob/main/ver9c/ontology/vad-basic-ontology_tech_Appendix.trig) (ранее .ttl)
 - [Терминологический словарь (Terminology Dictionary)](https://github.com/bpmbpm/rdf-grapher/blob/main/ver9c/ontology/term.md), например,  ptree - это хранилище концептов процесса, а индивиды процесса хранятся в TriG типа VADProcessDia.
 #### Наименования obj & predicate
 - имена классов / подклассов / типов : пишутся в формате UpperCamelCase (как в Java), а имена предикатов - в формате lowerCamelCase. 
