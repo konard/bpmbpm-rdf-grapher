@@ -1,0 +1,514 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>RDF Grapher ver9d - Тест Mixed Triple: 8 фаз (смешанные Simple и Shorthand операции)</title>
+    <!-- Ссылка на issue: https://github.com/bpmbpm/rdf-grapher/issues/256 -->
+    <style>
+        body { font-family: Consolas, Monaco, monospace; padding: 20px; background-color: #f5f5f5; }
+        h1 { color: #333; border-bottom: 2px solid #FF5722; padding-bottom: 10px; }
+        h2 { color: #FF5722; margin-top: 30px; }
+        h3 { color: #FF7043; margin-top: 20px; font-size: 16px; }
+        .step { padding: 10px 15px; margin: 5px 0; border-radius: 4px; font-size: 14px; }
+        .step-passed { background-color: #d4edda; border-left: 4px solid #28a745; color: #155724; }
+        .step-failed { background-color: #f8d7da; border-left: 4px solid #dc3545; color: #721c24; }
+        .step-running { background-color: #fff3cd; border-left: 4px solid #ffc107; color: #856404; }
+        .step-info { background-color: #d1ecf1; border-left: 4px solid #17a2b8; color: #0c5460; }
+        .phase-header { background-color: #fbe9e7; border-left: 4px solid #FF5722; color: #bf360c; font-weight: bold; margin-top: 20px; }
+        .phase-simple { border-left-color: #1976D2; background-color: #e3f2fd; }
+        .phase-shorthand { border-left-color: #8E24AA; background-color: #f3e5f5; }
+        .summary { margin-top: 20px; padding: 15px; border-radius: 4px; font-size: 16px; font-weight: bold; }
+        .summary-passed { background-color: #d4edda; color: #155724; }
+        .summary-failed { background-color: #f8d7da; color: #721c24; }
+        .sparql-block { background-color: #263238; color: #EEFFFF; padding: 15px; border-radius: 4px; margin: 10px 0; font-size: 13px; white-space: pre-wrap; overflow-x: auto; }
+        .data-block { background-color: #FAFAFA; border: 1px solid #E0E0E0; padding: 15px; border-radius: 4px; margin: 10px 0; font-size: 13px; white-space: pre-wrap; overflow-x: auto; max-height: 400px; overflow-y: auto; }
+        #test-log { margin-top: 10px; }
+        .legend { background-color: #fff; border: 1px solid #ddd; padding: 10px; margin: 10px 0; border-radius: 4px; }
+        .legend-item { display: inline-block; margin-right: 20px; }
+        .legend-simple { color: #1976D2; font-weight: bold; }
+        .legend-shorthand { color: #8E24AA; font-weight: bold; }
+    </style>
+</head>
+<body>
+    <h1>Тест Mixed Triple: 8 фаз</h1>
+    <p>
+        Сценарий тестирует смешанные операции с использованием Simple Triple для добавления и Shorthand Triple для удаления (и наоборот).<br><br>
+        <strong>Блок A (Simple INSERT → Shorthand DELETE):</strong><br>
+        <span class="legend-simple">Фаза 1:</span> Создание концепта процесса (Simple Triple)<br>
+        <span class="legend-simple">Фаза 2:</span> Создание концепта исполнителя (Simple Triple)<br>
+        <span class="legend-shorthand">Фаза 3:</span> Удаление концепта процесса (Shorthand Triple)<br>
+        <span class="legend-shorthand">Фаза 4:</span> Удаление концепта исполнителя (Shorthand Triple)<br><br>
+        <strong>Блок B (Shorthand INSERT → Simple DELETE):</strong><br>
+        <span class="legend-shorthand">Фаза 5:</span> Создание концепта процесса (Shorthand Triple)<br>
+        <span class="legend-shorthand">Фаза 6:</span> Создание концепта исполнителя (Shorthand Triple)<br>
+        <span class="legend-simple">Фаза 7:</span> Удаление концепта процесса (Simple Triple)<br>
+        <span class="legend-simple">Фаза 8:</span> Удаление концепта исполнителя (Simple Triple)
+    </p>
+    <div class="legend">
+        <span class="legend-item"><span class="legend-simple">■ Simple Triple</span></span>
+        <span class="legend-item"><span class="legend-shorthand">■ Shorthand Triple</span></span>
+    </div>
+    <div id="test-log"></div>
+    <div id="test-summary"></div>
+
+    <!-- Подключение библиотеки N3.js для парсинга и хранения RDF данных -->
+    <script src="https://unpkg.com/n3@1.17.2/browser/n3.min.js"></script>
+
+    <!-- Подключение библиотеки Comunica для SPARQL запросов -->
+    <script src="https://rdf.js.org/comunica-browser/versions/v4/engines/query-sparql-rdfjs/comunica-browser.js"></script>
+
+    <!-- Подключение основной библиотеки RDF Grapher (глобальные переменные, утилиты) -->
+    <script src="../../9_vadlib/vadlib.js"></script>
+    <!-- Подключение SPARQL-движка (funSPARQLvalues и вспомогательные функции) -->
+    <script src="../../9_vadlib/vadlib_sparql.js"></script>
+    <!-- Подключение логики триплстора (parseTriGHierarchy, validateVAD) -->
+    <script src="../../2_triplestore/2_triplestore_logic.js"></script>
+
+    <script>
+        // ============================================================================
+        // Тест Mixed Triple: 8 фаз смешанных операций
+        // Ссылка на issue: https://github.com/bpmbpm/rdf-grapher/issues/256
+        // ============================================================================
+
+        const testLog = document.getElementById('test-log');
+        const testSummary = document.getElementById('test-summary');
+        let stepResults = [];
+
+        /**
+         * Логирует шаг сценария с указанием статуса
+         */
+        function logStep(name, status, message, mode = null) {
+            const div = document.createElement('div');
+            let className = `step step-${status === 'phase' ? 'phase-header' : status}`;
+            if (status === 'phase' && mode) {
+                className += ` phase-${mode}`;
+            }
+            div.className = className;
+            const icons = { passed: '✅', failed: '❌', running: '⏳', info: 'ℹ️', phase: '📋' };
+            div.textContent = `${icons[status] || ''} ${name}: ${message}`;
+            testLog.appendChild(div);
+            if (status === 'passed' || status === 'failed') {
+                stepResults.push({ name, passed: status === 'passed', message });
+            }
+        }
+
+        /**
+         * Выводит блок с SPARQL-запросом или данными в лог
+         */
+        function logBlock(title, content, type = 'data') {
+            const h = document.createElement('h3');
+            h.textContent = title;
+            testLog.appendChild(h);
+
+            const div = document.createElement('div');
+            div.className = type === 'sparql' ? 'sparql-block' : 'data-block';
+            div.textContent = content;
+            testLog.appendChild(div);
+        }
+
+        /**
+         * Показывает итоговую сводку по всем шагам
+         */
+        function showSummary() {
+            const passed = stepResults.filter(s => s.passed).length;
+            const total = stepResults.length;
+            const allPassed = passed === total;
+            testSummary.className = `summary ${allPassed ? 'summary-passed' : 'summary-failed'}`;
+            testSummary.textContent = `Результат теста Mixed Triple: ${passed}/${total} шагов пройдено ${allPassed ? '✅' : '❌'}`;
+        }
+
+        /**
+         * Извлекает содержимое конкретного графа (TriG) из массива квадов
+         */
+        function getGraphContent(graphUri, quads, prefixes) {
+            const graphQuads = quads.filter(q => q.graph && q.graph.value === graphUri);
+            if (graphQuads.length === 0) return '(граф пуст)';
+
+            const graphLabel = getPrefixedName(graphUri, prefixes);
+            let output = `${graphLabel} {\n`;
+
+            graphQuads.forEach(q => {
+                const s = getPrefixedName(q.subject.value, prefixes);
+                const p = getPrefixedName(q.predicate.value, prefixes);
+                const o = q.object.termType === 'Literal'
+                    ? `"${q.object.value}"`
+                    : getPrefixedName(q.object.value, prefixes);
+                output += `    ${s} ${p} ${o} .\n`;
+            });
+
+            output += '}';
+            return output;
+        }
+
+        /**
+         * Применяет SPARQL запрос к currentStore через Comunica
+         */
+        async function applySparql(sparqlQuery) {
+            try {
+                if (!comunicaEngine) {
+                    if (typeof Comunica !== 'undefined' && Comunica.QueryEngine) {
+                        comunicaEngine = new Comunica.QueryEngine();
+                    } else {
+                        throw new Error('Comunica не загружена');
+                    }
+                }
+
+                await comunicaEngine.queryVoid(sparqlQuery, {
+                    sources: [currentStore]
+                });
+
+                currentQuads = currentStore.getQuads(null, null, null, null);
+                return true;
+            } catch (error) {
+                console.error('applySparql error:', error);
+                throw error;
+            }
+        }
+
+        /**
+         * Загружает и парсит TriG данные
+         */
+        async function loadTriGData() {
+            const response = await fetch('../../dia/Trig_VADv5.ttl');
+            if (!response.ok) throw new Error(`HTTP ${response.status}`);
+            const data = await response.text();
+
+            const quads = [];
+            let prefixes = {};
+
+            await new Promise((resolve, reject) => {
+                const parser = new N3.Parser({ format: 'trig' });
+                parser.parse(data, (error, quad, parsedPrefixes) => {
+                    if (error) { reject(error); return; }
+                    if (quad) { quads.push(quad); }
+                    else {
+                        if (parsedPrefixes) prefixes = parsedPrefixes;
+                        resolve();
+                    }
+                });
+            });
+
+            return { quads, prefixes };
+        }
+
+        /**
+         * Основная функция запуска теста
+         */
+        async function runTest() {
+            // ================================================================
+            // Загрузка исходных данных
+            // ================================================================
+            logStep('Подготовка', 'running', 'Загрузка Trig_VADv5.ttl...');
+            try {
+                const { quads, prefixes } = await loadTriGData();
+                currentQuads = quads;
+                currentPrefixes = prefixes;
+                currentStore = new N3.Store();
+                quads.forEach(q => currentStore.addQuad(q));
+
+                logStep('Подготовка', 'passed', `Загружено ${quads.length} квадов, ${Object.keys(prefixes).length} префиксов`);
+            } catch (error) {
+                logStep('Подготовка', 'failed', `Ошибка: ${error.message}`);
+                showSummary();
+                return;
+            }
+
+            const prefixLines = Object.entries(currentPrefixes)
+                .map(([prefix, uri]) => `PREFIX ${prefix}: <${uri}>`)
+                .join('\n');
+
+            // ================================================================
+            // БЛОК A: Simple INSERT → Shorthand DELETE
+            // ================================================================
+
+            // ФАЗА 1: Создание концепта процесса (Simple Triple)
+            logStep('ФАЗА 1', 'phase', 'Создание концепта процесса vad:process_mix_a (Simple Triple)', 'simple');
+
+            const phase1Query = `${prefixLines}
+
+INSERT DATA {
+    GRAPH vad:ptree {
+        vad:process_mix_a rdf:type vad:TypeProcess .
+        vad:process_mix_a rdfs:label "Процесс Mix A" .
+        vad:process_mix_a dcterms:description "Тестовый процесс для смешанного теста (блок A)" .
+        vad:process_mix_a vad:hasParentObj vad:p1 .
+    }
+}`;
+
+            logBlock('Фаза 1 - SPARQL INSERT (Simple Triple)', phase1Query, 'sparql');
+            try {
+                await applySparql(phase1Query);
+                const found = currentStore.getQuads(
+                    N3.DataFactory.namedNode('http://example.org/vad#process_mix_a'),
+                    N3.DataFactory.namedNode('http://www.w3.org/2000/01/rdf-schema#label'),
+                    null,
+                    N3.DataFactory.namedNode('http://example.org/vad#ptree')
+                );
+                if (found.length > 0) {
+                    logStep('Фаза 1', 'passed', `Концепт vad:process_mix_a создан (Simple). Label: "${found[0].object.value}"`);
+                } else {
+                    throw new Error('Концепт не найден после INSERT');
+                }
+            } catch (error) {
+                logStep('Фаза 1', 'failed', `Ошибка: ${error.message}`);
+                showSummary();
+                return;
+            }
+
+            const ptreeAfterPhase1 = getGraphContent('http://example.org/vad#ptree', currentQuads, currentPrefixes);
+            logBlock('Фаза 1 - Содержимое vad:ptree после INSERT', ptreeAfterPhase1, 'data');
+
+            // ФАЗА 2: Создание концепта исполнителя (Simple Triple)
+            logStep('ФАЗА 2', 'phase', 'Создание концепта исполнителя vad:executor_mix_a (Simple Triple)', 'simple');
+
+            const phase2Query = `${prefixLines}
+
+INSERT DATA {
+    GRAPH vad:rtree {
+        vad:executor_mix_a rdf:type vad:TypeExecutor .
+        vad:executor_mix_a rdfs:label "Исполнитель Mix A" .
+        vad:executor_mix_a vad:hasParentObj vad:Org-structure .
+    }
+}`;
+
+            logBlock('Фаза 2 - SPARQL INSERT (Simple Triple)', phase2Query, 'sparql');
+            try {
+                await applySparql(phase2Query);
+                const found = currentStore.getQuads(
+                    N3.DataFactory.namedNode('http://example.org/vad#executor_mix_a'),
+                    N3.DataFactory.namedNode('http://www.w3.org/2000/01/rdf-schema#label'),
+                    null,
+                    N3.DataFactory.namedNode('http://example.org/vad#rtree')
+                );
+                if (found.length > 0) {
+                    logStep('Фаза 2', 'passed', `Концепт vad:executor_mix_a создан (Simple). Label: "${found[0].object.value}"`);
+                } else {
+                    throw new Error('Концепт не найден после INSERT');
+                }
+            } catch (error) {
+                logStep('Фаза 2', 'failed', `Ошибка: ${error.message}`);
+                showSummary();
+                return;
+            }
+
+            const rtreeAfterPhase2 = getGraphContent('http://example.org/vad#rtree', currentQuads, currentPrefixes);
+            logBlock('Фаза 2 - Содержимое vad:rtree после INSERT', rtreeAfterPhase2, 'data');
+
+            // ФАЗА 3: Удаление концепта процесса (Shorthand Triple)
+            logStep('ФАЗА 3', 'phase', 'Удаление концепта процесса vad:process_mix_a (Shorthand Triple)', 'shorthand');
+
+            const phase3Query = `${prefixLines}
+
+DELETE WHERE {
+    GRAPH vad:ptree {
+        vad:process_mix_a ?p ?o .
+    }
+}`;
+
+            logBlock('Фаза 3 - SPARQL DELETE WHERE (Shorthand Triple)', phase3Query, 'sparql');
+            try {
+                await applySparql(phase3Query);
+                const remaining = currentStore.getQuads(
+                    N3.DataFactory.namedNode('http://example.org/vad#process_mix_a'),
+                    null, null,
+                    N3.DataFactory.namedNode('http://example.org/vad#ptree')
+                );
+                if (remaining.length === 0) {
+                    logStep('Фаза 3', 'passed', 'Концепт vad:process_mix_a удалён (Shorthand)');
+                } else {
+                    throw new Error(`Концепт не удалён: ${remaining.length} квадов осталось`);
+                }
+            } catch (error) {
+                logStep('Фаза 3', 'failed', `Ошибка: ${error.message}`);
+                showSummary();
+                return;
+            }
+
+            const ptreeAfterPhase3 = getGraphContent('http://example.org/vad#ptree', currentQuads, currentPrefixes);
+            logBlock('Фаза 3 - Содержимое vad:ptree после DELETE', ptreeAfterPhase3, 'data');
+
+            // ФАЗА 4: Удаление концепта исполнителя (Shorthand Triple)
+            logStep('ФАЗА 4', 'phase', 'Удаление концепта исполнителя vad:executor_mix_a (Shorthand Triple)', 'shorthand');
+
+            const phase4Query = `${prefixLines}
+
+DELETE WHERE {
+    GRAPH vad:rtree {
+        vad:executor_mix_a ?p ?o .
+    }
+}`;
+
+            logBlock('Фаза 4 - SPARQL DELETE WHERE (Shorthand Triple)', phase4Query, 'sparql');
+            try {
+                await applySparql(phase4Query);
+                const remaining = currentStore.getQuads(
+                    N3.DataFactory.namedNode('http://example.org/vad#executor_mix_a'),
+                    null, null,
+                    N3.DataFactory.namedNode('http://example.org/vad#rtree')
+                );
+                if (remaining.length === 0) {
+                    logStep('Фаза 4', 'passed', 'Концепт vad:executor_mix_a удалён (Shorthand)');
+                } else {
+                    throw new Error(`Концепт не удалён: ${remaining.length} квадов осталось`);
+                }
+            } catch (error) {
+                logStep('Фаза 4', 'failed', `Ошибка: ${error.message}`);
+                showSummary();
+                return;
+            }
+
+            const rtreeAfterPhase4 = getGraphContent('http://example.org/vad#rtree', currentQuads, currentPrefixes);
+            logBlock('Фаза 4 - Содержимое vad:rtree после DELETE', rtreeAfterPhase4, 'data');
+
+            // ================================================================
+            // БЛОК B: Shorthand INSERT → Simple DELETE
+            // ================================================================
+
+            // ФАЗА 5: Создание концепта процесса (Shorthand Triple)
+            logStep('ФАЗА 5', 'phase', 'Создание концепта процесса vad:process_mix_b (Shorthand Triple)', 'shorthand');
+
+            const phase5Query = `${prefixLines}
+
+INSERT DATA {
+    GRAPH vad:ptree {
+        vad:process_mix_b rdf:type vad:TypeProcess ;
+            rdfs:label "Процесс Mix B" ;
+            dcterms:description "Тестовый процесс для смешанного теста (блок B)" ;
+            vad:hasParentObj vad:p1 .
+    }
+}`;
+
+            logBlock('Фаза 5 - SPARQL INSERT (Shorthand Triple)', phase5Query, 'sparql');
+            try {
+                await applySparql(phase5Query);
+                const found = currentStore.getQuads(
+                    N3.DataFactory.namedNode('http://example.org/vad#process_mix_b'),
+                    N3.DataFactory.namedNode('http://www.w3.org/2000/01/rdf-schema#label'),
+                    null,
+                    N3.DataFactory.namedNode('http://example.org/vad#ptree')
+                );
+                if (found.length > 0) {
+                    logStep('Фаза 5', 'passed', `Концепт vad:process_mix_b создан (Shorthand). Label: "${found[0].object.value}"`);
+                } else {
+                    throw new Error('Концепт не найден после INSERT');
+                }
+            } catch (error) {
+                logStep('Фаза 5', 'failed', `Ошибка: ${error.message}`);
+                showSummary();
+                return;
+            }
+
+            const ptreeAfterPhase5 = getGraphContent('http://example.org/vad#ptree', currentQuads, currentPrefixes);
+            logBlock('Фаза 5 - Содержимое vad:ptree после INSERT', ptreeAfterPhase5, 'data');
+
+            // ФАЗА 6: Создание концепта исполнителя (Shorthand Triple)
+            logStep('ФАЗА 6', 'phase', 'Создание концепта исполнителя vad:executor_mix_b (Shorthand Triple)', 'shorthand');
+
+            const phase6Query = `${prefixLines}
+
+INSERT DATA {
+    GRAPH vad:rtree {
+        vad:executor_mix_b rdf:type vad:TypeExecutor ;
+            rdfs:label "Исполнитель Mix B" ;
+            vad:hasParentObj vad:Org-structure .
+    }
+}`;
+
+            logBlock('Фаза 6 - SPARQL INSERT (Shorthand Triple)', phase6Query, 'sparql');
+            try {
+                await applySparql(phase6Query);
+                const found = currentStore.getQuads(
+                    N3.DataFactory.namedNode('http://example.org/vad#executor_mix_b'),
+                    N3.DataFactory.namedNode('http://www.w3.org/2000/01/rdf-schema#label'),
+                    null,
+                    N3.DataFactory.namedNode('http://example.org/vad#rtree')
+                );
+                if (found.length > 0) {
+                    logStep('Фаза 6', 'passed', `Концепт vad:executor_mix_b создан (Shorthand). Label: "${found[0].object.value}"`);
+                } else {
+                    throw new Error('Концепт не найден после INSERT');
+                }
+            } catch (error) {
+                logStep('Фаза 6', 'failed', `Ошибка: ${error.message}`);
+                showSummary();
+                return;
+            }
+
+            const rtreeAfterPhase6 = getGraphContent('http://example.org/vad#rtree', currentQuads, currentPrefixes);
+            logBlock('Фаза 6 - Содержимое vad:rtree после INSERT', rtreeAfterPhase6, 'data');
+
+            // ФАЗА 7: Удаление концепта процесса (Simple Triple)
+            logStep('ФАЗА 7', 'phase', 'Удаление концепта процесса vad:process_mix_b (Simple Triple)', 'simple');
+
+            const phase7Query = `${prefixLines}
+
+DELETE WHERE {
+    GRAPH vad:ptree {
+        vad:process_mix_b ?p ?o .
+    }
+}`;
+
+            logBlock('Фаза 7 - SPARQL DELETE WHERE (Simple Triple)', phase7Query, 'sparql');
+            try {
+                await applySparql(phase7Query);
+                const remaining = currentStore.getQuads(
+                    N3.DataFactory.namedNode('http://example.org/vad#process_mix_b'),
+                    null, null,
+                    N3.DataFactory.namedNode('http://example.org/vad#ptree')
+                );
+                if (remaining.length === 0) {
+                    logStep('Фаза 7', 'passed', 'Концепт vad:process_mix_b удалён (Simple)');
+                } else {
+                    throw new Error(`Концепт не удалён: ${remaining.length} квадов осталось`);
+                }
+            } catch (error) {
+                logStep('Фаза 7', 'failed', `Ошибка: ${error.message}`);
+                showSummary();
+                return;
+            }
+
+            const ptreeAfterPhase7 = getGraphContent('http://example.org/vad#ptree', currentQuads, currentPrefixes);
+            logBlock('Фаза 7 - Содержимое vad:ptree после DELETE', ptreeAfterPhase7, 'data');
+
+            // ФАЗА 8: Удаление концепта исполнителя (Simple Triple)
+            logStep('ФАЗА 8', 'phase', 'Удаление концепта исполнителя vad:executor_mix_b (Simple Triple)', 'simple');
+
+            const phase8Query = `${prefixLines}
+
+DELETE WHERE {
+    GRAPH vad:rtree {
+        vad:executor_mix_b ?p ?o .
+    }
+}`;
+
+            logBlock('Фаза 8 - SPARQL DELETE WHERE (Simple Triple)', phase8Query, 'sparql');
+            try {
+                await applySparql(phase8Query);
+                const remaining = currentStore.getQuads(
+                    N3.DataFactory.namedNode('http://example.org/vad#executor_mix_b'),
+                    null, null,
+                    N3.DataFactory.namedNode('http://example.org/vad#rtree')
+                );
+                if (remaining.length === 0) {
+                    logStep('Фаза 8', 'passed', 'Концепт vad:executor_mix_b удалён (Simple)');
+                } else {
+                    throw new Error(`Концепт не удалён: ${remaining.length} квадов осталось`);
+                }
+            } catch (error) {
+                logStep('Фаза 8', 'failed', `Ошибка: ${error.message}`);
+            }
+
+            const rtreeAfterPhase8 = getGraphContent('http://example.org/vad#rtree', currentQuads, currentPrefixes);
+            logBlock('Фаза 8 - Содержимое vad:rtree после DELETE', rtreeAfterPhase8, 'data');
+
+            showSummary();
+        }
+
+        // Запуск теста при загрузке страницы
+        document.addEventListener('DOMContentLoaded', function() {
+            runTest();
+        });
+    </script>
+</body>
+</html>
