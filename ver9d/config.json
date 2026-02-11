@@ -12,7 +12,7 @@
         },
         "3_sd": {
             "title": "Smart Design",
-            "collapsed": false
+            "collapsed": true
         },
         "4_resSPARQL": {
             "title": "Result in SPARQL",
