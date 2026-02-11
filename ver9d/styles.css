@@ -882,6 +882,12 @@
             cursor: default;
         }
 
+        /* issue #370: Стиль для кнопки Обновить в заголовке Диаграммы */
+        .diagram-refresh-btn {
+            font-size: 16px;
+            font-weight: normal;
+        }
+
         .diagram-panel-content {
             flex: 1;
             overflow: auto;
@@ -2825,6 +2831,195 @@
 
         .del-concept-help-btn:hover {
             background-color: #1976D2;
+        }
+
+        /* ============================================================================= */
+        /* issue #370: Стили для модального окна Add hasNext Dia                         */
+        /* ============================================================================= */
+
+        .hasnext-dia-modal {
+            display: none;
+            position: fixed;
+            z-index: 2000;
+            left: 0;
+            top: 0;
+            width: 100%;
+            height: 100%;
+            background-color: rgba(0,0,0,0.5);
+        }
+
+        .hasnext-dia-modal-content {
+            position: absolute;
+            background-color: white;
+            padding: 0;
+            border-radius: 8px;
+            width: 550px;
+            max-height: 85vh;
+            overflow-y: auto;
+            box-shadow: 0 4px 20px rgba(0,0,0,0.3);
+            top: 50px;
+            left: 50%;
+            transform: translateX(-50%);
+        }
+
+        .hasnext-dia-modal-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 15px 20px;
+            background-color: #5C6BC0;
+            color: white;
+            border-radius: 8px 8px 0 0;
+            cursor: move;
+        }
+
+        .hasnext-dia-modal-header h3 {
+            margin: 0;
+            font-size: 16px;
+        }
+
+        .hasnext-dia-modal-header-buttons {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+
+        .hasnext-dia-help-btn {
+            background-color: #2196F3;
+            color: white;
+            border: none;
+            border-radius: 4px;
+            padding: 6px 12px;
+            font-size: 12px;
+            cursor: pointer;
+            font-weight: 500;
+        }
+
+        .hasnext-dia-help-btn:hover {
+            background-color: #1976D2;
+        }
+
+        .hasnext-dia-modal-close {
+            background: none;
+            border: none;
+            color: white;
+            font-size: 24px;
+            cursor: pointer;
+            padding: 0 5px;
+        }
+
+        .hasnext-dia-modal-body {
+            display: flex;
+            flex-direction: column;
+            gap: 15px;
+            padding: 20px;
+        }
+
+        .hasnext-dia-field {
+            display: flex;
+            flex-direction: column;
+            gap: 5px;
+        }
+
+        .hasnext-dia-field label {
+            font-weight: bold;
+            font-size: 14px;
+        }
+
+        .hasnext-dia-field input[type="text"] {
+            padding: 8px;
+            border: 1px solid #ddd;
+            border-radius: 4px;
+            font-size: 14px;
+        }
+
+        .hasnext-dia-hint {
+            color: #666;
+            font-style: italic;
+        }
+
+        .hasnext-dia-mode-options {
+            display: flex;
+            gap: 20px;
+            margin: 10px 0;
+        }
+
+        .hasnext-dia-checkbox-container {
+            max-height: 200px;
+            overflow-y: auto;
+            border: 1px solid #ddd;
+            border-radius: 4px;
+            padding: 8px;
+        }
+
+        .hasnext-dia-checkbox-label {
+            display: flex;
+            align-items: center;
+            gap: 5px;
+            font-weight: normal;
+            font-size: 13px;
+            cursor: pointer;
+            padding: 4px 0;
+        }
+
+        .hasnext-dia-message {
+            padding: 10px 20px;
+            margin: 0;
+            font-size: 13px;
+        }
+
+        .hasnext-dia-message.success {
+            background-color: #e8f5e9;
+            color: #2e7d32;
+        }
+
+        .hasnext-dia-message.error {
+            background-color: #ffebee;
+            color: #c62828;
+        }
+
+        .hasnext-dia-modal-buttons {
+            display: flex;
+            justify-content: flex-end;
+            gap: 10px;
+            padding: 15px 20px;
+            border-top: 1px solid #eee;
+        }
+
+        .hasnext-dia-modal-buttons button {
+            padding: 8px 16px;
+            border: none;
+            border-radius: 4px;
+            cursor: pointer;
+            font-size: 13px;
+            font-weight: 500;
+        }
+
+        .hasnext-dia-cancel-btn {
+            background-color: #9e9e9e;
+            color: white;
+        }
+
+        .hasnext-dia-cancel-btn:hover {
+            background-color: #757575;
+        }
+
+        .hasnext-dia-sparql-btn {
+            background-color: #ff9800;
+            color: white;
+        }
+
+        .hasnext-dia-sparql-btn:hover {
+            background-color: #f57c00;
+        }
+
+        .hasnext-dia-create-btn {
+            background-color: #5C6BC0;
+            color: white;
+        }
+
+        .hasnext-dia-create-btn:hover {
+            background-color: #3F51B5;
         }
 
         /* ============================================================================= */

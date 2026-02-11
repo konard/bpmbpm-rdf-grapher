@@ -443,6 +443,63 @@
         </div>
     </div>
 
+    <!-- issue #370: Модальное окно для редактирования vad:hasNext (Add hasNext Dia) -->
+    <div id="hasnext-dia-modal" class="hasnext-dia-modal">
+        <div class="hasnext-dia-modal-content">
+            <div class="hasnext-dia-modal-header">
+                <h3>Редактирование vad:hasNext</h3>
+                <div class="hasnext-dia-modal-header-buttons">
+                    <button class="hasnext-dia-help-btn" onclick="showHasNextDiaHelp()" title="Справка по редактированию hasNext">Help</button>
+                    <button class="hasnext-dia-modal-close" onclick="closeHasNextDiaModal()">&times;</button>
+                </div>
+            </div>
+            <div class="hasnext-dia-modal-body">
+                <!-- Предзаполненные нередактируемые поля -->
+                <div class="hasnext-dia-field">
+                    <label>Схема процесса:</label>
+                    <input type="text" id="hasnext-dia-trig" readonly style="background-color: #f5f5f5;">
+                </div>
+                <div class="hasnext-dia-field">
+                    <label>Концепт процесса:</label>
+                    <input type="text" id="hasnext-dia-concept" readonly style="background-color: #f5f5f5;">
+                </div>
+                <!-- Режим выбора hasNext -->
+                <div class="hasnext-dia-field">
+                    <label>Режим vad:hasNext:</label>
+                    <div class="hasnext-dia-mode-options">
+                        <label class="new-concept-radio">
+                            <input type="radio" name="hasnext-dia-mode" value="existing" checked onchange="onHasNextDiaModeChange()">
+                            vad:hasNext на существующий (индивиды в TriG)
+                        </label>
+                    </div>
+                    <small class="field-hint">Выбор из существующих индивидов процесса в текущем TriG</small>
+                </div>
+                <!-- Checkboxes для hasNext -->
+                <div class="hasnext-dia-field">
+                    <label>vad:hasNext (выберите следующие элементы):</label>
+                    <div id="hasnext-dia-checkbox-container" class="hasnext-dia-checkbox-container">
+                        <p class="hasnext-dia-hint">Загрузка...</p>
+                    </div>
+                    <small class="field-hint">Отмечены текущие значения vad:hasNext. Добавьте или снимите отметки.</small>
+                </div>
+                <!-- Промежуточный SPARQL запрос -->
+                <div id="hasnext-dia-intermediate-sparql" style="display: none;">
+                    <div class="intermediate-sparql-header">
+                        <label>Промежуточный SPARQL:</label>
+                        <button class="toggle-sparql-btn" onclick="toggleHasNextDiaIntermediateSparql()">Свернуть/Развернуть</button>
+                    </div>
+                    <textarea class="intermediate-sparql-textarea" rows="8" readonly></textarea>
+                </div>
+            </div>
+            <div id="hasnext-dia-message" class="hasnext-dia-message" style="display: none;"></div>
+            <div class="hasnext-dia-modal-buttons">
+                <button class="hasnext-dia-cancel-btn" onclick="closeHasNextDiaModal()">Отмена</button>
+                <button class="hasnext-dia-sparql-btn" onclick="toggleHasNextDiaIntermediateSparql()">Промежуточный SPARQL</button>
+                <button class="hasnext-dia-create-btn" onclick="createHasNextDiaSparql()">Создать запрос hasNext</button>
+            </div>
+        </div>
+    </div>
+
     <!-- issue #309: Модальное окно для отображения Virtual TriG -->
     <div id="virtual-trig-modal" class="virtual-trig-modal">
         <div class="virtual-trig-modal-content">
@@ -484,10 +541,7 @@
             <span class="window-toggle" id="toggle-5_publisher">&#9660;</span>
         </div>
         <div class="window-content" id="content-5_publisher">
-            <!-- issue #276: Кнопка Обновить перенесена из окна RDF данные в Publisher -->
-            <div class="publisher-controls">
-                <button id="refresh-btn" onclick="refreshVisualization()">Обновить</button>
-            </div>
+            <!-- issue #370: Кнопка Обновить перенесена в заголовок панели Диаграмма -->
             <div class="result-container" id="result-container">
                 <!-- VAD TriG режим: контейнер с диаграммой слева и панелями справа -->
                 <div class="vad-trig-container" id="vad-trig-container" style="display: none;">
@@ -497,6 +551,8 @@
                             <div class="diagram-panel-header">
                                 <span class="diagram-header-text">Диаграмма</span>
                                 <div class="diagram-nav-buttons">
+                                    <!-- issue #370: Кнопка Обновить перенесена в заголовок Диаграммы со стандартным значком -->
+                                    <button class="diagram-nav-btn diagram-refresh-btn" id="diagram-refresh" onclick="refreshVisualization()" title="Обновить">&#x21BB;</button>
                                     <button class="diagram-nav-btn" id="diagram-nav-back" onclick="navigateDiagramBack()" title="Назад" disabled>&lt;</button>
                                     <button class="diagram-nav-btn" id="diagram-nav-forward" onclick="navigateDiagramForward()" title="Вперёд" disabled>&gt;</button>
                                 </div>
@@ -838,7 +894,9 @@ WHERE {
                 { modal: 'new-individ-modal', header: 'new-individ-modal-header', content: 'new-individ-modal-content' },
                 { modal: 'new-trig-modal', header: 'new-trig-modal-header', content: 'new-trig-modal-content' },
                 { modal: 'del-concept-modal', header: 'del-concept-modal-header', content: 'del-concept-modal-content' },
-                { modal: 'virtual-trig-modal', header: 'virtual-trig-modal-header', content: 'virtual-trig-modal-content' }
+                { modal: 'virtual-trig-modal', header: 'virtual-trig-modal-header', content: 'virtual-trig-modal-content' },
+                // issue #370: Модальное окно редактирования vad:hasNext
+                { modal: 'hasnext-dia-modal', header: 'hasnext-dia-modal-header', content: 'hasnext-dia-modal-content' }
             ];
 
             modals.forEach(config => {
