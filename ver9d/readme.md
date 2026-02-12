@@ -20,7 +20,7 @@ https://bpmbpm.github.io/rdf-grapher/ver9d/
 ### target
 Семантический аналог для http://www.bpm.processoffice.ru/  
 Тезис: от табличек и SQL   
-к онтологиям (в Protege) + tripleStore + SPARQL  
+к онтологиям (Protege и т.п.) + tripleStore (quadstore) + SPARQL + Reasoner и т.п. (Linked Data RDF\RDFS\OWL)  
 "формальная семантика (LD) во всем" = semantic BPM/EA/CMDB/Web и т.п.  
 Принцип Семантический ARIS (BPM): UI на js (и подобном), а логика на SPARQL (SPARQL-Driven подход)  
 
