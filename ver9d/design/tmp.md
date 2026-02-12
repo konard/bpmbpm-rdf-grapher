@@ -17,7 +17,7 @@ proj вкладка - раобраться
 Верификация RDF - как внешний модуль и вообще отдельным проектом? Запрет разных комбинаций в RDF
 
 ## 3
-добавить - объединить Deta \ notDeta см. [vad-basic-ontology_tech_Appendix_nav.](https://github.com/bpmbpm/rdf-grapher/blob/main/ver9d/ontology/vad-basic-ontology_tech_Appendix_nav.md#4-%D1%81%D1%85%D0%B5%D0%BC%D0%B0-%D0%B2%D0%B7%D0%B0%D0%B8%D0%BC%D0%BE%D1%81%D0%B2%D1%8F%D0%B7%D0%B5%D0%B9-mermaid)
+добавить - объединить Deta \ notDeta см. [vad-basic-ontology_tech_Appendix_nav.](https://github.com/bpmbpm/rdf-grapher/blob/main/ver9d/ontology/vad-basic-ontology_tech_Appendix_nav.md#4-%D1%81%D1%85%D0%B5%D0%BC%D0%B0-%D0%B2%D0%B7%D0%B0%D0%B8%D0%BC%D0%BE%D1%81%D0%B2%D1%8F%D0%B7%D0%B5%D0%B9-mermaid) - OK
 
 ### SHACL
 3 Проверка .ttl на допустимые объекты и предикаты
