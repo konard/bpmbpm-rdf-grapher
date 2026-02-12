@@ -11,6 +11,13 @@
 - **Индивид (Individ)** — экземпляр концепта, используемый в схеме процесса (TriG типа VADProcessDia)
 
 ## 2. Основные сущности
+**Key naming conventions:**
+| Entity | Code Name | RDF Graph | Description |
+|--------|-----------|-----------|-------------|
+| Process concept | `conceptProcess` | vad:ptree | Type from process tree |
+| Process individ | `individProcess` | vad:VADProcessDia | Instance in schema |
+| Executor concept | `conceptExecutor` | vad:rtree | Type from role tree |
+| Executor individ | `individExecutor` | vad:VADProcessDia | Instance in schema |
 
 ### 2.1 Процессы (Process)
 
