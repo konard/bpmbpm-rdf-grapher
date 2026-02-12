@@ -690,7 +690,7 @@ function openDelConceptModal() {
  * Аналогично Add hasNext Dia — подставляются значения из текущей схемы,
  * пользователь получает готовый SPARQL-запрос для применения.
  *
- * @param {string} type - Тип удаления: 'individ' для индивида процесса, 'executor' для исполнителя
+ * @param {string} type - Тип удаления: 'individProcess' для индивида процесса, 'individExecutor' для индивида исполнителя
  * @param {string} prefixedTrigUri - Prefixed URI схемы (TriG), например 'vad:t_p1'
  * @param {string} prefixedIndividUri - Prefixed URI индивида, например 'vad:p1.1'
  */
@@ -725,7 +725,9 @@ function openDeleteModal(type, prefixedTrigUri, prefixedIndividUri) {
     resetDelConceptForm();
 
     // Выбираем тип операции в зависимости от параметра type
-    const operationType = type === 'executor'
+    // issue #382: Поддерживаем как новые обозначения (individProcess, individExecutor),
+    // так и старые (individ, executor) для обратной совместимости
+    const operationType = (type === 'individExecutor' || type === 'executor')
         ? DEL_OPERATION_TYPES.INDIVID_EXECUTOR_IN_SCHEMA
         : DEL_OPERATION_TYPES.INDIVID_PROCESS_IN_SCHEMA;
 
