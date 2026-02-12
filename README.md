@@ -31,9 +31,9 @@ https://bpmbpm.github.io/rdf-grapher/ver5t/
 https://bpmbpm.github.io/rdf-grapher/ver6d/
 Выбираем пример **Trig VADv2**
 
-### current
-https://github.com/bpmbpm/rdf-grapher/tree/main/ver8
-
+### Semantic BPM \ VAD
+https://github.com/bpmbpm/rdf-grapher/tree/main/ver8 / ver9
+https://github.com/bpmbpm/rdf-grapher/tree/main/ver9d 
 ver1-ver3 это про классический RDF grapher  
 начиная с ver4 "Если глобально", то сюда:
 - [Semantic BPM. Семантика и синтаксис бизнес-процессов](https://habr.com/ru/articles/795883/)
