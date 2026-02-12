@@ -1,6 +1,6 @@
 ### ver9d
 Ontology + SPARQL + Reasoner   
-на основе ver9b 
+на основе ver9с 
 
 ### run
 
@@ -16,5 +16,13 @@ https://bpmbpm.github.io/rdf-grapher/ver9d/
 - Trig_VADv5.ttl и Trig_VADv6.ttl разделитель . Поэтому quadstore формирует полный адрес
 - Trig_VADv7.ttl разделитель _
 
+
+### target
+Семантический аналог для http://www.bpm.processoffice.ru/  
+Тезис: от табличек и SQL   
+к онтологиям (в Protege) + tripleStore + SPARQL  
+"формальная семантика (LD) во всем" = semantic BPM/EA/CMDB/Web и т.п.  
+Принцип Семантический ARIS (BPM): UI на js (и подобном), а логика на SPARQL (SPARQL-Driven подход)  
+
 ### also
-- https://github.com/bpmbpm/rdf-grapher/tree/main/ver8tree#target
+- https://github.com/bpmbpm/rdf-grapher/tree/main/ver8tree
