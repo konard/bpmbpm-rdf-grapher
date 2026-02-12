@@ -1,7 +1,24 @@
 // Ссылка на issue: https://github.com/bpmbpm/rdf-grapher/issues/368
 // issue #370: Добавлен метод addHasNextDia
+// issue #386: Добавлены методы editLabelConceptProcess и delDia
 // 12_method_logic.js - Логика модуля Методы
 // Выполнение методов объектов диаграммы
+
+        // ==============================================================================
+        // issue #386: Состояние модуля редактирования label концепта процесса
+        // ==============================================================================
+
+        let editLabelState = {
+            isOpen: false,
+            processUri: null,       // URI концепта процесса
+            trigUri: null,          // URI текущего TriG (для контекста)
+            currentLabel: '',       // Текущее значение label
+            newLabel: '',           // Новое значение label
+            hasTrig: null,          // URI связанной схемы процесса (если есть)
+            intermediateSparql: ''
+        };
+
+        let editLabelIntermediateSparqlQueries = [];
 
         // ==============================================================================
         // issue #370: Состояние модуля редактирования hasNext
@@ -20,7 +37,7 @@
 
         /**
          * Выполняет метод объекта
-         * @param {string} functionId - Идентификатор функции ('deleteIndividProcess', 'deleteIndividExecutor' или 'addHasNextDia')
+         * @param {string} functionId - Идентификатор функции ('deleteIndividProcess', 'deleteIndividExecutor', 'addHasNextDia' или 'editLabelConceptProcess')
          * @param {string} objectUri - URI объекта
          * @param {string} trigUri - URI текущего TriG
          */
@@ -38,9 +55,76 @@
                     // issue #370: Открываем диалог редактирования hasNext
                     openHasNextDiaModal(objectUri, trigUri);
                     break;
+                case 'editLabelConceptProcess':
+                    // issue #386: Открываем диалог редактирования label концепта процесса
+                    openEditLabelModal(objectUri, trigUri);
+                    break;
                 default:
                     console.warn(`Unknown method function: ${functionId}`);
                     alert(`Метод "${functionId}" не реализован`);
+            }
+        }
+
+        /**
+         * issue #386: Выполняет метод диаграммы
+         * @param {string} functionId - Идентификатор функции (например, 'delDia')
+         * @param {string} trigUri - URI текущего TriG
+         */
+        function executeDiagramMethod(functionId, trigUri) {
+            console.log(`Executing diagram method: ${functionId} for ${trigUri}`);
+
+            switch (functionId) {
+                case 'delDia':
+                    // issue #386: Вызываем окно удаления схемы с предустановленным TriG
+                    openDeleteSchemaModal(trigUri);
+                    break;
+                default:
+                    console.warn(`Unknown diagram method function: ${functionId}`);
+                    alert(`Метод диаграммы "${functionId}" не реализован`);
+            }
+        }
+
+        /**
+         * issue #386: Открывает окно удаления схемы процесса с предустановленным TriG
+         * @param {string} trigUri - URI TriG для удаления
+         */
+        function openDeleteSchemaModal(trigUri) {
+            // Проверяем наличие данных
+            if (!currentStore || currentStore.size === 0) {
+                alert('Данные quadstore пусты.\n\nQuadstore is empty.');
+                return;
+            }
+
+            // Открываем окно удаления и предустанавливаем выбор
+            if (typeof openDelConceptModal === 'function') {
+                openDelConceptModal();
+
+                // После открытия окна предустанавливаем значения
+                setTimeout(() => {
+                    // Выбираем операцию "Удалить схему процесса (TriG)"
+                    const operationSelect = document.getElementById('del-concept-operation');
+                    if (operationSelect) {
+                        operationSelect.value = 'trig-schema';
+                        // Эмулируем событие change
+                        if (typeof onDelOperationChange === 'function') {
+                            onDelOperationChange();
+                        }
+
+                        // После загрузки списка TriG выбираем нужный
+                        setTimeout(() => {
+                            const trigSelect = document.getElementById('del-trig-select');
+                            if (trigSelect) {
+                                trigSelect.value = trigUri;
+                                // Эмулируем событие change
+                                if (typeof onDelTrigSelect === 'function') {
+                                    onDelTrigSelect();
+                                }
+                            }
+                        }, 100);
+                    }
+                }, 50);
+            } else {
+                alert('Функция openDelConceptModal не найдена');
             }
         }
 
@@ -478,10 +562,466 @@
         }
 
         // ==============================================================================
+        // issue #386: ФУНКЦИИ МОДУЛЯ РЕДАКТИРОВАНИЯ LABEL КОНЦЕПТА ПРОЦЕССА
+        // ==============================================================================
+
+        /**
+         * issue #386: Открывает модальное окно редактирования label концепта процесса
+         * @param {string} processUri - URI концепта процесса (индивида)
+         * @param {string} trigUri - URI текущего TriG (контекст)
+         */
+        function openEditLabelModal(processUri, trigUri) {
+            // Инициализируем состояние
+            editLabelState = {
+                isOpen: true,
+                processUri: processUri,
+                trigUri: trigUri,
+                currentLabel: '',
+                newLabel: '',
+                hasTrig: null,
+                intermediateSparql: ''
+            };
+            editLabelIntermediateSparqlQueries = [];
+
+            const modal = document.getElementById('edit-label-modal');
+            if (!modal) {
+                console.error('Модальное окно edit-label-modal не найдено');
+                return;
+            }
+
+            // Получаем текущие данные концепта из ptree
+            const conceptData = getConceptLabelData(processUri);
+            editLabelState.currentLabel = conceptData.label;
+            editLabelState.newLabel = conceptData.label;
+            editLabelState.hasTrig = conceptData.hasTrig;
+
+            // Заполняем поля формы
+            const idInput = document.getElementById('edit-label-id');
+            const labelInput = document.getElementById('edit-label-value');
+            const hasTrigInfo = document.getElementById('edit-label-has-trig');
+
+            const prefixedProcess = typeof getPrefixedName === 'function'
+                ? getPrefixedName(processUri, currentPrefixes) : processUri;
+
+            if (idInput) idInput.value = prefixedProcess;
+            if (labelInput) {
+                labelInput.value = conceptData.label;
+                labelInput.focus();
+            }
+
+            // Показываем информацию о связанной схеме
+            if (hasTrigInfo) {
+                if (conceptData.hasTrig) {
+                    const prefixedTrig = typeof getPrefixedName === 'function'
+                        ? getPrefixedName(conceptData.hasTrig, currentPrefixes) : conceptData.hasTrig;
+                    hasTrigInfo.innerHTML = `<span class="edit-label-info">Связанная схема: ${prefixedTrig} (label будет обновлён автоматически)</span>`;
+                    hasTrigInfo.style.display = 'block';
+                } else {
+                    hasTrigInfo.innerHTML = '<span class="edit-label-hint">Связанная схема отсутствует</span>';
+                    hasTrigInfo.style.display = 'block';
+                }
+            }
+
+            // Сбрасываем позицию модального окна
+            if (typeof resetModalPosition === 'function') {
+                resetModalPosition('edit-label-modal');
+            }
+
+            hideEditLabelMessage();
+            displayEditLabelIntermediateSparql();
+            modal.style.display = 'block';
+        }
+
+        /**
+         * issue #386: Закрывает модальное окно редактирования label
+         */
+        function closeEditLabelModal() {
+            const modal = document.getElementById('edit-label-modal');
+            if (modal) {
+                modal.style.display = 'none';
+            }
+            editLabelState.isOpen = false;
+        }
+
+        /**
+         * issue #386: Получает данные label и hasTrig для концепта процесса из ptree
+         * @param {string} processUri - URI концепта процесса
+         * @returns {{label: string, hasTrig: string|null}} Данные концепта
+         */
+        function getConceptLabelData(processUri) {
+            const rdfsLabelUri = 'http://www.w3.org/2000/01/rdf-schema#label';
+            const hasTrigUri = 'http://example.org/vad#hasTrig';
+            const ptreeUri = 'http://example.org/vad#ptree';
+
+            let label = '';
+            let hasTrig = null;
+
+            if (currentStore) {
+                // Получаем label из ptree
+                const labelQuads = currentStore.getQuads(processUri, rdfsLabelUri, null, ptreeUri);
+                if (labelQuads.length > 0) {
+                    label = labelQuads[0].object.value;
+                }
+
+                // Получаем hasTrig из ptree
+                const trigQuads = currentStore.getQuads(processUri, hasTrigUri, null, ptreeUri);
+                if (trigQuads.length > 0) {
+                    hasTrig = trigQuads[0].object.value;
+                }
+            }
+
+            // Записываем промежуточные запросы
+            editLabelIntermediateSparqlQueries.push({
+                description: 'Получение rdfs:label концепта процесса из ptree',
+                query: `SELECT ?label WHERE {\n    GRAPH vad:ptree {\n        <${processUri}> rdfs:label ?label .\n    }\n}`,
+                result: label ? `Найдено: "${label}"` : 'Label не найден'
+            });
+
+            editLabelIntermediateSparqlQueries.push({
+                description: 'Проверка наличия связанной схемы (vad:hasTrig)',
+                query: `SELECT ?trig WHERE {\n    GRAPH vad:ptree {\n        <${processUri}> vad:hasTrig ?trig .\n    }\n}`,
+                result: hasTrig
+                    ? `Найдена схема: ${typeof getPrefixedName === 'function' ? getPrefixedName(hasTrig, currentPrefixes) : hasTrig}`
+                    : 'Схема отсутствует'
+            });
+
+            return { label, hasTrig };
+        }
+
+        /**
+         * issue #386: Обработчик изменения поля label
+         */
+        function onEditLabelInput() {
+            const labelInput = document.getElementById('edit-label-value');
+            if (labelInput) {
+                editLabelState.newLabel = labelInput.value;
+            }
+        }
+
+        /**
+         * issue #386: Генерирует SPARQL запрос для изменения label
+         */
+        function createEditLabelSparql() {
+            hideEditLabelMessage();
+
+            const processUri = editLabelState.processUri;
+            const currentLabel = editLabelState.currentLabel;
+            const newLabel = editLabelState.newLabel;
+            const hasTrig = editLabelState.hasTrig;
+
+            if (!processUri) {
+                showEditLabelMessage('Ошибка: не определён концепт процесса', 'error');
+                return;
+            }
+
+            if (!newLabel || newLabel.trim() === '') {
+                showEditLabelMessage('Ошибка: label не может быть пустым', 'error');
+                return;
+            }
+
+            if (newLabel === currentLabel) {
+                showEditLabelMessage('Изменений нет. Введите новое значение label.', 'error');
+                return;
+            }
+
+            const prefixes = {
+                'rdf': 'http://www.w3.org/1999/02/22-rdf-syntax-ns#',
+                'rdfs': 'http://www.w3.org/2000/01/rdf-schema#',
+                'vad': 'http://example.org/vad#'
+            };
+
+            const prefixDeclarations = Object.entries(prefixes)
+                .map(([prefix, uri]) => `PREFIX ${prefix}: <${uri}>`)
+                .join('\n');
+
+            const processPrefixed = typeof getPrefixedName === 'function'
+                ? getPrefixedName(processUri, currentPrefixes) : `<${processUri}>`;
+
+            let sparqlQuery = `${prefixDeclarations}\n\n`;
+            sparqlQuery += `# issue #386: Изменение rdfs:label для концепта процесса ${processPrefixed}\n\n`;
+
+            // Удаление старого label
+            sparqlQuery += `# Удаление старого label в ptree\n`;
+            sparqlQuery += `DELETE DATA {\n`;
+            sparqlQuery += `    GRAPH vad:ptree {\n`;
+            sparqlQuery += `        ${processPrefixed} rdfs:label "${currentLabel}" .\n`;
+            sparqlQuery += `    }\n`;
+            sparqlQuery += `}\n;\n\n`;
+
+            // Добавление нового label
+            sparqlQuery += `# Добавление нового label в ptree\n`;
+            sparqlQuery += `INSERT DATA {\n`;
+            sparqlQuery += `    GRAPH vad:ptree {\n`;
+            sparqlQuery += `        ${processPrefixed} rdfs:label "${newLabel}" .\n`;
+            sparqlQuery += `    }\n`;
+            sparqlQuery += `}`;
+
+            // Если есть связанная схема, также обновляем её label
+            if (hasTrig) {
+                const trigPrefixed = typeof getPrefixedName === 'function'
+                    ? getPrefixedName(hasTrig, currentPrefixes) : `<${hasTrig}>`;
+
+                // Получаем текущий label схемы
+                const currentTrigLabel = getCurrentTrigLabel(hasTrig);
+                // Новый label схемы по правилу: "Схема процесса {newLabel}"
+                const newTrigLabel = `Схема процесса ${newLabel}`;
+
+                sparqlQuery += `\n;\n\n`;
+                sparqlQuery += `# Обновление label связанной схемы (TriG)\n`;
+                sparqlQuery += `# Правило: "Схема процесса {processLabel}"\n\n`;
+
+                if (currentTrigLabel) {
+                    sparqlQuery += `# Удаление старого label схемы\n`;
+                    sparqlQuery += `DELETE DATA {\n`;
+                    sparqlQuery += `    GRAPH ${trigPrefixed} {\n`;
+                    sparqlQuery += `        ${trigPrefixed} rdfs:label "${currentTrigLabel}" .\n`;
+                    sparqlQuery += `    }\n`;
+                    sparqlQuery += `}\n;\n\n`;
+                }
+
+                sparqlQuery += `# Добавление нового label схемы\n`;
+                sparqlQuery += `INSERT DATA {\n`;
+                sparqlQuery += `    GRAPH ${trigPrefixed} {\n`;
+                sparqlQuery += `        ${trigPrefixed} rdfs:label "${newTrigLabel}" .\n`;
+                sparqlQuery += `    }\n`;
+                sparqlQuery += `}`;
+            }
+
+            // Выводим в Result in SPARQL
+            const resultTextarea = document.getElementById('result-sparql-query');
+            if (resultTextarea) {
+                resultTextarea.value = sparqlQuery;
+            }
+
+            let message = `SPARQL запрос для изменения rdfs:label успешно сгенерирован.`;
+            if (hasTrig) {
+                message += ` Label связанной схемы также будет обновлён.`;
+            }
+            message += ` Запрос выведен в "Result in SPARQL".`;
+
+            showEditLabelMessage(message, 'success');
+            closeEditLabelModal();
+        }
+
+        /**
+         * issue #386: Получает текущий label TriG схемы
+         * @param {string} trigUri - URI TriG
+         * @returns {string|null} Текущий label или null
+         */
+        function getCurrentTrigLabel(trigUri) {
+            const rdfsLabelUri = 'http://www.w3.org/2000/01/rdf-schema#label';
+
+            if (currentStore) {
+                // Label схемы хранится внутри самой схемы (в её графе)
+                const labelQuads = currentStore.getQuads(trigUri, rdfsLabelUri, null, trigUri);
+                if (labelQuads.length > 0) {
+                    return labelQuads[0].object.value;
+                }
+            }
+
+            return null;
+        }
+
+        /**
+         * issue #386: Показывает сообщение в диалоге редактирования label
+         * @param {string} message - Текст сообщения
+         * @param {string} type - Тип: 'success' или 'error'
+         */
+        function showEditLabelMessage(message, type) {
+            const messageDiv = document.getElementById('edit-label-message');
+            if (messageDiv) {
+                messageDiv.textContent = message;
+                messageDiv.className = `edit-label-message ${type}`;
+                messageDiv.style.display = 'block';
+            }
+        }
+
+        /**
+         * issue #386: Скрывает сообщение в диалоге редактирования label
+         */
+        function hideEditLabelMessage() {
+            const messageDiv = document.getElementById('edit-label-message');
+            if (messageDiv) {
+                messageDiv.style.display = 'none';
+            }
+        }
+
+        /**
+         * issue #386: Отображает промежуточные SPARQL запросы
+         */
+        function displayEditLabelIntermediateSparql() {
+            const container = document.getElementById('edit-label-intermediate-sparql');
+            const textarea = container ? container.querySelector('textarea') : null;
+
+            if (!container || !textarea) return;
+
+            if (editLabelIntermediateSparqlQueries.length === 0) {
+                container.style.display = 'none';
+                return;
+            }
+
+            let sparqlText = '# ===== Промежуточные SPARQL запросы и результаты =====\n\n';
+
+            editLabelIntermediateSparqlQueries.forEach((query, index) => {
+                sparqlText += `# --- ${index + 1}. ${query.description} ---\n`;
+                sparqlText += query.query.trim() + '\n';
+                if (query.result) {
+                    sparqlText += `\n# Результат:\n# ${query.result}\n`;
+                }
+                sparqlText += '\n';
+            });
+
+            textarea.value = sparqlText;
+            editLabelState.intermediateSparql = sparqlText;
+        }
+
+        /**
+         * issue #386: Переключает видимость промежуточного SPARQL
+         */
+        function toggleEditLabelIntermediateSparql() {
+            const container = document.getElementById('edit-label-intermediate-sparql');
+            if (container) {
+                const isVisible = container.style.display !== 'none';
+                container.style.display = isVisible ? 'none' : 'block';
+            }
+        }
+
+        /**
+         * issue #386: Показывает справку по редактированию label
+         */
+        function showEditLabelHelp() {
+            const helpText = `Редактирование rdfs:label концепта процесса — справка:
+
+=== Назначение ===
+Данный диалог позволяет изменять rdfs:label для концепта процесса.
+
+=== Как пользоваться ===
+1. Поле "ID" показывает идентификатор концепта (только для чтения)
+2. Измените значение в поле "Label"
+3. Нажмите "Создать запрос"
+
+=== Автоматическое обновление схемы ===
+Если у процесса есть связанная схема (vad:hasTrig в ptree),
+её rdfs:label будет автоматически обновлён по правилу:
+"Схема процесса {новый_label}"
+
+=== Результат ===
+Генерируется SPARQL запрос с операциями DELETE DATA
+и INSERT DATA для изменения rdfs:label.
+
+Запрос выводится в окно "Result in SPARQL" для
+стандартной процедуры применения.`;
+
+            alert(helpText);
+        }
+
+        // ==============================================================================
+        // issue #386: ФУНКЦИИ МЕТОДОВ ДИАГРАММЫ
+        // ==============================================================================
+
+        /**
+         * issue #386: Показывает/скрывает выпадающий список методов диаграммы
+         * @param {Event} event - Событие клика
+         */
+        async function toggleDiagramMethodsDropdown(event) {
+            event.stopPropagation();
+
+            // Закрываем существующий dropdown если есть
+            const existingDropdown = document.querySelector('.diagram-methods-dropdown.visible');
+            if (existingDropdown) {
+                existingDropdown.remove();
+                return;
+            }
+
+            // Получаем текущий открытый TriG
+            const currentTrigUri = getCurrentOpenTrigUri();
+            if (!currentTrigUri) {
+                alert('Нет открытой схемы процесса (TriG)');
+                return;
+            }
+
+            const button = event.target;
+            const buttonRect = button.getBoundingClientRect();
+
+            // Создаём dropdown
+            const dropdown = document.createElement('div');
+            dropdown.className = 'diagram-methods-dropdown visible';
+            dropdown.style.position = 'fixed';
+            dropdown.style.left = buttonRect.left + 'px';
+            dropdown.style.top = (buttonRect.bottom + 2) + 'px';
+
+            // Получаем методы диаграммы
+            const methods = getDiagramMethods();
+
+            if (methods.length === 0) {
+                dropdown.innerHTML = '<div class="diagram-methods-dropdown-empty">Нет доступных методов</div>';
+            } else {
+                methods.forEach(method => {
+                    const item = document.createElement('div');
+                    item.className = 'diagram-methods-dropdown-item';
+                    item.textContent = method.label;
+                    item.onclick = (e) => {
+                        e.stopPropagation();
+                        dropdown.remove();
+                        executeDiagramMethod(method.functionId, currentTrigUri);
+                    };
+                    dropdown.appendChild(item);
+                });
+            }
+
+            document.body.appendChild(dropdown);
+
+            // Закрываем dropdown при клике вне его
+            const closeDropdown = (e) => {
+                if (!dropdown.contains(e.target) && e.target !== button) {
+                    dropdown.remove();
+                    document.removeEventListener('click', closeDropdown);
+                }
+            };
+            setTimeout(() => document.addEventListener('click', closeDropdown), 0);
+        }
+
+        /**
+         * issue #386: Получает список методов диаграммы
+         * @returns {Array<{label: string, functionId: string}>}
+         */
+        function getDiagramMethods() {
+            // Статический список методов диаграммы
+            // В будущем можно загружать из techtree через SPARQL
+            return [
+                { label: 'Del Dia', functionId: 'delDia' }
+            ];
+        }
+
+        /**
+         * issue #386: Получает URI текущего открытого TriG
+         * @returns {string|null} URI TriG или null
+         */
+        function getCurrentOpenTrigUri() {
+            // Пробуем получить из глобальной переменной selectedTrigUri
+            if (typeof selectedTrigUri !== 'undefined' && selectedTrigUri) {
+                return selectedTrigUri;
+            }
+
+            // Пробуем получить из глобальной переменной currentTrigUri
+            if (typeof currentTrigUri !== 'undefined' && currentTrigUri) {
+                return currentTrigUri;
+            }
+
+            // Пробуем получить из состояния TreeView
+            if (typeof treeViewState !== 'undefined' && treeViewState && treeViewState.currentTrigUri) {
+                return treeViewState.currentTrigUri;
+            }
+
+            return null;
+        }
+
+        // ==============================================================================
         // ЭКСПОРТ ФУНКЦИЙ ДЛЯ ГЛОБАЛЬНОГО ДОСТУПА
         // ==============================================================================
 
         if (typeof window !== 'undefined') {
+            // issue #370: Функции hasNext
             window.openHasNextDiaModal = openHasNextDiaModal;
             window.closeHasNextDiaModal = closeHasNextDiaModal;
             window.onHasNextDiaCheckboxChange = onHasNextDiaCheckboxChange;
@@ -489,4 +1029,18 @@
             window.toggleHasNextDiaIntermediateSparql = toggleHasNextDiaIntermediateSparql;
             window.createHasNextDiaSparql = createHasNextDiaSparql;
             window.showHasNextDiaHelp = showHasNextDiaHelp;
+
+            // issue #386: Функции Edit Label
+            window.openEditLabelModal = openEditLabelModal;
+            window.closeEditLabelModal = closeEditLabelModal;
+            window.onEditLabelInput = onEditLabelInput;
+            window.createEditLabelSparql = createEditLabelSparql;
+            window.toggleEditLabelIntermediateSparql = toggleEditLabelIntermediateSparql;
+            window.showEditLabelHelp = showEditLabelHelp;
+
+            // issue #386: Функции методов диаграммы
+            window.toggleDiagramMethodsDropdown = toggleDiagramMethodsDropdown;
+            window.executeDiagramMethod = executeDiagramMethod;
+            window.openDeleteSchemaModal = openDeleteSchemaModal;
+            window.getCurrentOpenTrigUri = getCurrentOpenTrigUri;
         }
