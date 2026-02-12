@@ -701,6 +701,13 @@ function openDeleteModal(type, prefixedTrigUri, prefixedIndividUri) {
         return;
     }
 
+    // issue #382: Проверяем корректность параметра type (только новые обозначения)
+    if (type !== 'individProcess' && type !== 'individExecutor') {
+        console.error(`openDeleteModal: неверный тип "${type}". Используйте 'individProcess' или 'individExecutor'.`);
+        alert(`Неверный тип удаления: "${type}".\nИспользуйте 'individProcess' или 'individExecutor'.\n\nInvalid deletion type: "${type}".\nUse 'individProcess' or 'individExecutor'.`);
+        return;
+    }
+
     // Очищаем предыдущее состояние
     delConceptState = {
         isOpen: true,
@@ -724,10 +731,9 @@ function openDeleteModal(type, prefixedTrigUri, prefixedIndividUri) {
     // Сбрасываем форму
     resetDelConceptForm();
 
-    // Выбираем тип операции в зависимости от параметра type
-    // issue #382: Поддерживаем как новые обозначения (individProcess, individExecutor),
-    // так и старые (individ, executor) для обратной совместимости
-    const operationType = (type === 'individExecutor' || type === 'executor')
+    // issue #382: Выбираем тип операции в зависимости от параметра type
+    // Используем только новые обозначения: individProcess, individExecutor
+    const operationType = (type === 'individExecutor')
         ? DEL_OPERATION_TYPES.INDIVID_EXECUTOR_IN_SCHEMA
         : DEL_OPERATION_TYPES.INDIVID_PROCESS_IN_SCHEMA;
 

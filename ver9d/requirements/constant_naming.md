@@ -56,14 +56,16 @@ const individExecutor = 'http://example.org/vad#r1';  // vad:r1 через vad:i
 
 ## 3. Таблица соответствий
 
-### 3.1 Старые vs Новые обозначения
+### 3.1 Стандартные обозначения (обязательные)
 
-| Старое обозначение | Новое обозначение | Контекст |
-|--------------------|-------------------|----------|
-| `individ` (для процесса) | `individProcess` | Удаление/создание индивида процесса |
-| `executor` (для индивида) | `individExecutor` | Удаление/создание индивида исполнителя |
-| `type: 'individ'` | `type: 'individProcess'` | Параметр функции openDeleteModal |
-| `type: 'executor'` | `type: 'individExecutor'` | Параметр функции openDeleteModal |
+| Обозначение | Контекст | Описание |
+|-------------|----------|----------|
+| `individProcess` | Удаление/создание индивида процесса | Экземпляр процесса в схеме VADProcessDia |
+| `individExecutor` | Удаление/создание индивида исполнителя | Использование исполнителя в схеме через vad:includes |
+| `type: 'individProcess'` | Параметр функции openDeleteModal | Тип для удаления индивида процесса |
+| `type: 'individExecutor'` | Параметр функции openDeleteModal | Тип для удаления индивида исполнителя |
+
+**Важно:** Устаревшие обозначения (`individ`, `executor`) больше **не поддерживаются**. Используйте только указанные выше стандартные обозначения в стиле camelCase.
 
 ### 3.2 Константы DEL_OPERATION_TYPES
 
@@ -79,7 +81,49 @@ const individExecutor = 'http://example.org/vad#r1';  // vad:r1 через vad:i
 
 ## 4. Правила именования
 
-### 4.1 Переменные для URI
+### 4.1 Стиль camelCase
+
+Все переменные, константы и параметры функций в проекте должны использовать стиль **camelCase** (нижний верблюжий регистр):
+
+**Правила camelCase:**
+- Первое слово начинается с маленькой буквы
+- Каждое последующее слово начинается с заглавной буквы
+- Слова пишутся слитно, без разделителей
+
+**Примеры правильного именования:**
+```javascript
+// Переменные
+const conceptProcess = 'http://example.org/vad#p1';
+const individExecutor = 'http://example.org/vad#r1';
+const trigUri = 'http://example.org/vad#t_p1';
+const selectedOperation = 'individProcess';
+
+// Параметры функций
+function openDeleteModal(type, prefixedTrigUri, prefixedIndividUri) { ... }
+function deleteIndividProcessFromTrig(processUri, trigUri) { ... }
+
+// Константы типов
+const TYPE_INDIVID_PROCESS = 'individProcess';
+const TYPE_INDIVID_EXECUTOR = 'individExecutor';
+```
+
+**Примеры неправильного именования (НЕ использовать):**
+```javascript
+// snake_case - НЕ использовать
+const concept_process = '...';  // Неверно!
+const individ_executor = '...'; // Неверно!
+
+// SCREAMING_SNAKE_CASE для значений строковых констант - НЕ использовать
+const type = 'INDIVID_PROCESS';  // Неверно для значений!
+
+// PascalCase для переменных - НЕ использовать
+const ConceptProcess = '...';   // Неверно!
+const IndividExecutor = '...';  // Неверно!
+```
+
+**Примечание:** SCREAMING_SNAKE_CASE допускается только для имён констант-перечислений (enum-like), например `DEL_OPERATION_TYPES.INDIVID_PROCESS`. Но значения этих констант должны быть в camelCase: `'individProcess'`.
+
+### 4.2 Переменные для URI
 
 ```javascript
 // Концепты (типы из деревьев)
@@ -184,15 +228,16 @@ SELECT ?individExecutor WHERE {
 }
 ```
 
-## 7. Миграция существующего кода
+## 7. Обязательные обозначения
 
-При обновлении кода следует заменять:
+Код проекта использует **только** следующие обозначения (без обратной совместимости):
 
-| Найти | Заменить на | Примечание |
-|-------|-------------|------------|
-| `type: 'individ'` | `type: 'individProcess'` | Параметр type в функциях |
-| `type: 'executor'` (для индивида) | `type: 'individExecutor'` | Параметр type в функциях |
-| `@param {string} type - Тип удаления: 'individ'` | `@param {string} type - Тип удаления: 'individProcess'` | JSDoc комментарии |
+| Обозначение | Использование | Примечание |
+|-------------|---------------|------------|
+| `'individProcess'` | Параметр type в функциях | Единственно допустимое значение для индивида процесса |
+| `'individExecutor'` | Параметр type в функциях | Единственно допустимое значение для индивида исполнителя |
+
+**Внимание:** Устаревшие обозначения `'individ'` и `'executor'` **не поддерживаются** и приведут к ошибке при вызове функций.
 
 ## 8. Связанные документы
 

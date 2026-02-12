@@ -30,9 +30,11 @@ function openDeleteModal(type, prefixedTrigUri, prefixedIndividUri)
 
 | Параметр | Тип | Описание |
 |----------|-----|----------|
-| `type` | `string` | Тип удаления: `'individProcess'` для индивида процесса, `'individExecutor'` для индивида исполнителя. Для обратной совместимости также поддерживаются `'individ'` и `'executor'` |
+| `type` | `string` | Тип удаления: `'individProcess'` для индивида процесса, `'individExecutor'` для индивида исполнителя. **Только эти два значения допустимы.** |
 | `prefixedTrigUri` | `string` | Prefixed URI схемы (TriG), например `'vad:t_p1'` |
 | `prefixedIndividUri` | `string` | Prefixed URI индивида, например `'vad:p1.1'` |
+
+**Важно:** Параметр `type` должен быть строго `'individProcess'` или `'individExecutor'` (в стиле camelCase). Другие значения приведут к ошибке.
 
 ### Возвращаемое значение
 
@@ -55,25 +57,31 @@ function openDeleteModal(type, prefixedTrigUri, prefixedIndividUri)
 │    │                                                           │
 │    └── delConceptState = { isOpen: true, ... }                 │
 │                                                                │
-│ 3. Определение типа операции                                   │
+│ 3. Проверка корректности параметра type                        │
 │    │                                                           │
-│    ├── type === 'individExecutor' || type === 'executor'       │
+│    └── if (type !== 'individProcess' && type !== 'individExecutor')│
+│        → alert('Неверный тип удаления...')                     │
+│        → return                                                │
+│                                                                │
+│ 4. Определение типа операции                                   │
+│    │                                                           │
+│    ├── type === 'individExecutor'                              │
 │    │   → INDIVID_EXECUTOR_IN_SCHEMA                            │
 │    │                                                           │
-│    └── type === 'individProcess' || type === 'individ' (default)│
+│    └── type === 'individProcess'                               │
 │        → INDIVID_PROCESS_IN_SCHEMA                             │
 │                                                                │
-│ 4. Преобразование prefixed URI в полные URI                    │
+│ 5. Преобразование prefixed URI в полные URI                    │
 │    │                                                           │
 │    ├── expandPrefixedName(prefixedTrigUri, currentPrefixes)    │
 │    └── expandPrefixedName(prefixedIndividUri, currentPrefixes) │
 │                                                                │
-│ 5. Построение формы модального окна                            │
+│ 6. Построение формы модального окна                            │
 │    │                                                           │
 │    ├── buildDelConceptForm(config, operationType)              │
 │    └── initializeDelDropdowns(operationType)                   │
 │                                                                │
-│ 6. Автоматическое заполнение dropdowns (setTimeout)            │
+│ 7. Автоматическое заполнение dropdowns (setTimeout)            │
 │    │                                                           │
 │    ├── Выбор TriG в dropdown «del-trig-select»                 │
 │    │   → onDelTrigSelectForIndivid()                           │
@@ -81,7 +89,7 @@ function openDeleteModal(type, prefixedTrigUri, prefixedIndividUri)
 │    └── Выбор индивида в dropdown «del-individ-in-schema-select»│
 │        → onDelIndividInSchemaSelect()                          │
 │                                                                │
-│ 7. Отображение модального окна                                 │
+│ 8. Отображение модального окна                                 │
 │    │                                                           │
 │    ├── resetModalPosition('del-concept-modal')                 │
 │    └── modal.style.display = 'block'                           │
@@ -98,6 +106,13 @@ function openDeleteModal(type, prefixedTrigUri, prefixedIndividUri) {
     // Проверяем наличие данных
     if (!currentStore || currentStore.size === 0) {
         alert('Данные quadstore пусты. Загрузите пример данных.\n\nQuadstore is empty. Load example data.');
+        return;
+    }
+
+    // issue #382: Проверяем корректность параметра type (только новые обозначения)
+    if (type !== 'individProcess' && type !== 'individExecutor') {
+        console.error(`openDeleteModal: неверный тип "${type}". Используйте 'individProcess' или 'individExecutor'.`);
+        alert(`Неверный тип удаления: "${type}".\nИспользуйте 'individProcess' или 'individExecutor'.\n\nInvalid deletion type: "${type}".\nUse 'individProcess' or 'individExecutor'.`);
         return;
     }
 
@@ -124,10 +139,9 @@ function openDeleteModal(type, prefixedTrigUri, prefixedIndividUri) {
     // Сбрасываем форму
     resetDelConceptForm();
 
-    // Выбираем тип операции в зависимости от параметра type
-    // issue #382: Поддерживаем как новые обозначения (individProcess, individExecutor),
-    // так и старые (individ, executor) для обратной совместимости
-    const operationType = (type === 'individExecutor' || type === 'executor')
+    // issue #382: Выбираем тип операции в зависимости от параметра type
+    // Используем только новые обозначения: individProcess, individExecutor
+    const operationType = (type === 'individExecutor')
         ? DEL_OPERATION_TYPES.INDIVID_EXECUTOR_IN_SCHEMA
         : DEL_OPERATION_TYPES.INDIVID_PROCESS_IN_SCHEMA;
 
@@ -230,8 +244,10 @@ function expandPrefixedName(prefixedUri, prefixes) {
 
 | Параметр `type` | Константа операции | Описание |
 |-----------------|-------------------|----------|
-| `'individProcess'` или `'individ'` | `INDIVID_PROCESS_IN_SCHEMA` | Удаление индивида процесса в конкретной схеме |
-| `'individExecutor'` или `'executor'` | `INDIVID_EXECUTOR_IN_SCHEMA` | Удаление индивида исполнителя в конкретной схеме |
+| `'individProcess'` | `INDIVID_PROCESS_IN_SCHEMA` | Удаление индивида процесса в конкретной схеме |
+| `'individExecutor'` | `INDIVID_EXECUTOR_IN_SCHEMA` | Удаление индивида исполнителя в конкретной схеме |
+
+**Примечание:** Только значения `'individProcess'` и `'individExecutor'` являются допустимыми. Другие значения (в том числе устаревшие `'individ'` и `'executor'`) приведут к ошибке.
 
 ## Используемые функции и модули
 
