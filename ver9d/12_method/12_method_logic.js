@@ -66,6 +66,7 @@
 
             // Вызываем окно удаления индивида в схеме с предустановленными значениями
             // Функция openDeleteModal определена в 3_sd_del_concept_individ_logic.js
+            // https://github.com/bpmbpm/rdf-grapher/blob/main/ver9d/3_sd/3_sd_del_concept_individ/3_sd_del_concept_individ_logic.js    
             openDeleteModal('individ', prefixedTrigUri, prefixedProcessUri);
         }
 
