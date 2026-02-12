@@ -51,7 +51,7 @@ function deleteIndividProcessFromTrig(processUri, trigUri)
 │                                                                │
 │ 2. Вызов openDeleteModal с предустановленными значениями       │
 │    │                                                           │
-│    └── openDeleteModal('individ', prefixedTrigUri,             │
+│    └── openDeleteModal('individProcess', prefixedTrigUri,      │
 │                        prefixedProcessUri)                     │
 │                                                                │
 │ 3. Модальное окно «Удалить индивид процесса в схеме»           │
@@ -89,7 +89,8 @@ function deleteIndividProcessFromTrig(processUri, trigUri) {
     const prefixedTrigUri = getPrefixedName(trigUri, currentPrefixes);
 
     // Вызываем окно удаления индивида в схеме с предустановленными значениями
-    openDeleteModal('individ', prefixedTrigUri, prefixedProcessUri);
+    // issue #382: Используем новое обозначение individProcess вместо individ
+    openDeleteModal('individProcess', prefixedTrigUri, prefixedProcessUri);
 }
 ```
 

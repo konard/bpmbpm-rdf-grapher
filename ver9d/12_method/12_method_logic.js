@@ -67,7 +67,8 @@
             // Вызываем окно удаления индивида в схеме с предустановленными значениями
             // Функция openDeleteModal определена в 3_sd_del_concept_individ_logic.js
             // https://github.com/bpmbpm/rdf-grapher/blob/main/ver9d/3_sd/3_sd_del_concept_individ/3_sd_del_concept_individ_logic.js    
-            openDeleteModal('individ', prefixedTrigUri, prefixedProcessUri);
+            // issue #382: Используем новое обозначение individProcess вместо individ
+            openDeleteModal('individProcess', prefixedTrigUri, prefixedProcessUri);
         }
 
         /**
@@ -89,7 +90,8 @@
             const prefixedTrigUri = getPrefixedName(trigUri, currentPrefixes);
 
             // Вызываем окно удаления индивида исполнителя в схеме с предустановленными значениями
-            openDeleteModal('executor', prefixedTrigUri, prefixedUri);
+            // issue #382: Используем новое обозначение individExecutor вместо executor
+            openDeleteModal('individExecutor', prefixedTrigUri, prefixedUri);
         }
 
         // ==============================================================================

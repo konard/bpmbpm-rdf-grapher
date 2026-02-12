@@ -690,7 +690,7 @@ function openDelConceptModal() {
  * Аналогично Add hasNext Dia — подставляются значения из текущей схемы,
  * пользователь получает готовый SPARQL-запрос для применения.
  *
- * @param {string} type - Тип удаления: 'individ' для индивида процесса, 'executor' для исполнителя
+ * @param {string} type - Тип удаления: 'individProcess' для индивида процесса, 'individExecutor' для индивида исполнителя
  * @param {string} prefixedTrigUri - Prefixed URI схемы (TriG), например 'vad:t_p1'
  * @param {string} prefixedIndividUri - Prefixed URI индивида, например 'vad:p1.1'
  */
@@ -698,6 +698,13 @@ function openDeleteModal(type, prefixedTrigUri, prefixedIndividUri) {
     // Проверяем наличие данных
     if (!currentStore || currentStore.size === 0) {
         alert('Данные quadstore пусты. Загрузите пример данных.\n\nQuadstore is empty. Load example data.');
+        return;
+    }
+
+    // issue #382: Проверяем корректность параметра type (только новые обозначения)
+    if (type !== 'individProcess' && type !== 'individExecutor') {
+        console.error(`openDeleteModal: неверный тип "${type}". Используйте 'individProcess' или 'individExecutor'.`);
+        alert(`Неверный тип удаления: "${type}".\nИспользуйте 'individProcess' или 'individExecutor'.\n\nInvalid deletion type: "${type}".\nUse 'individProcess' or 'individExecutor'.`);
         return;
     }
 
@@ -724,8 +731,9 @@ function openDeleteModal(type, prefixedTrigUri, prefixedIndividUri) {
     // Сбрасываем форму
     resetDelConceptForm();
 
-    // Выбираем тип операции в зависимости от параметра type
-    const operationType = type === 'executor'
+    // issue #382: Выбираем тип операции в зависимости от параметра type
+    // Используем только новые обозначения: individProcess, individExecutor
+    const operationType = (type === 'individExecutor')
         ? DEL_OPERATION_TYPES.INDIVID_EXECUTOR_IN_SCHEMA
         : DEL_OPERATION_TYPES.INDIVID_PROCESS_IN_SCHEMA;
 
