@@ -31,6 +31,9 @@ https://bpmbpm.github.io/rdf-grapher/ver5t/
 https://bpmbpm.github.io/rdf-grapher/ver6d/
 Выбираем пример **Trig VADv2**
 
+### ver 9
+Подробно см. https://github.com/bpmbpm/rdf-grapher/tree/main/introduction 
+
 ### Semantic BPM \ VAD
 https://github.com/bpmbpm/rdf-grapher/tree/main/ver8 / ver9
 https://github.com/bpmbpm/rdf-grapher/tree/main/ver9d 
