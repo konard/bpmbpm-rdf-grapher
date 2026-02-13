@@ -4,7 +4,7 @@
 
 ### 1.1 Что такое RDF Grapher
 
-RDF Grapher — это веб-приложение для парсинга RDF данных и их визуализации в виде графов. Проект эволюционировал от простого RDF Viewer (ver1-ver3) до прототипа системы моделирования бизнес-процессов на основе семантических технологий (ver4-ver9). В качестве протоипа RDF Viewer был https://www.ldf.fi/service/rdf-grapher (требует VPN).  
+RDF Grapher — это веб-приложение для парсинга RDF данных и их визуализации в виде графов. Проект эволюционировал от простого RDF Viewer (ver1-ver3) до прототипа системы моделирования бизнес-процессов на основе семантических технологий (ver4-ver9). В качестве протоипа RDF Viewer был финский https://www.ldf.fi/service/rdf-grapher (требует VPN).  
 Начиная с версии после [ver7so](https://github.com/bpmbpm/rdf-grapher/tree/main/ver7so) функции классического RDF Viewer удалены.  
 
 **Текущая версия** [ver9d](https://github.com/bpmbpm/rdf-grapher/tree/main/ver9d) представляет собой прототип Semantic ARIS — ARIS-подобной системы моделирования, построенной на стеке Linked Data.
