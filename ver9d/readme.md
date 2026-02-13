@@ -10,13 +10,15 @@ https://bpmbpm.github.io/rdf-grapher/ver9d/
 *Загрузить пример RDF данных:*
 выбрать (choose): **Trig VADv8** (или другой) 
 Данные автоматически загрузятся, пройдут валидацию и отобразятся в окне Publisher.  
-В Дерево TriG выбирать объекты, схемы или процессы. При выборе схемы в treeview - в окне Диаграмма отобразится схема процесса.
+В Дерево TriG выбирать объекты, схемы или процессы (как в любой ARIS - подобной системе). При выборе схемы процесса в treeview - в окне Диаграмма отобразится схема процесса.
 
 Файлы с примерами RDF - данных в /dia:
 - Trig_VADv5.ttl и Trig_VADv6.ttl разделитель "." Поэтому quadstore формирует полный адрес
 - начиная с Trig_VADv7.ttl разделитель "_", поэтому quadstore уже "чище".
 
 [Основные тезисы](https://github.com/bpmbpm/rdf-grapher/blob/main/introduction/theses.md)
+см. https://github.com/bpmbpm/rdf-grapher/tree/main/introduction 
+
 ### target
 Семантический аналог для http://www.bpm.processoffice.ru/  
 Тезис: от табличек и SQL   
