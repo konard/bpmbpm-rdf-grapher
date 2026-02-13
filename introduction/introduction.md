@@ -361,6 +361,9 @@ INSERT DATA {
 - [Нотации для моделирования бизнес-процессов](https://fox-manager.com/notacii-dlja-modelirovanija-biznes-processov/)
 - [ARIS](https://en.wikipedia.org/wiki/Architecture_of_Integrated_Information_Systems)
 
+### Неоторые проектные решения / исследования 
+- https://github.com/bpmbpm/rdf-grapher/blob/main/ver8tree/doc/aris-alignment-proposals.md (архивное)
+- https://github.com/bpmbpm/rdf-grapher/blob/main/ver9d/analysis/new_individ_process.md (на перспективу)
 ---
 
 *Документ создан в рамках issue #388*
