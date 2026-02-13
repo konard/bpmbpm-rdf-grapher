@@ -596,9 +596,10 @@
             editLabelState.hasTrig = conceptData.hasTrig;
 
             // Заполняем поля формы
-            const idInput = document.getElementById('edit-label-id');
-            const labelInput = document.getElementById('edit-label-value');
-            const hasTrigInfo = document.getElementById('edit-label-has-trig');
+            // issue #388: Исправлены ID элементов для соответствия HTML
+            const idInput = document.getElementById('edit-label-process-id');
+            const labelInput = document.getElementById('edit-label-input');
+            const hasTrigInfo = document.getElementById('edit-label-trig-info');
 
             const prefixedProcess = typeof getPrefixedName === 'function'
                 ? getPrefixedName(processUri, currentPrefixes) : processUri;
@@ -610,15 +611,17 @@
             }
 
             // Показываем информацию о связанной схеме
-            if (hasTrigInfo) {
+            // issue #388: Исправлено отображение hasTrig через поле edit-label-trig-uri
+            const hasTrigInput = document.getElementById('edit-label-trig-uri');
+            if (hasTrigInfo && hasTrigInput) {
                 if (conceptData.hasTrig) {
                     const prefixedTrig = typeof getPrefixedName === 'function'
                         ? getPrefixedName(conceptData.hasTrig, currentPrefixes) : conceptData.hasTrig;
-                    hasTrigInfo.innerHTML = `<span class="edit-label-info">Связанная схема: ${prefixedTrig} (label будет обновлён автоматически)</span>`;
+                    hasTrigInput.value = prefixedTrig;
                     hasTrigInfo.style.display = 'block';
                 } else {
-                    hasTrigInfo.innerHTML = '<span class="edit-label-hint">Связанная схема отсутствует</span>';
-                    hasTrigInfo.style.display = 'block';
+                    hasTrigInput.value = '';
+                    hasTrigInfo.style.display = 'none';
                 }
             }
 
