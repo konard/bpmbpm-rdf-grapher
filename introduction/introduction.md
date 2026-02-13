@@ -362,8 +362,8 @@ INSERT DATA {
 - [ARIS](https://en.wikipedia.org/wiki/Architecture_of_Integrated_Information_Systems)
 
 ### Неоторые проектные решения / исследования 
-- https://github.com/bpmbpm/rdf-grapher/blob/main/ver8tree/doc/aris-alignment-proposals.md (архивное)
-- https://github.com/bpmbpm/rdf-grapher/blob/main/ver9d/analysis/new_individ_process.md (на перспективу)
+- [Предложения по соответствию ARIS ToolSet и методологии ARIS из ver8tree/doc/aris-alignment-proposals.md](https://github.com/bpmbpm/rdf-grapher/blob/main/ver8tree/doc/aris-alignment-proposals.md) (архивное)
+- [Concepr vs Individ в разных системах, например, ARIS различает Definition (определение объекта) vs Occurrence (вхождение на диаграмме)](https://github.com/bpmbpm/rdf-grapher/blob/main/ver9d/analysis/new_individ_process.md) 
 ---
 
 *Документ создан в рамках issue #388*
