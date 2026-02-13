@@ -342,18 +342,15 @@
         <label for="rdf-input">RDF данные или URI:</label>
 
         <!-- Текстовое поле для ввода RDF -->
-        <textarea id="rdf-input" placeholder="Введите RDF данные в формате Turtle, N-Triples, N-Quads или TriG...
-
-Пример (Turtle):
-@prefix foaf: <http://xmlns.com/foaf/0.1/> .
+        <textarea id="rdf-input"># @prefix foaf: <http://xmlns.com/foaf/0.1/> .
 @prefix ex: <http://example.org/> .
+#
+ex:john a ex:Person ;
+    ex:name &quot;John Doe&quot; ;
+    ex:knows ex:jane .
 
-ex:john a foaf:Person ;
-    foaf:name &quot;John Doe&quot; ;
-    foaf:knows ex:jane .
-
-ex:jane a foaf:Person ;
-    foaf:name &quot;Jane Smith&quot; ."></textarea>
+ex:jane a ex:Person ;
+    ex:name &quot;Jane Smith&quot; .</textarea>
 
         <!-- Селекторы форматов -->
         <div class="format-selectors">
