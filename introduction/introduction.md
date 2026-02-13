@@ -4,7 +4,8 @@
 
 ### 1.1 Что такое RDF Grapher
 
-RDF Grapher — это веб-приложение для парсинга RDF данных и их визуализации в виде графов. Проект эволюционировал от простого RDF Viewer (ver1-ver3) до прототипа системы моделирования бизнес-процессов на основе семантических технологий (ver4-ver9). 
+RDF Grapher — это веб-приложение для парсинга RDF данных и их визуализации в виде графов. Проект эволюционировал от простого RDF Viewer (ver1-ver3) до прототипа системы моделирования бизнес-процессов на основе семантических технологий (ver4-ver9). В качестве протоипа RDF Viewer был https://www.ldf.fi/service/rdf-grapher (требует VPN).  
+Начиная с https://github.com/bpmbpm/rdf-grapher/tree/main/ver7so функции классического RDF Viewer удалены.  
 
 **Текущая версия ver9d** представляет собой прототип Semantic ARIS — ARIS-подобной системы моделирования, построенной на стеке Linked Data.
 
@@ -363,7 +364,7 @@ INSERT DATA {
 
 ### Неоторые проектные решения / исследования 
 - [Предложения по соответствию ARIS ToolSet и методологии ARIS из ver8tree/doc/aris-alignment-proposals.md](https://github.com/bpmbpm/rdf-grapher/blob/main/ver8tree/doc/aris-alignment-proposals.md) (архивное)
-- [Concepr vs Individ в разных системах, например, ARIS различает Definition (определение объекта) vs Occurrence (вхождение на диаграмме)](https://github.com/bpmbpm/rdf-grapher/blob/main/ver9d/analysis/new_individ_process.md) 
+- [Concept vs Individ в разных системах, например, ARIS различает Definition (определение объекта) vs Occurrence (вхождение на диаграмме)](https://github.com/bpmbpm/rdf-grapher/blob/main/ver9d/analysis/new_individ_process.md) 
 ---
 
 *Документ создан в рамках issue #388*
