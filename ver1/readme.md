@@ -11,3 +11,5 @@ https://bpmbpm.github.io/rdf-grapher/ver1/
 
 ### info
 - https://github.com/bpmbpm/doc/tree/main/LD/RDF_viewer
+### pull
+https://github.com/bpmbpm/rdf-grapher/pull/399
