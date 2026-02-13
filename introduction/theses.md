@@ -1,5 +1,5 @@
 # Semantic ARIS - Тезисы
-Semantic BPM / EA
+Semantic BPM / EA на примере semantic VAD [ver9d](https://github.com/bpmbpm/rdf-grapher/tree/main/ver9d)
 ## A. Концепт
 
 ### Для пользователя
