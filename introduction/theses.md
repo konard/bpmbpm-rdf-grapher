@@ -53,7 +53,7 @@ Semantic BPM / EA на примере semantic VAD [ver9d](https://github.com/bp
 
 ### Макет
 - Текущая реализация: [ver9d](https://github.com/bpmbpm/rdf-grapher/tree/main/ver9d)
-- Общий концепт: [SemanticBPM](https://github.com/bpmbpm/SemanticBPM)
+- Общий концепт: [SemanticBPM](https://github.com/bpmbpm/SemanticBPM) и [замысел: "скрестить" два мира: мир BPM/BPMS (EA) и технологический мир знаний / семантики в лице Linked Data (Semantic Web, semantic MediaWiki) для получения semantic ARIS](https://github.com/bpmbpm/SemanticBPM/blob/main/README.md#mission)
 - Статьи на Хабр:
   - [Semantic BPM. Семантика и синтаксис бизнес-процессов](https://habr.com/ru/articles/795883/)
   - [Semantic BPM. Онтологическое моделирование верхнеуровневых процессов. VAD](https://habr.com/ru/articles/828266/)
