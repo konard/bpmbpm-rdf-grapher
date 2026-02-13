@@ -141,6 +141,8 @@ ver9d/12_method/
 | | getDiagramMethods() | Загрузка методов диаграммы из techtree |
 | | getCurrentOpenTrigUri() | Получение URI текущей открытой диаграммы |
 
+Нет удаление Индивида Исполнителя 
+
 ## Схема взаимосвязей (Mermaid)
 
 ```mermaid
