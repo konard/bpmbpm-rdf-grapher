@@ -1,7 +1,8 @@
 ## easy_guide
 Простое руководство
 
-### 1 SPARQL 
+## SPARQL 
+### 1 SELECT
 Пример изменений в quadstore  
 Например, есть задача:
 На VAD-диаграмме нарисовать стрелку от процесса 1 к процессу 2  
@@ -33,8 +34,15 @@ WHERE {
 Можем повторить на https://github.com/bpmbpm/rdf-grapher/tree/main/ver3 = https://bpmbpm.github.io/rdf-grapher/ver3/   
 У нас (rdf-grapher/ver3) же граф \ RDF **передаются параметром**, поэтому [пример](https://bpmbpm.github.io/rdf-grapher/ver3/?rdf=%40prefix+vad%3A+%3Chttp%3A%2F%2Fexample.org%2Fvad%23%3E+.%0Avad%3At_p1+%7B%0Avad%3Ap1_1+%0Avad%3AhasNext+vad%3Ap1_2+.%0A%7D&from=trig&to=svg)
 
-#### 1.3 INSERT
-https://github.com/bpmbpm/doc/blob/main/LD2/sparql2.md#5-insert-data-vs-insert  
+#### 1.3 SPARQL-Playground
+Аналогично на  
+https://atomgraph.github.io/SPARQL-Playground/
+
+#### 2 INSERT
+info: https://github.com/bpmbpm/doc/blob/main/LD2/sparql2.md#5-insert-data-vs-insert   
+
+#### 2.1 
+
 Попробуем: 
 
 
