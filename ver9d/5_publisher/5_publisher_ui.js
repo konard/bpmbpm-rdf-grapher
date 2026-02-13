@@ -530,9 +530,10 @@ function showNodeProperties(nodeUri, nodeLabel) {
     const escapedTrigUri = selectedTrigUri ? selectedTrigUri.replace(/'/g, "\\'") : '';
 
     // issue #336: Генерируем кнопку Методы если есть тип объекта и контекст TriG
+    // issue #390: Добавлена всплывающая подсказка (title) для кнопки Методы
     let methodsButtonHtml = '';
     if (objectMethodType && selectedTrigUri) {
-        methodsButtonHtml = `<button class="methods-btn" onclick="event.stopPropagation(); toggleMethodsDropdown(event, '${escapedNodeUri}', '${escapedTrigUri}', '${objectMethodType}')">Методы</button>`;
+        methodsButtonHtml = `<button class="methods-btn" onclick="event.stopPropagation(); toggleMethodsDropdown(event, '${escapedNodeUri}', '${escapedTrigUri}', '${objectMethodType}')" title="Методы объекта">Методы</button>`;
     }
 
     const panelHtml = `
