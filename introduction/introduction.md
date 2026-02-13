@@ -1,6 +1,6 @@
 # Semantic ARIS — Подробное введение
 Коротко см. https://github.com/bpmbpm/rdf-grapher/blob/main/introduction/theses.md
-Коротко см. https://github.com/bpmbpm/rdf-grapher/introduction/theses.md
+
 ## 1. Обзор проекта RDF Grapher ver9d
 
 ### 1.1 Что такое RDF Grapher
