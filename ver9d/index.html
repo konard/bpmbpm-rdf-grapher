@@ -500,6 +500,52 @@
         </div>
     </div>
 
+    <!-- issue #386: Модальное окно для редактирования Label концепта процесса (Edit Label Concept Process) -->
+    <div id="edit-label-modal" class="edit-label-modal">
+        <div class="edit-label-modal-content" id="edit-label-modal-content">
+            <div class="edit-label-modal-header" id="edit-label-modal-header">
+                <h3>Редактирование Label концепта процесса</h3>
+                <div class="edit-label-modal-header-buttons">
+                    <button class="edit-label-help-btn" onclick="showEditLabelHelp()" title="Справка по редактированию Label">Help</button>
+                    <button class="edit-label-modal-close" onclick="closeEditLabelModal()">&times;</button>
+                </div>
+            </div>
+            <div class="edit-label-modal-body">
+                <!-- ID (нередактируемый) -->
+                <div class="edit-label-field">
+                    <label>ID концепта процесса:</label>
+                    <input type="text" id="edit-label-process-id" readonly style="background-color: #f5f5f5;">
+                </div>
+                <!-- Label (редактируемый) -->
+                <div class="edit-label-field">
+                    <label>Label (rdfs:label):</label>
+                    <input type="text" id="edit-label-input" oninput="onEditLabelInput()">
+                    <small class="field-hint">Введите новый label для концепта процесса</small>
+                </div>
+                <!-- Информация о схеме (hasTrig) -->
+                <div class="edit-label-field" id="edit-label-trig-info" style="display: none;">
+                    <label>Схема процесса (vad:hasTrig):</label>
+                    <input type="text" id="edit-label-trig-uri" readonly style="background-color: #f5f5f5;">
+                    <small class="field-hint">Label схемы будет автоматически изменён на "Схема процесса {новый_label}"</small>
+                </div>
+                <!-- Промежуточный SPARQL запрос -->
+                <div id="edit-label-intermediate-sparql" style="display: none;">
+                    <div class="intermediate-sparql-header">
+                        <label>Промежуточный SPARQL:</label>
+                        <button class="toggle-sparql-btn" onclick="toggleEditLabelIntermediateSparql()">Свернуть/Развернуть</button>
+                    </div>
+                    <textarea class="intermediate-sparql-textarea" id="edit-label-intermediate-textarea" rows="8" readonly></textarea>
+                </div>
+            </div>
+            <div id="edit-label-message" class="edit-label-message" style="display: none;"></div>
+            <div class="edit-label-modal-buttons">
+                <button class="edit-label-cancel-btn" onclick="closeEditLabelModal()">Отмена</button>
+                <button class="edit-label-sparql-btn" onclick="toggleEditLabelIntermediateSparql()">Промежуточный SPARQL</button>
+                <button class="edit-label-create-btn" onclick="createEditLabelSparql()">Создать запрос Edit Label</button>
+            </div>
+        </div>
+    </div>
+
     <!-- issue #309: Модальное окно для отображения Virtual TriG -->
     <div id="virtual-trig-modal" class="virtual-trig-modal">
         <div class="virtual-trig-modal-content">
@@ -557,6 +603,8 @@
                                     <button class="diagram-nav-btn diagram-home-btn" id="diagram-home" onclick="resetTreeViewToInitialState()" title="Домой - свернуть TreeView в исходное состояние">&#x2302;</button>
                                     <button class="diagram-nav-btn" id="diagram-nav-back" onclick="navigateDiagramBack()" title="Назад" disabled>&lt;</button>
                                     <button class="diagram-nav-btn" id="diagram-nav-forward" onclick="navigateDiagramForward()" title="Вперёд" disabled>&gt;</button>
+                                    <!-- issue #386: Кнопка Методы для методов диаграммы (Del Dia и др.) -->
+                                    <button class="diagram-methods-btn" id="diagram-methods" onclick="toggleDiagramMethodsDropdown(event)" title="Методы диаграммы">Методы</button>
                                 </div>
                             </div>
                             <div class="diagram-panel-content">
@@ -902,7 +950,9 @@ WHERE {
                 { modal: 'del-concept-modal', header: 'del-concept-modal-header', content: 'del-concept-modal-content' },
                 { modal: 'virtual-trig-modal', header: 'virtual-trig-modal-header', content: 'virtual-trig-modal-content' },
                 // issue #370: Модальное окно редактирования vad:hasNext
-                { modal: 'hasnext-dia-modal', header: 'hasnext-dia-modal-header', content: 'hasnext-dia-modal-content' }
+                { modal: 'hasnext-dia-modal', header: 'hasnext-dia-modal-header', content: 'hasnext-dia-modal-content' },
+                // issue #386: Модальное окно редактирования Label концепта процесса
+                { modal: 'edit-label-modal', header: 'edit-label-modal-header', content: 'edit-label-modal-content' }
             ];
 
             modals.forEach(config => {
