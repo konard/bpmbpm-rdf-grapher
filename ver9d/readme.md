@@ -16,7 +16,7 @@ https://bpmbpm.github.io/rdf-grapher/ver9d/
 - Trig_VADv5.ttl и Trig_VADv6.ttl разделитель "." Поэтому quadstore формирует полный адрес
 - начиная с Trig_VADv7.ttl разделитель "_", поэтому quadstore уже "чище".
 
-
+[Основные тезисы](https://github.com/bpmbpm/rdf-grapher/blob/main/introduction/theses.md)
 ### target
 Семантический аналог для http://www.bpm.processoffice.ru/  
 Тезис: от табличек и SQL   
