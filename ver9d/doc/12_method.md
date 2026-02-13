@@ -4,6 +4,8 @@
 <!-- Обновлено: https://github.com/bpmbpm/rdf-grapher/issues/370 -->
 <!-- Обновлено: https://github.com/bpmbpm/rdf-grapher/issues/372 -->
 <!-- Обновлено: https://github.com/bpmbpm/rdf-grapher/issues/382 -->
+<!-- Обновлено: https://github.com/bpmbpm/rdf-grapher/issues/386 -->
+<!-- Обновлено: https://github.com/bpmbpm/rdf-grapher/issues/396 -->
 <!-- Дата создания: 2026-02-12 -->
 
 ## Содержание
@@ -44,6 +46,8 @@
 | #370 | Добавление метода Add hasNext Dia |
 | #372 | Переработка на SPARQL-Driven подход |
 | #382 | Обновление именования констант (individProcess, individExecutor) |
+| #386 | Добавление методов editLabelConceptProcess и delDia |
+| #396 | Документирование структуры модуля с указанием cross-module зависимостей |
 
 ---
 
@@ -68,6 +72,41 @@ ver9d/
 | `12_method_sparql.js` | SPARQL запрос для получения методов из vad:techtree |
 | `12_method_ui.js` | UI: кнопка "Методы", выпадающий список методов |
 | `12_method.css` | CSS стили для UI компонентов |
+
+### 2.2 Таблица функций модуля
+
+#### Функции 12_method_logic.js
+
+| Функция | Назначение | Вызываемые функции других модулей |
+|---------|------------|-----------------------------------|
+| `executeObjectMethod(functionId, objectUri, trigUri)` | Диспетчер методов объектов | - |
+| `executeDiagramMethod(functionId, trigUri)` | Диспетчер методов диаграммы | - |
+| `deleteIndividProcessFromTrig(processUri, trigUri)` | Удаление индивида процесса | `openDeleteModal()` - **3_sd_del_concept_individ_ui.js** |
+| `deleteIndividExecutorFromTrig(executorGroupUri, trigUri)` | Удаление индивида исполнителя | `openDeleteModal()` - **3_sd_del_concept_individ_ui.js** |
+| `openHasNextDiaModal(processUri, trigUri)` | Открытие окна редактирования hasNext | `getPrefixedName()` - **9_vadlib/vadlib_sparql.js**, `resetModalPosition()` - глобальная функция |
+| `getCurrentHasNext(processUri, trigUri)` | Получение текущих hasNext | `getPrefixedName()` - **9_vadlib/vadlib_sparql.js** |
+| `getIndividsForHasNextDia(trigUri)` | Получение индивидов для справочника hasNext | `getPrefixedName()` - **9_vadlib/vadlib_sparql.js** |
+| `fillHasNextDiaCheckboxes(trigUri)` | Заполнение чекбоксов hasNext | - |
+| `createHasNextDiaSparql()` | Генерация SPARQL для hasNext | `getPrefixedName()` - **9_vadlib/vadlib_sparql.js** |
+| `openEditLabelModal(processUri, trigUri)` | Открытие окна редактирования label | `getPrefixedName()` - **9_vadlib/vadlib_sparql.js**, `resetModalPosition()` - глобальная функция |
+| `getConceptLabelData(processUri)` | Получение данных label концепта | `getPrefixedName()` - **9_vadlib/vadlib_sparql.js** |
+| `createEditLabelSparql()` | Генерация SPARQL для изменения label | `getPrefixedName()` - **9_vadlib/vadlib_sparql.js**, `getCurrentTrigLabel()` - локальная функция |
+| `openDeleteSchemaModal(trigUri)` | Открытие окна удаления схемы | `openDelConceptModal()` - **3_sd_del_concept_individ_ui.js**, `onDelOperationChange()` - **3_sd_del_concept_individ_ui.js**, `onDelTrigSelect()` - **3_sd_del_concept_individ_ui.js** |
+| `toggleDiagramMethodsDropdown(event)` | Показ/скрытие dropdown методов диаграммы | `getCurrentOpenTrigUri()` - локальная функция |
+| `getDiagramMethods()` | Получение списка методов диаграммы | - |
+| `getCurrentOpenTrigUri()` | Получение URI текущего TriG | Доступ к глобальным переменным: `selectedTrigUri`, `currentTrigUri`, `treeViewState` |
+
+#### Функции 12_method_sparql.js
+
+| Функция | Назначение | Вызываемые функции других модулей |
+|---------|------------|-----------------------------------|
+| `getMethodsForType(objectMethodType)` | Получение методов для типа объекта | `funSPARQLvaluesComunica()` - **9_vadlib/vadlib_sparql.js** |
+
+#### Функции 12_method_ui.js
+
+| Функция | Назначение | Вызываемые функции других модулей |
+|---------|------------|-----------------------------------|
+| `toggleMethodsDropdown(event, objectUri, trigUri, objectMethodType)` | Показ/скрытие dropdown методов объекта | `getMethodsForType()` - **12_method_sparql.js**, `executeObjectMethod()` - **12_method_logic.js** |
 
 ---
 
@@ -280,6 +319,228 @@ DELETE DATA { GRAPH vad:t_p1 { vad:p1.1 vad:hasNext vad:p1.2 . } }
 INSERT DATA { GRAPH vad:t_p1 { vad:p1.1 vad:hasNext vad:p1.3 . } }
 ```
 
+### 5.4 Edit Label Concept Process
+
+**Идентификатор:** `editLabelConceptProcess`
+
+**Назначение:** Редактирование rdfs:label концепта процесса.
+
+**Алгоритм:**
+1. Открытие модального окна `edit-label-modal`
+2. Получение текущего label из ptree
+3. Получение связанной схемы (vad:hasTrig)
+4. Генерация SPARQL DELETE DATA/INSERT DATA запроса
+
+**Генерируемый SPARQL:**
+```sparql
+PREFIX rdf: <http://www.w3.org/1999/02/22-rdf-syntax-ns#>
+PREFIX rdfs: <http://www.w3.org/2000/01/rdf-schema#>
+PREFIX vad: <http://example.org/vad#>
+
+# Удаление старого label в ptree
+DELETE DATA {
+    GRAPH vad:ptree {
+        vad:p1 rdfs:label "Old Label" .
+    }
+};
+
+# Добавление нового label в ptree
+INSERT DATA {
+    GRAPH vad:ptree {
+        vad:p1 rdfs:label "New Label" .
+    }
+}
+```
+
+### 5.5 Del Dia (Delete Diagram)
+
+**Идентификатор:** `delDia`
+
+**Назначение:** Удаление схемы процесса (TriG).
+
+**Алгоритм:**
+1. Открытие модального окна удаления (`openDelConceptModal`)
+2. Предустановка операции "Удалить схему процесса (TriG)"
+3. Выбор указанного TriG
+4. Генерация SPARQL запроса на удаление
+
+**Вызываемые функции других модулей:**
+- `openDelConceptModal()` - **3_sd_del_concept_individ_ui.js**
+- `onDelOperationChange()` - **3_sd_del_concept_individ_ui.js**
+- `onDelTrigSelect()` - **3_sd_del_concept_individ_ui.js**
+
+---
+
+## 5.6 SPARQL-запросы для методов Del
+
+Данный раздел описывает SPARQL-запросы, которые формируются при вызове методов удаления через модуль **12_method**.
+
+### 5.6.1 Удаление индивида процесса (Delete Individ Process)
+
+**Функция:** `deleteIndividProcessFromTrig()` в **12_method_logic.js**
+
+**Вызов функции другого модуля:**
+```javascript
+openDeleteModal('individProcess', prefixedTrigUri, prefixedProcessUri)
+// → 3_sd_del_concept_individ_ui.js
+```
+
+**SPARQL-запросы, генерируемые в 3_sd_del_concept_individ:**
+
+**Поиск индивида в TriG:**
+```sparql
+PREFIX vad: <http://example.org/vad#>
+PREFIX rdfs: <http://www.w3.org/2000/01/rdf-schema#>
+
+SELECT ?individ ?label WHERE {
+    GRAPH <trigUri> {
+        ?individ vad:isSubprocessTrig <trigUri> .
+    }
+    OPTIONAL {
+        GRAPH vad:ptree {
+            ?individ rdfs:label ?label .
+        }
+    }
+}
+```
+
+**Поиск ExecutorGroup для индивида:**
+```sparql
+PREFIX vad: <http://example.org/vad#>
+
+SELECT ?executorGroup WHERE {
+    GRAPH <trigUri> {
+        <individUri> vad:hasExecutor ?executorGroup .
+    }
+}
+```
+
+**Поиск входящих vad:hasNext:**
+```sparql
+PREFIX vad: <http://example.org/vad#>
+
+SELECT ?sourceIndivid WHERE {
+    GRAPH <trigUri> {
+        ?sourceIndivid vad:hasNext <individUri> .
+    }
+}
+```
+
+**Генерация DELETE-запроса** (функция `GENERATE_DELETE_PROCESS_INDIVID_QUERY` в **3_sd_del_concept_individ_sparql.js**):
+```sparql
+PREFIX rdf: <http://www.w3.org/1999/02/22-rdf-syntax-ns#>
+PREFIX rdfs: <http://www.w3.org/2000/01/rdf-schema#>
+PREFIX vad: <http://example.org/vad#>
+
+# Удаление всех исходящих триплетов индивида процесса
+DELETE WHERE {
+    GRAPH vad:t_p1 {
+        vad:p1.1 ?p ?o .
+    }
+};
+
+# Удаление объекта ExecutorGroup
+DELETE WHERE {
+    GRAPH vad:t_p1 {
+        vad:ExecutorGroup_p1.1 ?p ?o .
+    }
+};
+
+# Удаление входящей связи vad:hasNext
+DELETE DATA {
+    GRAPH vad:t_p1 {
+        vad:p1.2 vad:hasNext vad:p1.1 .
+    }
+}
+```
+
+### 5.6.2 Удаление индивида исполнителя (Delete Individ Executor)
+
+**Функция:** `deleteIndividExecutorFromTrig()` в **12_method_logic.js**
+
+**Вызов функции другого модуля:**
+```javascript
+openDeleteModal('individExecutor', prefixedTrigUri, prefixedUri)
+// → 3_sd_del_concept_individ_ui.js
+```
+
+**SPARQL-запросы, генерируемые в 3_sd_del_concept_individ:**
+
+**Поиск исполнителей в TriG:**
+```sparql
+PREFIX vad: <http://example.org/vad#>
+PREFIX rdfs: <http://www.w3.org/2000/01/rdf-schema#>
+
+SELECT DISTINCT ?executor ?label WHERE {
+    GRAPH <trigUri> {
+        ?group vad:includes ?executor .
+    }
+    OPTIONAL {
+        GRAPH vad:rtree {
+            ?executor rdfs:label ?label .
+        }
+    }
+}
+```
+
+**Генерация DELETE-запроса** (функция `GENERATE_DELETE_EXECUTOR_INDIVID_QUERY` в **3_sd_del_concept_individ_sparql.js**):
+```sparql
+PREFIX rdf: <http://www.w3.org/1999/02/22-rdf-syntax-ns#>
+PREFIX rdfs: <http://www.w3.org/2000/01/rdf-schema#>
+PREFIX vad: <http://example.org/vad#>
+
+# Удаление связи vad:includes для исполнителя
+DELETE DATA {
+    GRAPH vad:t_p1 {
+        vad:p1.1 vad:includes vad:r1 .
+    }
+}
+```
+
+### 5.6.3 Удаление схемы процесса (Del Dia)
+
+**Функция:** `openDeleteSchemaModal()` в **12_method_logic.js**
+
+**Вызов функции другого модуля:**
+```javascript
+openDelConceptModal()
+// → 3_sd_del_concept_individ_ui.js
+```
+
+**SPARQL-запросы, генерируемые в 3_sd_del_concept_individ:**
+
+**Получение всех TriG:**
+```sparql
+PREFIX rdf: <http://www.w3.org/1999/02/22-rdf-syntax-ns#>
+PREFIX rdfs: <http://www.w3.org/2000/01/rdf-schema#>
+PREFIX vad: <http://example.org/vad#>
+
+SELECT ?trig ?label WHERE {
+    ?trig rdf:type vad:VADProcessDia .
+    OPTIONAL { ?trig rdfs:label ?label }
+}
+```
+
+**Генерация DELETE-запроса** (функция `GENERATE_DELETE_TRIG_QUERY` в **3_sd_del_concept_individ_sparql.js**):
+```sparql
+PREFIX rdf: <http://www.w3.org/1999/02/22-rdf-syntax-ns#>
+PREFIX rdfs: <http://www.w3.org/2000/01/rdf-schema#>
+PREFIX vad: <http://example.org/vad#>
+
+# Удаление триплета vad:hasTrig в концепте процесса
+DELETE DATA {
+    GRAPH vad:ptree {
+        vad:p1 vad:hasTrig vad:t_p1 .
+    }
+};
+
+# Удаление всего графа TriG
+DROP GRAPH vad:t_p1;
+
+# Каскадное удаление связанного Virtual TriG
+DROP SILENT GRAPH vad:vt_p1
+```
+
 ---
 
 ## 6. Интеграция с UI
@@ -396,5 +657,5 @@ const executorMethods = await getMethodsForType('ExecutorGroup');
 
 *Документ создан: 2026-02-12*
 *Автор: AI Assistant (Claude Opus 4.5)*
-*Версия: 1.0*
-*Ссылки на issues: #336, #368, #370, #372, #382*
+*Версия: 1.1*
+*Ссылки на issues: #336, #368, #370, #372, #382, #386, #396*
