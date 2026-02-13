@@ -1,5 +1,5 @@
 ### SPARQL Smart Design
-
+(выбрать Режим SPARQL:) 
 ### run
 https://bpmbpm.github.io/rdf-grapher/ver7s/
 ```
