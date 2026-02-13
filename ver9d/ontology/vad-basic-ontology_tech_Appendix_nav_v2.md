@@ -236,10 +236,10 @@ graph TD
     CET[ConceptExecutorTreePredicate] -.-> RT[rtree]
     
     classDef techObject fill:#fff3e0,stroke:#f57c00
-    classDef graph fill:#e3f2fd,stroke:#1976d2
+    classDef graph1 fill:#e3f2fd,stroke:#1976d2
     
     class VP,CP,IP,CEP,CEGP,CTP,CPT,CET techObject
-    class PT,RT graph
+    class PT,RT graph1
 ```
 
 ### 4.2 Автогенерируемые объекты
