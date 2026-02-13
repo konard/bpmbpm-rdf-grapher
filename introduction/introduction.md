@@ -348,10 +348,9 @@ INSERT DATA {
 - [SemanticBPM](https://github.com/bpmbpm/SemanticBPM)
 - [draw-vad](https://github.com/bpmbpm/draw-vad)
 
-### Статьи на Хабр
+### Статьи на Хабр 
 - [Semantic BPM. Семантика и синтаксис бизнес-процессов](https://habr.com/ru/articles/795883/)
-- [Semantic BPM. Онтологическое моделирование верхнеуровневых процессов. VAD](https://habr.com/ru/articles/828266/)
-- [НеОсознанный вайб-кодинг (с примером RDF Grapher)](https://habr.com/ru/articles/982634/)
+- [Semantic BPM. Онтологическое моделирование верхнеуровневых процессов. VAD](https://habr.com/ru/articles/828266/)  
 
 ### Технологии
 - [N3.js](https://github.com/rdfjs/N3.js) — RDF парсер
