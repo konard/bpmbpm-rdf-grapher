@@ -63,7 +63,7 @@ Semantic BPM / EA на примере semantic VAD [ver9d](https://github.com/bp
 
 ---
 
-## B. План развития
+## B. Варианты развития
 
 ### Этап 1: Semantic ARIS "на минималках"
 Полнофункциональный Инструмент процессного офиса для управления \ формализации верхнеуровневых процессов компании любого масштаба  
@@ -72,14 +72,11 @@ Semantic BPM / EA на примере semantic VAD [ver9d](https://github.com/bp
 - **Достаточно для:** формализации и анализа верхнеуровневых процессов компании любого масштаба. Структурные и VAD диаграммы, произвольные отчеты, включая RACI
 - **Дополнение:** Редактор для перетаскивания фигур из шаблона (к AutoVAD from RDF / ver9d)
 
-### Этап 2: Развитие сообщества
-- **Идеал:** Создание группы для продвижения семантических технологий в:
-  - BPM (Business Process Management)
-  - Enterprise Architecture
-- **Развитие проектов:**
+### Этап 2: Создание сообщества
+- Создание группы для продвижения семантических технологий в BPM (Business Process Management) / Enterprise Architecture. Разработка семантичсеких инструментов для них новых или как развитие проектов:
   - [SemanticBPM](https://github.com/bpmbpm/SemanticBPM)
   - [rdf-grapher/ver9d](https://github.com/bpmbpm/rdf-grapher/tree/main/ver9d)
-
+- crowdsourcing \ crowdfunding ; Open Source \ FOSS
 ---
 
 ## C. Ключевые технические принципы ver9d
