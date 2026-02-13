@@ -346,7 +346,7 @@ INSERT DATA {
 
 ### Проект
 - [RDF Grapher ver9d](https://github.com/bpmbpm/rdf-grapher/tree/main/ver9d)
-- [SemanticBPM](https://github.com/bpmbpm/SemanticBPM)
+- [SemanticBPM](https://github.com/bpmbpm/SemanticBPM) - основной проект (глобально)
 - [draw-vad](https://github.com/bpmbpm/draw-vad)
 
 ### Статьи на Хабр 
