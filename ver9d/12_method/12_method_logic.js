@@ -693,9 +693,10 @@
 
         /**
          * issue #386: Обработчик изменения поля label
+         * issue #390: Исправлен ID элемента (edit-label-value -> edit-label-input)
          */
         function onEditLabelInput() {
-            const labelInput = document.getElementById('edit-label-value');
+            const labelInput = document.getElementById('edit-label-input');
             if (labelInput) {
                 editLabelState.newLabel = labelInput.value;
             }

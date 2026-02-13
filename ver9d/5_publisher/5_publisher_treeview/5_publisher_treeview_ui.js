@@ -407,10 +407,11 @@
             html += `<div class="trig-property-buttons">`;
             html += `<button class="copy-id-btn" onclick="copyObjectId('${escapeHtml(objectUri)}', this)">Копировать</button>`;
             // issue #336: Кнопка Методы (только если объект имеет тип с методами)
+            // issue #390: Добавлена всплывающая подсказка (title) для кнопки Методы
             if (objectMethodType && contextTrigUri) {
                 const escapedObjectUri = escapeHtml(objectUri).replace(/'/g, "\\'");
                 const escapedTrigUri = escapeHtml(contextTrigUri).replace(/'/g, "\\'");
-                html += `<button class="methods-btn" onclick="toggleMethodsDropdown(event, '${escapedObjectUri}', '${escapedTrigUri}', '${objectMethodType}')">Методы</button>`;
+                html += `<button class="methods-btn" onclick="toggleMethodsDropdown(event, '${escapedObjectUri}', '${escapedTrigUri}', '${objectMethodType}')" title="Методы объекта">Методы</button>`;
             }
             html += `</div>`;
             html += `</div>`;
