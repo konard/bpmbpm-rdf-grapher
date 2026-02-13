@@ -51,6 +51,7 @@ INSERT DATA {
 }
 ```
 #### 2.2 DELETE DATA
+```
 PREFIX vad: <http://example.org/vad#>
 DELETE DATA {
     GRAPH vad:t_p1 {
