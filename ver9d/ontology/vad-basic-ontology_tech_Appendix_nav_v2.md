@@ -425,7 +425,7 @@ flowchart TB
     AHND -.->|methodForType| VAD_DIA
     ELCP -.->|methodForType| VAD_DIA
     
-    classDef graph fill:#e3f2fd,stroke:#1976d2
+    classDef graph1 fill:#e3f2fd,stroke:#1976d2
     classDef mainClass fill:#e8f5e8,stroke:#388e3c
     classDef techClass fill:#fff3e0,stroke:#f57c00
     classDef subtype fill:#ffe0b2,stroke:#ef6c00
@@ -433,7 +433,7 @@ flowchart TB
     classDef auto fill:#f3e5f5,stroke:#7b1fa2
     classDef method fill:#e0f2f1,stroke:#00695c
     
-    class VAD,TECH,PTREE,RTREE graph
+    class VAD,TECH,PTREE,RTREE graph1
     class PROC,VAD_DIA,EXEC,EG mainClass
     class TECH_C,AUTO,VIRT,VADX,OM,DM techClass
     class CVS,DET,NDET,NDT,DC,DE,NDC,NDE subtype
