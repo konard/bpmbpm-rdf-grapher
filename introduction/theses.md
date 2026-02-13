@@ -11,7 +11,7 @@ Semantic BPM / EA на примере semantic VAD [ver9d](https://github.com/bp
   - Паблишер (визуализация и публикация)
   - Отчеты (запросы к репозитарию)
 
-### Под капотом — Linked Data стек
+### "Под капотом" — стек Linked Data 
 - **Технологическая основа:** Semantic Web, Wikidata, semantic MediaWiki и подобные технологии \ системы
 - **Хранилище:** Quadstore (triplestore) для RDF данных (in-memory \ graph database)
 
