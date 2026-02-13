@@ -81,7 +81,7 @@ Semantic BPM / EA на примере semantic VAD [ver9d](https://github.com/bp
 
 ### Этап N:
 - полномасштабный семантический аналог ARIS, MEGA, [BPM-X](https://www.osp.ru/os/2013/08/13037855) и т.п.
-- EKG (Enterprise Knowledge Graph) - семантический граф предприятия, вплоть до корпоративный [Palantir](https://t-j.ru/news/review-palantir/) - знать обо всем на предприяти в разметке на языке знаний.
+- EKG (Enterprise Knowledge Graph) - семантический граф предприятия, вплоть до корпоративный [Palantir](https://t-j.ru/news/review-palantir/) - знать обо всем на предприятии, т.е. "знать" - как иметь информацию в разметке на языке знаний.
 
 ---
 
