@@ -102,6 +102,12 @@ Semantic BPM / EA на примере semantic VAD [ver9d](https://github.com/bp
 
 ---
 
+## summary
+- Семантический аналог для всего ARIS - подобного: http://www.bpm.processoffice.ru/  
+- Тезис: от табличек и SQL к онтологиям (Protege) + tripleStore / quadstore + SPARQL + Reasoner и т.п. (Linked Data RDF\RDFS\OWL)  
+- "формальная семантика (LD) во всем" = semantic BPM/EA/CMDB/Web/Wiki и т.п.  
+- Принцип Семантический ARIS (BPM): UI на js (и подобном), а логика на SPARQL (SPARQL-Driven подход)
+
 ## important
 Версия ver9d сознательно имеет «перебор» со SPARQL окнами, чтобы:
 -  продемонтсрировать реальную обработка на основе SPARQL-запросов (что "под капотом"), показать внутреннию "механику", в реальности SPARQL - запросы не будут визуализироваться и будут исполняться по кнопке
