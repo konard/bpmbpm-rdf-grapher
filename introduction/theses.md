@@ -4,7 +4,7 @@ Semantic BPM / EA на примере semantic VAD [ver9d](https://github.com/bp
 ## A. Концепт
 
 ### Для пользователя
-- **Внешне** — классическая ARIS-подобная система (аналог Toolset, Business Studio, Sparx Architect и т.п.)
+- **Внешне** — классическая ARIS-подобная система (аналог ARIS Toolset, Business Studio, Sparx Architect и т.п.)
 - **Базовый функционал** — типовые компоненты:
   - Моделер (создание и редактирование схем)
   - Репозитарий (хранение объектов моделирования)
