@@ -38,17 +38,24 @@ WHERE {
 Аналогично на  
 https://atomgraph.github.io/SPARQL-Playground/
 
-#### 2 INSERT
+#### 2 UPDATE
 info: https://github.com/bpmbpm/doc/blob/main/LD2/sparql2.md#5-insert-data-vs-insert   
-
-#### 2.1 
+на примере Пример Trig_VADv8.ttl 
+#### 2.1 INSERT DATA
 ```
 PREFIX vad: <http://example.org/vad#>
 INSERT DATA {
     GRAPH vad:t_p1 {
-        vad:p1_1 vad:hasNext vad:p1_2 .
+        vad:p1_2 vad:hasNext vad:p1_1 .
+    }
+}
+```
+#### 2.2 DELETE DATA
+PREFIX vad: <http://example.org/vad#>
+DELETE DATA {
+    GRAPH vad:t_p1 {
+        vad:p1_2 vad:hasNext vad:p1_1 .
     }
 }
 ```
 
-UPDATE
