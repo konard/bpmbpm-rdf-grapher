@@ -1,3 +1,5 @@
 ## introduction
 - theses.md *Semantic ARIS / BPM - Тезисы*
 - introduction.md *Semantic ARIS / BPM — Подробное введение*
+### current
+https://github.com/bpmbpm/rdf-grapher/tree/main/ver9d 
