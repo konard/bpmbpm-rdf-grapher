@@ -1,5 +1,5 @@
 # Semantic ARIS - Тезисы
-
+Semantic BPM / EA
 ## A. Концепт
 
 ### Для пользователя
