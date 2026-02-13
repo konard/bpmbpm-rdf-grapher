@@ -93,6 +93,50 @@ const newTrigLabel = `Схема процесса ${newLabel}`;
 
 **Issue:** #368
 
+### ObjectMethod: Del Individ Executor
+
+**Назначение:** Удаление индивида исполнителя (группы исполнителей) из диаграммы.
+
+**Применимость:** Объекты типа `vad:ExecutorGroup`
+
+**Определение в онтологии:**
+```turtle
+vad:DeleteIndividExecutor
+    rdf:type vad:ObjectMethod ;
+    rdfs:label "Delete Individ Executor" ;
+    vad:methodForType vad:ExecutorGroup ;
+    vad:methodFunction "deleteIndividExecutor" .
+```
+
+**Алгоритм работы:**
+1. Пользователь выбирает ExecutorGroup (группу исполнителей) на диаграмме
+2. Открывается окно "Свойство объекта диаграммы"
+3. Кликает на кнопку "Методы" и выбирает "Delete Individ Executor"
+4. Генерируется SPARQL DELETE запрос для удаления всех предикатов `vad:includes` из текущего TriG
+
+**Пример SPARQL:**
+```sparql
+PREFIX vad: <http://example.org/vad#>
+
+DELETE {
+    GRAPH <currentTrigUri> {
+        <executorGroupUri> vad:includes ?executor .
+    }
+}
+WHERE {
+    GRAPH <currentTrigUri> {
+        <executorGroupUri> vad:includes ?executor .
+    }
+}
+```
+
+**Связь с другими методами:**
+- В отличие от Del Individ Dia (удаление процесса), этот метод удаляет только связь исполнителей
+- Группа исполнителей (ExecutorGroup) остаётся, но становится пустой
+
+**Файлы:**
+- `12_method/12_method_logic.js` - функции deleteIndividExecutor()
+
 ### DiagramMethod: Del Dia
 
 **Назначение:** Удаление всей диаграммы (схемы процесса).
@@ -135,13 +179,13 @@ ver9d/12_method/
 | | onEditLabelInput() | Обработка ввода нового label |
 | | createEditLabelSparql() | Генерация SPARQL запроса |
 | | getCurrentTrigLabel() | Получение текущего label схемы |
+| Del Individ Dia | deleteIndividProcess() | Удаление индивида процесса из диаграммы |
+| Del Individ Executor | deleteIndividExecutor() | Удаление индивида исполнителя из диаграммы |
 | Del Dia | executeDiagramMethod() | Маршрутизатор методов диаграммы |
 | | openDeleteSchemaModal() | Открытие модального окна удаления схемы |
 | | toggleDiagramMethodsDropdown() | Открытие/закрытие выпадающего списка методов |
 | | getDiagramMethods() | Загрузка методов диаграммы из techtree |
 | | getCurrentOpenTrigUri() | Получение URI текущей открытой диаграммы |
-
-Нет удаление Индивида Исполнителя 
 
 ## Схема взаимосвязей (Mermaid)
 
@@ -156,6 +200,7 @@ graph TD
     MOD --> EL[Edit Label Concept Process]
     MOD --> AH[Add hasNext Dia]
     MOD --> DI[Del Individ Dia]
+    MOD --> DE[Del Individ Executor]
 
     EL --> OEM[openEditLabelModal]
     OEM --> GCD[getConceptLabelData]
@@ -167,6 +212,9 @@ graph TD
     CES --> GTL[getCurrentTrigLabel]
     GTL --> QS
     CES --> SPARQL[SPARQL DELETE/INSERT]
+
+    DE --> DIE[deleteIndividExecutor]
+    DIE --> SPARQL_DE[SPARQL DELETE]
 
     %% DiagramMethod
     DMB --> DMOD[Diagram Methods Dropdown]
@@ -183,9 +231,9 @@ graph TD
     classDef store fill:#e8f5e8
 
     class OP,DH entryPoint
-    class OEM,GCD,OEI,CES,GTL,EDM,ODSM function
+    class OEM,GCD,OEI,CES,GTL,EDM,ODSM,DIE function
     class ELM,DCM modal
-    class QS,SPARQL store
+    class QS,SPARQL,SPARQL_DE store
 ```
 
 ## Генерация SPARQL для Edit Label
@@ -291,4 +339,5 @@ function getDiagramMethods() {
 ---
 
 *Документ создан для issue #386: ver9d_5label*
-*Дата: 2026-02-12*
+*Обновлено для issue #392: ver9d_6doc*
+*Дата: 2026-02-13*
