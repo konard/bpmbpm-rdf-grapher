@@ -8,7 +8,7 @@
 Это означает Назначить процесса 1 значение пердиката hasNext (имеет следующего) равное процесс 2: `:Процесс1 :hasNext :Процесс1 .` 
 Применительно к примеру Trig_VADv8.ttl
 
-#### 1.1 select www.semantechs.co.uk
+#### 1.1 select semantechs.co.uk
 https://www.semantechs.co.uk/turtle-editor-viewer/  
 Рассмотрим пример. Введем TriG (схему):
 ```
