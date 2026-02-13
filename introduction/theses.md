@@ -78,6 +78,11 @@ Semantic BPM / EA на примере semantic VAD [ver9d](https://github.com/bp
   - [SemanticBPM](https://github.com/bpmbpm/SemanticBPM)
   - [rdf-grapher/ver9d](https://github.com/bpmbpm/rdf-grapher/tree/main/ver9d)
 - crowdsourcing \ crowdfunding ; Open Source \ FOSS
+
+### Этап N:
+- полномасштабный семантический аналог ARIS, MEGA, BPM-X и т.п.
+- EKG (Enterprise Knowledge Graph) - семаннтический граф предприятия (Palantir предприятия)
+
 ---
 
 ## C. Ключевые технические принципы ver9d
