@@ -33,5 +33,6 @@ WHERE {
 Можем повторить на https://github.com/bpmbpm/rdf-grapher/tree/main/ver3 = https://bpmbpm.github.io/rdf-grapher/ver3/   
 У нас (rdf-grapher/ver3) же граф \ RDF **передаются параметром**, поэтому [пример](https://bpmbpm.github.io/rdf-grapher/ver3/?rdf=%40prefix+vad%3A+%3Chttp%3A%2F%2Fexample.org%2Fvad%23%3E+.%0Avad%3At_p1+%7B%0Avad%3Ap1_1+%0Avad%3AhasNext+vad%3Ap1_2+.%0A%7D&from=trig&to=svg)
 
+#### INSERT
 
 UPDATE?
