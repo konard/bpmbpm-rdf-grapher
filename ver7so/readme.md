@@ -1,5 +1,5 @@
 ### ver7so
-SPARQL Smart Design + Ontology
+SPARQL + Smart Design (выбрать Режим SPARQL:) + Ontology
 
 ### run
 https://bpmbpm.github.io/rdf-grapher/ver7so/  
