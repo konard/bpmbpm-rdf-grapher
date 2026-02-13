@@ -67,6 +67,19 @@ vad:EditLabelConceptProcess
    - DELETE/INSERT для изменения label концепта в vad:ptree
    - Если процесс имеет схему (vad:hasTrig), автоматически обновляется label схемы по правилу "Схема процесса {новый_label}"
 
+**SPARQL-Driven:** Да
+
+**Переменные SPARQL:**
+- `editLabelState` - состояние модуля (processUri, trigUri, currentLabel, newLabel, hasTrig)
+- `editLabelIntermediateSparqlQueries` - массив промежуточных SPARQL запросов
+- `sparqlQuery` - итоговый SPARQL запрос (генерируется в createEditLabelSparql)
+
+**Генерируемые SPARQL операции:**
+- DELETE DATA - удаление старого label в ptree
+- INSERT DATA - добавление нового label в ptree
+- DELETE DATA - удаление старого label схемы (если есть vad:hasTrig)
+- INSERT DATA - добавление нового label схемы (если есть vad:hasTrig)
+
 **Правило изменения label схемы:**
 ```javascript
 const newTrigLabel = `Схема процесса ${newLabel}`;
@@ -83,6 +96,17 @@ const newTrigLabel = `Схема процесса ${newLabel}`;
 
 **Применимость:** Объекты типа `vad:isSubprocessTrig`
 
+**SPARQL-Driven:** Да
+
+**Переменные SPARQL:**
+- `hasNextDiaState` - состояние модуля (processUri, trigUri, currentHasNext, selectedHasNext)
+- `hasNextDiaIntermediateSparqlQueries` - массив промежуточных SPARQL запросов
+- `sparqlQuery` - итоговый SPARQL запрос (генерируется в createHasNextDiaSparql)
+
+**Генерируемые SPARQL операции:**
+- DELETE DATA - удаление выбранных hasNext
+- INSERT DATA - добавление выбранных hasNext
+
 **Issue:** #370
 
 ### ObjectMethod: Del Individ Dia
@@ -91,6 +115,13 @@ const newTrigLabel = `Схема процесса ${newLabel}`;
 
 **Применимость:** Объекты типа `vad:isSubprocessTrig`
 
+**SPARQL-Driven:** Да (использует модальное окно openDeleteModal)
+
+**Описание подхода:**
+- Метод использует SPARQL-Driven подход через модальное окно "Удалить концепт/индивид/схему"
+- Функция deleteIndividProcessFromTrig() вызывает openDeleteModal() с предустановленными значениями
+- Пользователь выбирает операцию удаления и генерирует SPARQL через стандартный интерфейс
+
 **Issue:** #368
 
 ### ObjectMethod: Del Individ Executor
@@ -98,6 +129,13 @@ const newTrigLabel = `Схема процесса ${newLabel}`;
 **Назначение:** Удаление индивида исполнителя (группы исполнителей) из диаграммы.
 
 **Применимость:** Объекты типа `vad:ExecutorGroup`
+
+**SPARQL-Driven:** Да (использует модальное окно openDeleteModal)
+
+**Описание подхода:**
+- Метод использует SPARQL-Driven подход через модальное окно "Удалить концепт/индивид/схему"
+- Функция deleteIndividExecutorFromTrig() вызывает openDeleteModal() с предустановленными значениями
+- Генерируется SPARQL DELETE запрос для удаления предикатов vad:includes
 
 **Определение в онтологии:**
 ```turtle
@@ -171,21 +209,28 @@ ver9d/12_method/
 
 ## Таблица функций
 
-| Метод | Функция | Назначение |
-|-------|---------|------------|
-| Edit Label Concept Process | openEditLabelModal() | Открытие модального окна редактирования label |
-| | closeEditLabelModal() | Закрытие модального окна |
-| | getConceptLabelData() | Получение текущего label из quadstore |
-| | onEditLabelInput() | Обработка ввода нового label |
-| | createEditLabelSparql() | Генерация SPARQL запроса |
-| | getCurrentTrigLabel() | Получение текущего label схемы |
-| Del Individ Dia | deleteIndividProcess() | Удаление индивида процесса из диаграммы |
-| Del Individ Executor | deleteIndividExecutor() | Удаление индивида исполнителя из диаграммы |
-| Del Dia | executeDiagramMethod() | Маршрутизатор методов диаграммы |
-| | openDeleteSchemaModal() | Открытие модального окна удаления схемы |
-| | toggleDiagramMethodsDropdown() | Открытие/закрытие выпадающего списка методов |
-| | getDiagramMethods() | Загрузка методов диаграммы из techtree |
-| | getCurrentOpenTrigUri() | Получение URI текущей открытой диаграммы |
+| Метод | Функция | SPARQL переменная | Назначение |
+|-------|---------|-------------------|------------|
+| Edit Label Concept Process | openEditLabelModal() | - | Открытие модального окна редактирования label |
+| | closeEditLabelModal() | - | Закрытие модального окна |
+| | getConceptLabelData() | editLabelIntermediateSparqlQueries | Получение текущего label из quadstore |
+| | onEditLabelInput() | editLabelState.newLabel | Обработка ввода нового label |
+| | createEditLabelSparql() | sparqlQuery | Генерация SPARQL запроса |
+| | getCurrentTrigLabel() | - | Получение текущего label схемы |
+| Add hasNext Dia | openHasNextDiaModal() | - | Открытие модального окна редактирования hasNext |
+| | closeHasNextDiaModal() | - | Закрытие модального окна |
+| | getCurrentHasNext() | hasNextDiaIntermediateSparqlQueries | Получение текущих hasNext |
+| | getIndividsForHasNextDia() | - | Получение списка индивидов для выбора |
+| | fillHasNextDiaCheckboxes() | - | Заполнение чекбоксов |
+| | onHasNextDiaCheckboxChange() | hasNextDiaState.selectedHasNext | Обработка изменения чекбокса |
+| | createHasNextDiaSparql() | sparqlQuery | Генерация SPARQL запроса |
+| Del Individ Dia | deleteIndividProcessFromTrig() | - | Удаление индивида процесса (SPARQL-Driven) |
+| Del Individ Executor | deleteIndividExecutor() | - | Удаление индивида исполнителя из диаграммы |
+| Del Dia | executeDiagramMethod() | - | Маршрутизатор методов диаграммы |
+| | openDeleteSchemaModal() | - | Открытие модального окна удаления схемы |
+| | toggleDiagramMethodsDropdown() | - | Открытие/закрытие выпадающего списка методов |
+| | getDiagramMethods() | - | Загрузка методов диаграммы из techtree |
+| | getCurrentOpenTrigUri() | - | Получение URI текущей открытой диаграммы |
 
 ## Схема взаимосвязей (Mermaid)
 
@@ -201,6 +246,20 @@ graph TD
     MOD --> AH[Add hasNext Dia]
     MOD --> DI[Del Individ Dia]
     MOD --> DE[Del Individ Executor]
+
+    %% Add hasNext Dia flows
+    AH --> OHM[openHasNextDiaModal]
+    OHM --> GCH[getCurrentHasNext]
+    GCH --> GIH[getIndividsForHasNextDia]
+    GIH --> FHC[fillHasNextDiaCheckboxes]
+    FHC --> OHC[onHasNextDiaCheckboxChange]
+    OHC --> CHS[createHasNextDiaSparql]
+    CHS --> SPARQL_AH[SPARQL DELETE/INSERT hasNext]
+
+    %% Del Individ Dia flows
+    DI --> DIP[deleteIndividProcessFromTrig]
+    DIP --> ODM[openDeleteModal]
+    ODM --> SPARQL_DI[SPARQL DELETE Individ]
 
     EL --> OEM[openEditLabelModal]
     OEM --> GCD[getConceptLabelData]
