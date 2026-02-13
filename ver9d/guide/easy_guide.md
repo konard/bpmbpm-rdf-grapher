@@ -43,8 +43,12 @@ info: https://github.com/bpmbpm/doc/blob/main/LD2/sparql2.md#5-insert-data-vs-in
 
 #### 2.1 
 
-Попробуем: 
-
+PREFIX vad: <http://example.org/vad#>
+INSERT DATA {
+    GRAPH vad:t_p1 {
+        vad:p1_1 vad:hasNext vad:p1_2 .
+    }
+}
 
 
 UPDATE?
