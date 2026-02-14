@@ -5,9 +5,10 @@
 ### 1 SELECT
 Пример изменений в quadstore  
 Например, есть задача:
-На VAD-диаграмме нарисовать стрелку от процесса 1 к процессу 2  
-Это означает Назначить процесса 1 значение пердиката hasNext (имеет следующего) равное процесс 2: `:Процесс1 :hasNext :Процесс1 .` 
-Применительно к примеру Trig_VADv8.ttl
+На VAD-диаграмме нарисовать стрелку от процесса 1 к процессу 2.  
+Это означает Назначить "Процесс 1" значение пердиката hasNext (имеет следующего) равное "Процесс 2":  
+`:Процесс1 :hasNext :Процесс1 .`  
+Ниже применительно к примеру Trig_VADv8.ttl
 
 #### 1.1 select semantechs.co.uk
 https://www.semantechs.co.uk/turtle-editor-viewer/  
@@ -42,6 +43,8 @@ https://atomgraph.github.io/SPARQL-Playground/
 info: https://github.com/bpmbpm/doc/blob/main/LD2/sparql2.md#5-insert-data-vs-insert   
 на примере Пример Trig_VADv8.ttl 
 #### 2.1 INSERT DATA
+Делаем связь типа hasNext с Процесс 2 на Процесс 1:    
+`:Процесс2 :hasNext :Процесс1 .`  
 ```
 PREFIX vad: <http://example.org/vad#>
 INSERT DATA {
@@ -51,6 +54,7 @@ INSERT DATA {
 }
 ```
 #### 2.2 DELETE DATA
+Удаляем следанную в 2.1 связь
 ```
 PREFIX vad: <http://example.org/vad#>
 DELETE DATA {
@@ -59,4 +63,4 @@ DELETE DATA {
     }
 }
 ```
-
+Примеры 2.1 и 2.2 демонстрируют INSERT и DELETE, например, в методах 
