@@ -1,0 +1,45 @@
+# Пример TriG VADempty (Value Added Chain Diagram с иерархией TriG) rdfs:label для vad:ExecutorGroup 
+# Исполнители определены в vad:rtree (Дерево Исполнителей)
+# https://github.com/bpmbpm/rdf-grapher/blob/main/ver9d/requirements/problem.md#name
+
+@prefix rdf: <http://www.w3.org/1999/02/22-rdf-syntax-ns#> .
+@prefix rdfs: <http://www.w3.org/2000/01/rdf-schema#> .
+@prefix dcterms: <http://purl.org/dc/terms/> .
+@prefix vad: <http://example.org/vad#> .
+
+
+vad:root {
+    vad:root rdf:type vad:TechTree ;
+    rdfs:label "Корень Дерева" .
+}
+
+# ============================================================================
+# Дерево Процессов (ptree) - общий граф с метаданными всех процессов
+# ============================================================================
+
+vad:ptree {
+    vad:ptree rdf:type vad:ObjectTree ;
+        rdfs:label "Дерево Процессов (TriG)" ;
+        vad:hasParentObj vad:root .
+
+}
+
+# ============================================================================
+# Дерево Исполнителей (rtree) - общий граф с метаданными всех исполнителей
+# Содержит rdf:type, rdfs:label для всех vad:Executor
+# ============================================================================
+
+vad:rtree {
+    vad:rtree rdf:type vad:ObjectTree ;
+        rdfs:label "Дерево Исполнителей (TriG)" ;
+        vad:hasParentObj vad:root .
+
+    vad:Org-structure rdf:type vad:TypeExecutor ;
+        rdfs:label "Исполнитель Org-structure" ;
+        vad:hasParentObj vad:rtree .
+
+    # Исполнители
+
+}
+
+
