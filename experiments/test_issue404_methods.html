@@ -1,0 +1,127 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Test Issue #404 - New Methods</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            padding: 20px;
+            max-width: 800px;
+            margin: 0 auto;
+        }
+        .test-section {
+            margin: 20px 0;
+            padding: 15px;
+            border: 1px solid #ccc;
+            border-radius: 5px;
+        }
+        .test-section h3 {
+            margin-top: 0;
+        }
+        .status {
+            padding: 10px;
+            margin: 10px 0;
+            border-radius: 3px;
+        }
+        .status.pass {
+            background-color: #d4edda;
+            color: #155724;
+        }
+        .status.fail {
+            background-color: #f8d7da;
+            color: #721c24;
+        }
+        button {
+            padding: 10px 15px;
+            margin: 5px;
+            cursor: pointer;
+        }
+    </style>
+</head>
+<body>
+    <h1>Issue #404 - Method Implementation Tests</h1>
+
+    <div class="test-section">
+        <h3>Test 1: DiagramMethod Functions Exist</h3>
+        <button onclick="testDiagramMethodFunctions()">Run Test</button>
+        <div id="test1-result"></div>
+    </div>
+
+    <div class="test-section">
+        <h3>Test 2: ObjectMethod Functions Exist</h3>
+        <button onclick="testObjectMethodFunctions()">Run Test</button>
+        <div id="test2-result"></div>
+    </div>
+
+    <div class="test-section">
+        <h3>Test 3: Load Main Application</h3>
+        <button onclick="loadMainApp()">Load ver9d/index.html</button>
+        <div id="test3-result"></div>
+    </div>
+
+    <script>
+        function showResult(elementId, passed, message) {
+            const element = document.getElementById(elementId);
+            element.innerHTML = `<div class="status ${passed ? 'pass' : 'fail'}">${message}</div>`;
+        }
+
+        function testDiagramMethodFunctions() {
+            const results = [];
+
+            // Check if getDiagramMethods exists
+            if (typeof getDiagramMethods !== 'undefined') {
+                results.push('✓ getDiagramMethods function exists');
+            } else {
+                results.push('✗ getDiagramMethods function NOT found');
+            }
+
+            // Check if openNewProcessIndividModal exists
+            if (typeof openNewProcessIndividModal !== 'undefined') {
+                results.push('✓ openNewProcessIndividModal function exists');
+            } else {
+                results.push('✗ openNewProcessIndividModal function NOT found');
+            }
+
+            // Check if executeDiagramMethod exists
+            if (typeof executeDiagramMethod !== 'undefined') {
+                results.push('✓ executeDiagramMethod function exists');
+            } else {
+                results.push('✗ executeDiagramMethod function NOT found');
+            }
+
+            const allPassed = !results.some(r => r.includes('✗'));
+            showResult('test1-result', allPassed, results.join('<br>'));
+        }
+
+        function testObjectMethodFunctions() {
+            const results = [];
+
+            // Check if openNewExecutorIndividModal exists
+            if (typeof openNewExecutorIndividModal !== 'undefined') {
+                results.push('✓ openNewExecutorIndividModal function exists');
+            } else {
+                results.push('✗ openNewExecutorIndividModal function NOT found');
+            }
+
+            // Check if executeObjectMethod exists
+            if (typeof executeObjectMethod !== 'undefined') {
+                results.push('✓ executeObjectMethod function exists');
+            } else {
+                results.push('✗ executeObjectMethod function NOT found');
+            }
+
+            const allPassed = !results.some(r => r.includes('✗'));
+            showResult('test2-result', allPassed, results.join('<br>'));
+        }
+
+        function loadMainApp() {
+            showResult('test3-result', true, 'Redirecting to main application...');
+            setTimeout(() => {
+                window.location.href = '../ver9d/index.html';
+            }, 1000);
+        }
+    </script>
+</body>
+</html>
