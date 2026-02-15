@@ -37,6 +37,8 @@
     <link rel="stylesheet" href="3_sd/3_sd.css">
     <link rel="stylesheet" href="4_resSPARQL/4_resSPARQL.css">
     <link rel="stylesheet" href="5_publisher/5_publisher.css">
+    <!-- issue #408: Стили для поиска в TreeView -->
+    <link rel="stylesheet" href="5_publisher/5_publisher_treeview/5_publisher_treeview_search.css">
     <link rel="stylesheet" href="6_legend/6_legend.css">
     <link rel="stylesheet" href="7_info/7_info.css">
     <link rel="stylesheet" href="8_infoSPARQL/8_infoSPARQL.css">
@@ -636,7 +638,10 @@
                     <div class="vad-trig-left-panels">
                         <!-- Панель дерева TriG -->
                         <div class="trig-tree-panel">
-                            <div class="trig-tree-header">Дерево TriG</div>
+                            <div class="trig-tree-header">
+                                <span>Дерево TriG</span>
+                                <button class="trig-tree-find-btn" onclick="openTriGSearchDialog()" title="Поиск в дереве TriG">Найти</button>
+                            </div>
                             <div class="trig-tree-content" id="trig-tree-content">
                                 <div class="trig-properties-empty">Выберите данные TriG</div>
                             </div>
@@ -789,6 +794,8 @@ WHERE {
     <script src="5_publisher/5_publisher_logic.js"></script>
     <!-- issue #368: Подмодуль TreeView (дерево TriG и Карточка объекта treeview) -->
     <script src="5_publisher/5_publisher_treeview/5_publisher_treeview_ui.js"></script>
+    <!-- issue #408: Функциональность поиска в TreeView -->
+    <script src="5_publisher/5_publisher_treeview/5_publisher_treeview_search.js"></script>
     <!-- issue #368: Подмодуль ExportView (экспорт SVG, PNG, открытие во внешних сервисах) -->
     <script src="5_publisher/5_publisher_exportview/5_publisher_exportview_logic.js"></script>
     <script src="5_publisher/5_publisher_ui.js"></script>
