@@ -609,6 +609,8 @@
                                     <button class="diagram-nav-btn diagram-home-btn" id="diagram-home" onclick="resetTreeViewToInitialState()" title="Домой - свернуть TreeView в исходное состояние">&#x2302;</button>
                                     <button class="diagram-nav-btn" id="diagram-nav-back" onclick="navigateDiagramBack()" title="Назад" disabled>&lt;</button>
                                     <button class="diagram-nav-btn" id="diagram-nav-forward" onclick="navigateDiagramForward()" title="Вперёд" disabled>&gt;</button>
+                                    <!-- issue #406: Кнопка Фильтр для фильтрации элементов диаграммы -->
+                                    <button class="diagram-filter-btn" id="diagram-filter" onclick="toggleDiagramFilterDropdown(event)" title="Фильтр элементов диаграммы">Фильтр</button>
                                     <!-- issue #386: Кнопка Методы для методов диаграммы (Del Dia и др.) -->
                                     <button class="diagram-methods-btn" id="diagram-methods" onclick="toggleDiagramMethodsDropdown(event)" title="Методы диаграммы">Методы</button>
                                 </div>
@@ -814,6 +816,9 @@ WHERE {
     <script src="12_method/12_method_sparql.js"></script>
     <script src="12_method/12_method_logic.js"></script>
     <script src="12_method/12_method_ui.js"></script>
+
+    <!-- issue #406: Модуль 13: Фильтр диаграммы (обработка кнопки Фильтр в заголовке диаграммы) -->
+    <script src="13_filter/13_filter_logic.js"></script>
 
     <!-- ========================================================================== -->
     <!-- ИНИЦИАЛИЗАЦИЯ                                                              -->

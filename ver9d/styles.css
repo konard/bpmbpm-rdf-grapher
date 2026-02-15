@@ -3190,6 +3190,80 @@
         }
 
         /* ============================================================================= */
+        /* issue #406: Стили для кнопки Фильтр диаграммы                                */
+        /* ============================================================================= */
+
+        .diagram-filter-btn {
+            background-color: #26A69A;
+            color: white;
+            border: none;
+            border-radius: 4px;
+            padding: 4px 10px;
+            font-size: 12px;
+            cursor: pointer;
+            margin-left: 10px;
+        }
+
+        .diagram-filter-btn:hover {
+            background-color: #00897B;
+        }
+
+        /* Выпадающий список фильтров диаграммы */
+        .diagram-filter-dropdown {
+            display: none;
+            position: absolute;
+            top: 100%;
+            right: 0;
+            background-color: white;
+            border: 1px solid #ddd;
+            border-radius: 4px;
+            box-shadow: 0 2px 8px rgba(0,0,0,0.15);
+            z-index: 1000;
+            min-width: 180px;
+        }
+
+        .diagram-filter-dropdown.visible {
+            display: block;
+        }
+
+        .diagram-filter-dropdown-item {
+            padding: 8px 12px;
+            cursor: pointer;
+            font-size: 13px;
+            border-bottom: 1px solid #eee;
+            display: flex;
+            align-items: center;
+        }
+
+        .diagram-filter-dropdown-item:last-child {
+            border-bottom: none;
+        }
+
+        .diagram-filter-dropdown-item:hover {
+            background-color: #f5f5f5;
+        }
+
+        .diagram-filter-dropdown-item.selected {
+            background-color: #E0F2F1;
+            font-weight: 500;
+        }
+
+        .diagram-filter-dropdown-item::before {
+            content: '';
+            display: inline-block;
+            width: 16px;
+            height: 16px;
+            margin-right: 8px;
+            border: 2px solid #26A69A;
+            border-radius: 50%;
+        }
+
+        .diagram-filter-dropdown-item.selected::before {
+            background-color: #26A69A;
+            box-shadow: inset 0 0 0 3px white;
+        }
+
+        /* ============================================================================= */
         /* issue #386: Стили для модального окна Edit Label Concept Process              */
         /* ============================================================================= */
 
