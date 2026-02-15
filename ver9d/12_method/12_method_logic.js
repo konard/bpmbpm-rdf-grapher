@@ -37,7 +37,8 @@
 
         /**
          * Выполняет метод объекта
-         * @param {string} functionId - Идентификатор функции ('deleteIndividProcess', 'deleteIndividExecutor', 'addHasNextDia' или 'editLabelConceptProcess')
+         * issue #404: Добавлен метод newExecutorIndivid
+         * @param {string} functionId - Идентификатор функции ('deleteIndividProcess', 'deleteIndividExecutor', 'addHasNextDia', 'editLabelConceptProcess' или 'newExecutorIndivid')
          * @param {string} objectUri - URI объекта
          * @param {string} trigUri - URI текущего TriG
          */
@@ -59,6 +60,10 @@
                     // issue #386: Открываем диалог редактирования label концепта процесса
                     openEditLabelModal(objectUri, trigUri);
                     break;
+                case 'newExecutorIndivid':
+                    // issue #404: Открываем диалог создания нового исполнителя
+                    openNewExecutorIndividModal(objectUri, trigUri);
+                    break;
                 default:
                     console.warn(`Unknown method function: ${functionId}`);
                     alert(`Метод "${functionId}" не реализован`);
@@ -67,13 +72,18 @@
 
         /**
          * issue #386: Выполняет метод диаграммы
-         * @param {string} functionId - Идентификатор функции (например, 'delDia')
+         * issue #404: Добавлен метод newProcessIndivid
+         * @param {string} functionId - Идентификатор функции (например, 'delDia' или 'newProcessIndivid')
          * @param {string} trigUri - URI текущего TriG
          */
         function executeDiagramMethod(functionId, trigUri) {
             console.log(`Executing diagram method: ${functionId} for ${trigUri}`);
 
             switch (functionId) {
+                case 'newProcessIndivid':
+                    // issue #404: Вызываем окно создания индивида процесса с предустановленным TriG
+                    openNewProcessIndividModal(trigUri);
+                    break;
                 case 'delDia':
                     // issue #386: Вызываем окно удаления схемы с предустановленным TriG
                     openDeleteSchemaModal(trigUri);
@@ -81,6 +91,107 @@
                 default:
                     console.warn(`Unknown diagram method function: ${functionId}`);
                     alert(`Метод диаграммы "${functionId}" не реализован`);
+            }
+        }
+
+        /**
+         * issue #404: Открывает окно создания нового индивида процесса с предустановленным TriG
+         * @param {string} trigUri - URI TriG для создания индивида
+         */
+        function openNewProcessIndividModal(trigUri) {
+            // Проверяем наличие данных
+            if (!currentStore || currentStore.size === 0) {
+                alert('Данные quadstore пусты.\n\nQuadstore is empty.');
+                return;
+            }
+
+            // Открываем окно создания индивида
+            if (typeof openNewIndividModal === 'function') {
+                openNewIndividModal();
+
+                // После открытия окна предустанавливаем значения
+                setTimeout(() => {
+                    // Выбираем тип "Индивид процесса"
+                    const typeSelect = document.getElementById('new-individ-type');
+                    if (typeSelect) {
+                        typeSelect.value = 'individ-process';
+                        // Эмулируем событие change
+                        if (typeof onNewIndividTypeChange === 'function') {
+                            onNewIndividTypeChange();
+                        }
+
+                        // После загрузки формы предустанавливаем TriG
+                        setTimeout(() => {
+                            const trigSelect = document.getElementById('new-individ-trig');
+                            if (trigSelect) {
+                                trigSelect.value = trigUri;
+                                // Эмулируем событие change
+                                if (typeof onNewIndividTrigChange === 'function') {
+                                    onNewIndividTrigChange();
+                                }
+                            }
+                        }, 100);
+                    }
+                }, 50);
+            } else {
+                alert('Функция openNewIndividModal не найдена');
+            }
+        }
+
+        /**
+         * issue #404: Открывает окно создания нового индивида исполнителя с предустановленными полями
+         * @param {string} processUri - URI индивида процесса
+         * @param {string} trigUri - URI текущего TriG
+         */
+        function openNewExecutorIndividModal(processUri, trigUri) {
+            // Проверяем наличие данных
+            if (!currentStore || currentStore.size === 0) {
+                alert('Данные quadstore пусты.\n\nQuadstore is empty.');
+                return;
+            }
+
+            // Открываем окно создания индивида
+            if (typeof openNewIndividModal === 'function') {
+                openNewIndividModal();
+
+                // После открытия окна предустанавливаем значения
+                setTimeout(() => {
+                    // Выбираем тип "Индивид исполнителя"
+                    const typeSelect = document.getElementById('new-individ-type');
+                    if (typeSelect) {
+                        typeSelect.value = 'individ-executor';
+                        // Эмулируем событие change
+                        if (typeof onNewIndividTypeChange === 'function') {
+                            onNewIndividTypeChange();
+                        }
+
+                        // После загрузки формы предустанавливаем TriG и индивид процесса
+                        setTimeout(() => {
+                            const trigSelect = document.getElementById('new-individ-trig');
+                            if (trigSelect) {
+                                trigSelect.value = trigUri;
+                                // Эмулируем событие change
+                                if (typeof onNewIndividTrigChange === 'function') {
+                                    onNewIndividTrigChange();
+                                }
+
+                                // После загрузки списка индивидов процесса выбираем нужный
+                                setTimeout(() => {
+                                    const processSelect = document.getElementById('new-individ-process-individ');
+                                    if (processSelect) {
+                                        processSelect.value = processUri;
+                                        // Эмулируем событие change
+                                        if (typeof onNewIndividProcessIndividChange === 'function') {
+                                            onNewIndividProcessIndividChange();
+                                        }
+                                    }
+                                }, 100);
+                            }
+                        }, 100);
+                    }
+                }, 50);
+            } else {
+                alert('Функция openNewIndividModal не найдена');
             }
         }
 
@@ -987,12 +1098,14 @@
 
         /**
          * issue #386: Получает список методов диаграммы
+         * issue #404: Добавлен метод "New Process Individ"
          * @returns {Array<{label: string, functionId: string}>}
          */
         function getDiagramMethods() {
             // Статический список методов диаграммы
             // В будущем можно загружать из techtree через SPARQL
             return [
+                { label: 'New Process Individ', functionId: 'newProcessIndivid' },
                 { label: 'Del Dia', functionId: 'delDia' }
             ];
         }
@@ -1047,4 +1160,8 @@
             window.executeDiagramMethod = executeDiagramMethod;
             window.openDeleteSchemaModal = openDeleteSchemaModal;
             window.getCurrentOpenTrigUri = getCurrentOpenTrigUri;
+
+            // issue #404: Функции новых методов
+            window.openNewProcessIndividModal = openNewProcessIndividModal;
+            window.openNewExecutorIndividModal = openNewExecutorIndividModal;
         }
