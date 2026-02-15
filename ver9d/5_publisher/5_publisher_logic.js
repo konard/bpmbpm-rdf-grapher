@@ -1213,50 +1213,60 @@
 
             dot += '\n';
 
+            // issue #406: Проверяем текущий фильтр диаграммы
+            // Если фильтр = 'hideExecutors', пропускаем рендеринг ExecutorGroup узлов
+            const shouldShowExecutors = (typeof getCurrentDiagramFilter === 'function')
+                ? getCurrentDiagramFilter() !== 'hideExecutors'
+                : true;
+
             // Добавляем ExecutorGroup узлы (желтые эллипсы)
             // ExecutorGroup объекты теперь кликабельны и показывают свойства
-            dot += '    // ExecutorGroup узлы (эллипсы с желтоватой заливкой)\n';
-            visibleProcesses.forEach((processInfo, uri) => {
-                const nodeId = generateVadNodeId(uri, prefixes);
+            if (shouldShowExecutors) {
+                dot += '    // ExecutorGroup узлы (эллипсы с желтоватой заливкой)\n';
+                visibleProcesses.forEach((processInfo, uri) => {
+                    const nodeId = generateVadNodeId(uri, prefixes);
 
-                // Получаем метку ExecutorGroup (вычисленную в Virtual TriG)
-                let executorsList = '';
-                let executorGroupUri = null;
-                if (processInfo.executorGroup && executorGroups.has(processInfo.executorGroup)) {
-                    executorGroupUri = processInfo.executorGroup;
-                    const group = executorGroups.get(processInfo.executorGroup);
-                    
-                    // Используем вычисленную rdfs:label из Virtual TriG
-                    if (group.label) {
-                        executorsList = group.label;
-                    } else {
-                        // Fallback: строим список из имен исполнителей (старый способ)
-                        const executorNamesList = group.executors.map(exUri =>
-                            executorNames.get(exUri) || getPrefixedName(exUri, prefixes)
-                        );
-                        executorsList = executorNamesList.join(', ');
+                    // Получаем метку ExecutorGroup (вычисленную в Virtual TriG)
+                    let executorsList = '';
+                    let executorGroupUri = null;
+                    if (processInfo.executorGroup && executorGroups.has(processInfo.executorGroup)) {
+                        executorGroupUri = processInfo.executorGroup;
+                        const group = executorGroups.get(processInfo.executorGroup);
+
+                        // Используем вычисленную rdfs:label из Virtual TriG
+                        if (group.label) {
+                            executorsList = group.label;
+                        } else {
+                            // Fallback: строим список из имен исполнителей (старый способ)
+                            const executorNamesList = group.executors.map(exUri =>
+                                executorNames.get(exUri) || getPrefixedName(exUri, prefixes)
+                            );
+                            executorsList = executorNamesList.join(', ');
+                        }
                     }
-                }
 
-                if (executorsList && executorGroupUri) {
-                    const executorNodeId = `${nodeId}_exec`;
-                    const wrappedExecutors = wrapTextByWords(executorsList, currentMaxLabelLength);
+                    if (executorsList && executorGroupUri) {
+                        const executorNodeId = `${nodeId}_exec`;
+                        const wrappedExecutors = wrapTextByWords(executorsList, currentMaxLabelLength);
 
-                    let execLabel = '<<FONT POINT-SIZE="9">';
-                    for (let i = 0; i < wrappedExecutors.length; i++) {
-                        if (i > 0) execLabel += '<BR/>';
-                        execLabel += escapeHtmlLabel(wrappedExecutors[i]);
+                        let execLabel = '<<FONT POINT-SIZE="9">';
+                        for (let i = 0; i < wrappedExecutors.length; i++) {
+                            if (i > 0) execLabel += '<BR/>';
+                            execLabel += escapeHtmlLabel(wrappedExecutors[i]);
+                        }
+                        execLabel += '</FONT>>';
+
+                        // ExecutorGroup как эллипс с желтоватой заливкой
+                        dot += `    ${executorNodeId} [label=${execLabel} shape="ellipse" color="#B8860B" fillcolor="#FFFFCC" fontname="Arial" style="filled"];\n`;
+
+                        // Регистрируем ExecutorGroup для кликабельности (показ свойств объекта)
+                        const executorGroupLabel = getPrefixedName(executorGroupUri, prefixes);
+                        nodeLabelToUri[executorGroupLabel] = { uri: executorGroupUri, dotId: executorNodeId };
                     }
-                    execLabel += '</FONT>>';
-
-                    // ExecutorGroup как эллипс с желтоватой заливкой
-                    dot += `    ${executorNodeId} [label=${execLabel} shape="ellipse" color="#B8860B" fillcolor="#FFFFCC" fontname="Arial" style="filled"];\n`;
-
-                    // Регистрируем ExecutorGroup для кликабельности (показ свойств объекта)
-                    const executorGroupLabel = getPrefixedName(executorGroupUri, prefixes);
-                    nodeLabelToUri[executorGroupLabel] = { uri: executorGroupUri, dotId: executorNodeId };
-                }
-            });
+                });
+            } else {
+                dot += '    // issue #406: ExecutorGroup узлы скрыты фильтром\n';
+            }
 
             dot += '\n';
 
@@ -1273,7 +1283,8 @@
                     cdsNodeIds.push(nodeId);
                     nodeIdToUri.set(nodeId, uri);
 
-                    if (processInfo.executorGroup && executorGroups.has(processInfo.executorGroup)) {
+                    // issue #406: Добавляем execNodeIds только если ExecutorGroup видимы
+                    if (shouldShowExecutors && processInfo.executorGroup && executorGroups.has(processInfo.executorGroup)) {
                         const group = executorGroups.get(processInfo.executorGroup);
                         if (group.executors.length > 0) {
                             execNodeIds.push(`${nodeId}_exec`);
@@ -1336,22 +1347,27 @@
             dot += '\n';
 
             // Добавляем видимые связи vad:hasExecutor между CDS и ExecutorGroup
-            dot += '    // Связи vad:hasExecutor - видимые ребра от процессов к группам исполнителей\n';
-            visibleProcesses.forEach((processInfo, uri) => {
-                const nodeId = generateVadNodeId(uri, prefixes);
+            // issue #406: Связи vad:hasExecutor отображаются только если ExecutorGroup видимы
+            if (shouldShowExecutors) {
+                dot += '    // Связи vad:hasExecutor - видимые ребра от процессов к группам исполнителей\n';
+                visibleProcesses.forEach((processInfo, uri) => {
+                    const nodeId = generateVadNodeId(uri, prefixes);
 
-                let hasExecutorGroup = false;
-                if (processInfo.executorGroup && executorGroups.has(processInfo.executorGroup)) {
-                    const group = executorGroups.get(processInfo.executorGroup);
-                    hasExecutorGroup = group.executors.length > 0;
-                }
+                    let hasExecutorGroup = false;
+                    if (processInfo.executorGroup && executorGroups.has(processInfo.executorGroup)) {
+                        const group = executorGroups.get(processInfo.executorGroup);
+                        hasExecutorGroup = group.executors.length > 0;
+                    }
 
-                if (hasExecutorGroup) {
-                    const executorNodeId = `${nodeId}_exec`;
-                    // Видимая связь vad:hasExecutor (синяя пунктирная, ненаправленная)
-                    dot += `    ${nodeId} -> ${executorNodeId} [color="#1565C0" penwidth="1" style="dashed" arrowhead="none" weight=10];\n`;
-                }
-            });
+                    if (hasExecutorGroup) {
+                        const executorNodeId = `${nodeId}_exec`;
+                        // Видимая связь vad:hasExecutor (синяя пунктирная, ненаправленная)
+                        dot += `    ${nodeId} -> ${executorNodeId} [color="#1565C0" penwidth="1" style="dashed" arrowhead="none" weight=10];\n`;
+                    }
+                });
+            } else {
+                dot += '    // issue #406: Связи vad:hasExecutor скрыты фильтром\n';
+            }
 
             dot += '\n';
 
