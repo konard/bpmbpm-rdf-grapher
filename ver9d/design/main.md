@@ -24,3 +24,17 @@ Method
 - test (из двух окон)
 - выдать в RDF данные \ скачать в файл
 - выполнить SELECT (прочитать)
+
+### doc
+- https://github.com/bpmbpm/rdf-grapher/blob/main/introduction/theses.md
+verXX  
+проектная
+- analysis https://github.com/bpmbpm/rdf-grapher/tree/main/ver9d/analysis
+- design https://github.com/bpmbpm/rdf-grapher/tree/main/ver9d/design
+- requirements https://github.com/bpmbpm/rdf-grapher/tree/main/ver9d/requirements
+  - https://github.com/bpmbpm/rdf-grapher/tree/main/ver9d/requirements/function
+
+авто документация
+- doc algorithm & function https://github.com/bpmbpm/rdf-grapher/tree/main/ver9d/doc/algorithm
+
+см. https://github.com/bpmbpm/rdf-grapher/wiki/1-project-folders
