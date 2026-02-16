@@ -258,14 +258,14 @@ WHERE {
     ?ancestor vad:hasParentObj+ ?descendant .
 }
 ```
-
+см. [пояснения](https://github.com/bpmbpm/rdf-grapher/blob/main/ver9d/guide/appendix/SPARQL/CONSTRUCT.md)
 ### 6.2 Virtual TriG
 
 Virtual TriG (`vad:vt_*`) — автоматически вычисляемые графы, которые:
 - Связаны с родительским `vad:VADProcessDia` через `vad:hasParentObj`
 - Имеют тип `vad:Virtual`
 - Пересчитываются при изменении исходных данных
-
+Содержат пересчет для определения цветового отображения VAD-элемента и некоторых авто-вычисляемых данных, например, label Группы исполнителей процесса.  
 ---
 
 ## 7. Пример работы: Редактирование Label концепта процесса
