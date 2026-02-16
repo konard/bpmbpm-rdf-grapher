@@ -1,6 +1,6 @@
 # Отображение ID и Label в выпадающих справочниках
 
-**Ссылка на issue:** [#410](https://github.com/bpmbpm/rdf-grapher/issues/410)
+**Ссылка на issue:** [#410](https://github.com/bpmbpm/rdf-grapher/issues/410) pull https://github.com/bpmbpm/rdf-grapher/pull/411
 
 ## Описание задачи
 
