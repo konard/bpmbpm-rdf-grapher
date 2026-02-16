@@ -1,0 +1,212 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Test Root Options Label Display - Issue #412</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            max-width: 800px;
+            margin: 50px auto;
+            padding: 20px;
+        }
+        .test-case {
+            margin: 20px 0;
+            padding: 15px;
+            border: 1px solid #ddd;
+            border-radius: 5px;
+        }
+        .test-case h3 {
+            margin-top: 0;
+        }
+        .pass {
+            background-color: #d4edda;
+            border-color: #c3e6cb;
+        }
+        .fail {
+            background-color: #f8d7da;
+            border-color: #f5c6cb;
+        }
+        .code {
+            background-color: #f5f5f5;
+            padding: 10px;
+            margin: 10px 0;
+            border-radius: 3px;
+            font-family: monospace;
+        }
+        select {
+            width: 100%;
+            padding: 8px;
+            margin: 10px 0;
+            font-size: 14px;
+        }
+    </style>
+</head>
+<body>
+    <h1>Test Root Options Label Display - Issue #412</h1>
+    <p>This test verifies that root options (vad:ptree, vad:rtree) display with proper labels using formatDropdownDisplayText.</p>
+
+    <div id="test-results"></div>
+
+    <script>
+        // Simulate the formatDropdownDisplayText function
+        function formatDropdownDisplayText(uri, label, prefixes) {
+            // Get prefixed form of URI
+            const getPrefixedName = (uri, prefixes) => {
+                if (!prefixes) return uri;
+                for (const [prefix, baseUri] of Object.entries(prefixes)) {
+                    if (uri.startsWith(baseUri)) {
+                        return prefix + ':' + uri.substring(baseUri.length);
+                    }
+                }
+                return uri;
+            };
+
+            const id = getPrefixedName(uri, prefixes);
+
+            // If label not set or matches id, return only id
+            if (!label || label === id || label === uri) {
+                return id;
+            }
+
+            // Return "id (label)" format
+            return `${id} (${label})`;
+        }
+
+        // Test data
+        const currentPrefixes = {
+            'vad': 'http://example.org/vad#',
+            'rdfs': 'http://www.w3.org/2000/01/rdf-schema#',
+            'rdf': 'http://www.w3.org/1999/02/22-rdf-syntax-ns#'
+        };
+
+        const testCases = [
+            {
+                name: 'Root option with label (vad:ptree)',
+                uri: 'http://example.org/vad#ptree',
+                label: 'Дерево процессов',
+                expected: 'vad:ptree (Дерево процессов)',
+                description: 'Should display "vad:ptree (Дерево процессов)"'
+            },
+            {
+                name: 'Root option with label (vad:rtree)',
+                uri: 'http://example.org/vad#rtree',
+                label: 'Дерево исполнителей',
+                expected: 'vad:rtree (Дерево исполнителей)',
+                description: 'Should display "vad:rtree (Дерево исполнителей)"'
+            },
+            {
+                name: 'Root option without label',
+                uri: 'http://example.org/vad#ptree',
+                label: null,
+                expected: 'vad:ptree',
+                description: 'Should display only "vad:ptree" when label is missing'
+            },
+            {
+                name: 'Root option with label matching ID',
+                uri: 'http://example.org/vad#ptree',
+                label: 'vad:ptree',
+                expected: 'vad:ptree',
+                description: 'Should display only "vad:ptree" when label matches ID'
+            },
+            {
+                name: 'Process concept with label',
+                uri: 'http://example.org/vad#p1',
+                label: 'Процесс согласования',
+                expected: 'vad:p1 (Процесс согласования)',
+                description: 'Should display "vad:p1 (Процесс согласования)"'
+            },
+            {
+                name: 'Executor concept with label',
+                uri: 'http://example.org/vad#r1',
+                label: 'Руководитель отдела',
+                expected: 'vad:r1 (Руководитель отдела)',
+                description: 'Should display "vad:r1 (Руководитель отдела)"'
+            }
+        ];
+
+        // Run tests
+        let passCount = 0;
+        let failCount = 0;
+        const resultsDiv = document.getElementById('test-results');
+
+        testCases.forEach((testCase, index) => {
+            const result = formatDropdownDisplayText(testCase.uri, testCase.label, currentPrefixes);
+            const passed = result === testCase.expected;
+
+            if (passed) passCount++;
+            else failCount++;
+
+            const testDiv = document.createElement('div');
+            testDiv.className = `test-case ${passed ? 'pass' : 'fail'}`;
+            testDiv.innerHTML = `
+                <h3>Test ${index + 1}: ${testCase.name} ${passed ? '✓' : '✗'}</h3>
+                <p>${testCase.description}</p>
+                <div class="code">
+                    <strong>URI:</strong> ${testCase.uri}<br>
+                    <strong>Label:</strong> ${testCase.label || '(null)'}<br>
+                    <strong>Expected:</strong> ${testCase.expected}<br>
+                    <strong>Got:</strong> ${result}<br>
+                    <strong>Status:</strong> ${passed ? 'PASS ✓' : 'FAIL ✗'}
+                </div>
+            `;
+            resultsDiv.appendChild(testDiv);
+        });
+
+        // Summary
+        const summaryDiv = document.createElement('div');
+        summaryDiv.className = `test-case ${failCount === 0 ? 'pass' : 'fail'}`;
+        summaryDiv.innerHTML = `
+            <h3>Summary</h3>
+            <p>
+                <strong>Total tests:</strong> ${testCases.length}<br>
+                <strong>Passed:</strong> ${passCount} ✓<br>
+                <strong>Failed:</strong> ${failCount} ✗
+            </p>
+        `;
+        resultsDiv.insertBefore(summaryDiv, resultsDiv.firstChild);
+
+        // Create a demo dropdown
+        const demoDiv = document.createElement('div');
+        demoDiv.className = 'test-case';
+        demoDiv.innerHTML = `
+            <h3>Demo: Dropdown with Root Options</h3>
+            <p>This shows how the dropdown should look with proper formatting:</p>
+            <select id="demo-dropdown">
+                <option value="">-- Выберите родительский элемент --</option>
+            </select>
+        `;
+        resultsDiv.appendChild(demoDiv);
+
+        const demoDropdown = document.getElementById('demo-dropdown');
+
+        // Add root options
+        const rootOptions = [
+            { uri: 'http://example.org/vad#ptree', label: 'Дерево процессов' },
+            { uri: 'http://example.org/vad#rtree', label: 'Дерево исполнителей' }
+        ];
+
+        rootOptions.forEach(root => {
+            const option = document.createElement('option');
+            option.value = root.uri;
+            option.textContent = formatDropdownDisplayText(root.uri, root.label, currentPrefixes);
+            demoDropdown.appendChild(option);
+        });
+
+        // Add some process concepts
+        const processConcepts = [
+            { uri: 'http://example.org/vad#p1', label: 'Процесс согласования' },
+            { uri: 'http://example.org/vad#p2', label: 'Процесс утверждения' },
+            { uri: 'http://example.org/vad#p3', label: null }
+        ];
+
+        processConcepts.forEach(concept => {
+            const option = document.createElement('option');
+            option.value = concept.uri;
+            option.textContent = formatDropdownDisplayText(concept.uri, concept.label, currentPrefixes);
+            demoDropdown.appendChild(option);
+        });
+    </script>
+</body>
+</html>

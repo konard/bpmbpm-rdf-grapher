@@ -426,15 +426,31 @@ function initializeParentSelector(config) {
     parentSelect.innerHTML = '<option value="">-- Выберите родительский элемент --</option>';
 
     // Добавляем корневые опции (vad:ptree или vad:rtree)
+    // issue #412: Используем formatDropdownDisplayText для отображения "id (label)"
     if (config.parentRootOptions) {
         config.parentRootOptions.forEach(rootOption => {
             const rootUri = typeof currentPrefixes !== 'undefined' && currentPrefixes['vad']
                 ? currentPrefixes['vad'] + rootOption.replace('vad:', '')
                 : `http://example.org/vad#${rootOption.replace('vad:', '')}`;
 
+            // Получаем label из RDF store
+            let rootLabel = null;
+            if (currentStore) {
+                const rdfsLabelUri = 'http://www.w3.org/2000/01/rdf-schema#label';
+                const quads = currentStore.getQuads(null, rdfsLabelUri, null, null);
+                quads.forEach(quad => {
+                    if (quad.subject.value === rootUri) {
+                        rootLabel = quad.object.value;
+                    }
+                });
+            }
+
             const option = document.createElement('option');
             option.value = rootUri;
-            option.textContent = `${rootOption} (корень)`;
+            // Используем formatDropdownDisplayText для консистентного отображения
+            option.textContent = typeof formatDropdownDisplayText === 'function'
+                ? formatDropdownDisplayText(rootUri, rootLabel, currentPrefixes)
+                : (rootLabel || rootOption);
             parentSelect.appendChild(option);
         });
     }

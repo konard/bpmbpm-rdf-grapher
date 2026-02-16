@@ -1,6 +1,7 @@
 # Отображение ID и Label в выпадающих справочниках
 
 **Ссылка на issue:** [#410](https://github.com/bpmbpm/rdf-grapher/issues/410) pull https://github.com/bpmbpm/rdf-grapher/pull/411
+**Ссылка на issue:** [#412](https://github.com/bpmbpm/rdf-grapher/issues/412) pull https://github.com/bpmbpm/rdf-grapher/pull/413
 
 ## Описание задачи
 
@@ -79,7 +80,7 @@ function formatDropdownDisplayText(uri, label, prefixes) {
 
 **Функция:** `initializeParentSelector()`
 
-**Изменение:**
+**Изменение для обычных объектов:**
 ```javascript
 // Было:
 option.textContent = obj.label || obj.uri;
@@ -90,9 +91,31 @@ option.textContent = typeof formatDropdownDisplayText === 'function'
     : (obj.label || obj.uri);
 ```
 
+**Изменение для корневых элементов (issue #412):**
+```javascript
+// Было:
+option.textContent = `${rootOption} (корень)`;
+
+// Стало (получаем label из RDF store и используем formatDropdownDisplayText):
+let rootLabel = null;
+if (currentStore) {
+    const rdfsLabelUri = 'http://www.w3.org/2000/01/rdf-schema#label';
+    const quads = currentStore.getQuads(null, rdfsLabelUri, null, null);
+    quads.forEach(quad => {
+        if (quad.subject.value === rootUri) {
+            rootLabel = quad.object.value;
+        }
+    });
+}
+option.textContent = typeof formatDropdownDisplayText === 'function'
+    ? formatDropdownDisplayText(rootUri, rootLabel, currentPrefixes)
+    : (rootLabel || rootOption);
+```
+
 **Применяется к:**
 - Выпадающий список `vad:hasParentObj` при создании концепта процесса
 - Выпадающий список `vad:hasParentObj` при создании концепта исполнителя
+- Корневые элементы `vad:ptree` и `vad:rtree` (issue #412)
 
 #### 2.2. Создание индивида (`3_sd_create_new_individ_ui.js`)
 
