@@ -1,4 +1,5 @@
 ## introduction
+Введение применительно к версиям ver9+
 - theses.md *Semantic ARIS / BPM - Тезисы*
 - introduction.md *Semantic ARIS / BPM — Подробное введение*
 ### current
