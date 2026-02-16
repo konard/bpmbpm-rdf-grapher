@@ -440,10 +440,13 @@ function initializeParentSelector(config) {
     }
 
     // Добавляем найденные объекты
+    // issue #410: Используем formatDropdownDisplayText для отображения "id (label)"
     objects.forEach(obj => {
         const option = document.createElement('option');
         option.value = obj.uri;
-        option.textContent = obj.label || obj.uri;
+        option.textContent = typeof formatDropdownDisplayText === 'function'
+            ? formatDropdownDisplayText(obj.uri, obj.label, currentPrefixes)
+            : (obj.label || obj.uri);
         parentSelect.appendChild(option);
     });
 

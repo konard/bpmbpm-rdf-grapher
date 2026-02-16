@@ -256,6 +256,31 @@ function getPrefixedName(uri, prefixes) {
     return getLocalName(uri);
 }
 
+/**
+ * issue #410: Форматирует текст для отображения в dropdown справочниках
+ * Возвращает строку в формате "id (label)" если label отличается от id,
+ * иначе возвращает только id
+ *
+ * @param {string} uri - URI объекта
+ * @param {string} label - Метка объекта (rdfs:label)
+ * @param {Object} prefixes - Объект префиксов для преобразования URI
+ * @returns {string} Форматированный текст для отображения
+ */
+function formatDropdownDisplayText(uri, label, prefixes) {
+    // Получаем prefixed форму URI (например, vad:p1)
+    const id = typeof getPrefixedName === 'function'
+        ? getPrefixedName(uri, prefixes)
+        : uri;
+
+    // Если label не задан или совпадает с id, возвращаем только id
+    if (!label || label === id || label === uri) {
+        return id;
+    }
+
+    // Возвращаем формат "id (label)"
+    return `${id} (${label})`;
+}
+
 function escapeDotString(str) {
     return str.replace(/\\/g, '\\\\').replace(/"/g, '\\"');
 }

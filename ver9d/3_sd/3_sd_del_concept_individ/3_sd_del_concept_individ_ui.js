@@ -350,10 +350,13 @@ function onDelTrigSelectForIndivid() {
                 : 'Индивиды не найдены'
         });
 
+        // issue #410: Используем formatDropdownDisplayText для отображения "id (label)"
         individuals.forEach(individ => {
             const option = document.createElement('option');
             option.value = individ.uri;
-            option.textContent = individ.label || individ.uri;
+            option.textContent = typeof formatDropdownDisplayText === 'function'
+                ? formatDropdownDisplayText(individ.uri, individ.label, currentPrefixes)
+                : (individ.label || individ.uri);
             individSelect.appendChild(option);
         });
     } else if (operationType === DEL_OPERATION_TYPES.INDIVID_EXECUTOR_IN_SCHEMA) {
@@ -368,10 +371,13 @@ function onDelTrigSelectForIndivid() {
                 : 'Индивиды не найдены'
         });
 
+        // issue #410: Используем formatDropdownDisplayText для отображения "id (label)"
         executors.forEach(executor => {
             const option = document.createElement('option');
             option.value = executor.uri;
-            option.textContent = executor.label || executor.uri;
+            option.textContent = typeof formatDropdownDisplayText === 'function'
+                ? formatDropdownDisplayText(executor.uri, executor.label, currentPrefixes)
+                : (executor.label || executor.uri);
             individSelect.appendChild(option);
         });
     }
@@ -571,10 +577,13 @@ function fillTrigDropdownForIndivid() {
 
     const trigs = getAllTrigs();
 
+    // issue #410: Используем formatDropdownDisplayText для отображения "id (label)"
     trigs.forEach(trig => {
         const option = document.createElement('option');
         option.value = trig.uri;
-        option.textContent = trig.label || trig.uri;
+        option.textContent = typeof formatDropdownDisplayText === 'function'
+            ? formatDropdownDisplayText(trig.uri, trig.label, currentPrefixes)
+            : (trig.label || trig.uri);
         select.appendChild(option);
     });
 }
@@ -621,10 +630,13 @@ function fillConceptDropdown(type) {
         ? getProcessConceptsForDeletion()
         : getExecutorConceptsForDeletion();
 
+    // issue #410: Используем formatDropdownDisplayText для отображения "id (label)"
     concepts.forEach(concept => {
         const option = document.createElement('option');
         option.value = concept.uri;
-        option.textContent = concept.label || concept.uri;
+        option.textContent = typeof formatDropdownDisplayText === 'function'
+            ? formatDropdownDisplayText(concept.uri, concept.label, currentPrefixes)
+            : (concept.label || concept.uri);
         select.appendChild(option);
     });
 }
@@ -638,10 +650,13 @@ function fillTrigDropdown() {
 
     const trigs = getAllTrigs();
 
+    // issue #410: Используем formatDropdownDisplayText для отображения "id (label)"
     trigs.forEach(trig => {
         const option = document.createElement('option');
         option.value = trig.uri;
-        option.textContent = trig.label || trig.uri;
+        option.textContent = typeof formatDropdownDisplayText === 'function'
+            ? formatDropdownDisplayText(trig.uri, trig.label, currentPrefixes)
+            : (trig.label || trig.uri);
         select.appendChild(option);
     });
 }

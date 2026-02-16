@@ -413,10 +413,13 @@ function fillNewIndividTrigDropdown() {
     if (!select) return;
 
     const trigs = getTrigsForIndivid();
+    // issue #410: Используем formatDropdownDisplayText для отображения "id (label)"
     trigs.forEach(trig => {
         const option = document.createElement('option');
         option.value = trig.uri;
-        option.textContent = trig.label || trig.uri;
+        option.textContent = typeof formatDropdownDisplayText === 'function'
+            ? formatDropdownDisplayText(trig.uri, trig.label, currentPrefixes)
+            : (trig.label || trig.uri);
         select.appendChild(option);
     });
 }
@@ -451,10 +454,13 @@ function fillNewIndividConceptDropdown() {
             : '(нет результатов)'
     });
 
+    // issue #410: Используем formatDropdownDisplayText для отображения "id (label)"
     concepts.forEach(concept => {
         const option = document.createElement('option');
         option.value = concept.uri;
-        option.textContent = concept.label || concept.uri;
+        option.textContent = typeof formatDropdownDisplayText === 'function'
+            ? formatDropdownDisplayText(concept.uri, concept.label, currentPrefixes)
+            : (concept.label || concept.uri);
         select.appendChild(option);
     });
 
@@ -543,10 +549,13 @@ function fillNewIndividProcessIndividDropdown(trigUri) {
             : 'Индивиды процесса не найдены'
     });
 
+    // issue #410: Используем formatDropdownDisplayText для отображения "id (label)"
     individs.forEach(individ => {
         const option = document.createElement('option');
         option.value = individ.uri;
-        option.textContent = individ.label || individ.uri;
+        option.textContent = typeof formatDropdownDisplayText === 'function'
+            ? formatDropdownDisplayText(individ.uri, individ.label, currentPrefixes)
+            : (individ.label || individ.uri);
         select.appendChild(option);
     });
 
@@ -583,10 +592,13 @@ function fillNewIndividExecutorDropdown() {
             : '(нет результатов)'
     });
 
+    // issue #410: Используем formatDropdownDisplayText для отображения "id (label)"
     concepts.forEach(concept => {
         const option = document.createElement('option');
         option.value = concept.uri;
-        option.textContent = concept.label || concept.uri;
+        option.textContent = typeof formatDropdownDisplayText === 'function'
+            ? formatDropdownDisplayText(concept.uri, concept.label, currentPrefixes)
+            : (concept.label || concept.uri);
         select.appendChild(option);
     });
 

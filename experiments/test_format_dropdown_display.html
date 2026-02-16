@@ -1,0 +1,225 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Test formatDropdownDisplayText - issue #410</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            max-width: 800px;
+            margin: 20px auto;
+            padding: 20px;
+        }
+        h1 {
+            color: #333;
+        }
+        .test-case {
+            margin: 20px 0;
+            padding: 15px;
+            border: 1px solid #ddd;
+            border-radius: 5px;
+            background-color: #f9f9f9;
+        }
+        .test-case h3 {
+            margin-top: 0;
+            color: #0066cc;
+        }
+        .result {
+            padding: 10px;
+            margin: 10px 0;
+            background-color: #e8f4f8;
+            border-left: 4px solid #0066cc;
+            font-family: monospace;
+        }
+        .pass {
+            color: green;
+            font-weight: bold;
+        }
+        .fail {
+            color: red;
+            font-weight: bold;
+        }
+        code {
+            background-color: #f4f4f4;
+            padding: 2px 6px;
+            border-radius: 3px;
+            font-family: monospace;
+        }
+    </style>
+</head>
+<body>
+    <h1>Тест функции formatDropdownDisplayText (issue #410)</h1>
+    <p>Тестируем отображение ID и Label в выпадающих справочниках</p>
+
+    <div id="test-results"></div>
+
+    <script>
+        // Копируем необходимые функции из vadlib_logic.js
+
+        function getLocalName(uri) {
+            const hashIndex = uri.lastIndexOf('#');
+            const slashIndex = uri.lastIndexOf('/');
+            const splitIndex = Math.max(hashIndex, slashIndex);
+            if (splitIndex !== -1 && splitIndex < uri.length - 1) {
+                return uri.substring(splitIndex + 1);
+            }
+            return uri;
+        }
+
+        function getPrefixedName(uri, prefixes) {
+            if (typeof uri !== 'string') return String(uri);
+            for (const [prefix, namespace] of Object.entries(prefixes)) {
+                if (uri.startsWith(namespace)) {
+                    const localName = uri.substring(namespace.length);
+                    return prefix + ':' + localName;
+                }
+            }
+            return getLocalName(uri);
+        }
+
+        /**
+         * issue #410: Форматирует текст для отображения в dropdown справочниках
+         * Возвращает строку в формате "id (label)" если label отличается от id,
+         * иначе возвращает только id
+         *
+         * @param {string} uri - URI объекта
+         * @param {string} label - Метка объекта (rdfs:label)
+         * @param {Object} prefixes - Объект префиксов для преобразования URI
+         * @returns {string} Форматированный текст для отображения
+         */
+        function formatDropdownDisplayText(uri, label, prefixes) {
+            // Получаем prefixed форму URI (например, vad:p1)
+            const id = typeof getPrefixedName === 'function'
+                ? getPrefixedName(uri, prefixes)
+                : uri;
+
+            // Если label не задан или совпадает с id, возвращаем только id
+            if (!label || label === id || label === uri) {
+                return id;
+            }
+
+            // Возвращаем формат "id (label)"
+            return `${id} (${label})`;
+        }
+
+        // Префиксы для тестирования
+        const currentPrefixes = {
+            'vad': 'http://example.org/vad#',
+            'rdf': 'http://www.w3.org/1999/02/22-rdf-syntax-ns#',
+            'rdfs': 'http://www.w3.org/2000/01/rdf-schema#'
+        };
+
+        // Тестовые случаи
+        const testCases = [
+            {
+                name: 'URI с label (должно быть "id (label)")',
+                uri: 'http://example.org/vad#p1',
+                label: 'Процесс согласования',
+                expected: 'vad:p1 (Процесс согласования)'
+            },
+            {
+                name: 'URI без label (должно быть только "id")',
+                uri: 'http://example.org/vad#p1',
+                label: null,
+                expected: 'vad:p1'
+            },
+            {
+                name: 'URI с пустым label (должно быть только "id")',
+                uri: 'http://example.org/vad#p1',
+                label: '',
+                expected: 'vad:p1'
+            },
+            {
+                name: 'Label совпадает с id (должно быть только "id")',
+                uri: 'http://example.org/vad#p1',
+                label: 'vad:p1',
+                expected: 'vad:p1'
+            },
+            {
+                name: 'Label совпадает с URI (должно быть только "id")',
+                uri: 'http://example.org/vad#p1',
+                label: 'http://example.org/vad#p1',
+                expected: 'vad:p1'
+            },
+            {
+                name: 'Исполнитель с label',
+                uri: 'http://example.org/vad#r1',
+                label: 'Руководитель отдела',
+                expected: 'vad:r1 (Руководитель отдела)'
+            },
+            {
+                name: 'ExecutorGroup с label',
+                uri: 'http://example.org/vad#ExecutorGroup_p1',
+                label: 'Группа исполнителей p1',
+                expected: 'vad:ExecutorGroup_p1 (Группа исполнителей p1)'
+            },
+            {
+                name: 'Корневой элемент ptree',
+                uri: 'http://example.org/vad#ptree',
+                label: 'Корневой процесс',
+                expected: 'vad:ptree (Корневой процесс)'
+            },
+            {
+                name: 'Корневой элемент rtree без label',
+                uri: 'http://example.org/vad#rtree',
+                label: null,
+                expected: 'vad:rtree'
+            },
+            {
+                name: 'URI без префикса',
+                uri: 'http://other-namespace.org/item#test1',
+                label: 'Тестовый элемент',
+                expected: 'test1 (Тестовый элемент)'
+            }
+        ];
+
+        // Запуск тестов
+        function runTests() {
+            const resultsDiv = document.getElementById('test-results');
+            let passedCount = 0;
+            let failedCount = 0;
+
+            testCases.forEach((testCase, index) => {
+                const testDiv = document.createElement('div');
+                testDiv.className = 'test-case';
+
+                const result = formatDropdownDisplayText(testCase.uri, testCase.label, currentPrefixes);
+                const passed = result === testCase.expected;
+
+                if (passed) {
+                    passedCount++;
+                } else {
+                    failedCount++;
+                }
+
+                testDiv.innerHTML = `
+                    <h3>Тест ${index + 1}: ${testCase.name}</h3>
+                    <p><strong>URI:</strong> <code>${testCase.uri}</code></p>
+                    <p><strong>Label:</strong> <code>${testCase.label === null ? 'null' : testCase.label === '' ? '(пустая строка)' : testCase.label}</code></p>
+                    <p><strong>Ожидается:</strong> <code>${testCase.expected}</code></p>
+                    <p><strong>Получено:</strong> <code>${result}</code></p>
+                    <p class="${passed ? 'pass' : 'fail'}">${passed ? '✓ ПРОЙДЕН' : '✗ ПРОВАЛЕН'}</p>
+                `;
+
+                resultsDiv.appendChild(testDiv);
+            });
+
+            // Итоговый результат
+            const summaryDiv = document.createElement('div');
+            summaryDiv.className = 'test-case';
+            summaryDiv.style.backgroundColor = passedCount === testCases.length ? '#e8f5e9' : '#ffebee';
+            summaryDiv.innerHTML = `
+                <h3>Итоговый результат</h3>
+                <p><strong>Всего тестов:</strong> ${testCases.length}</p>
+                <p class="pass">✓ Пройдено: ${passedCount}</p>
+                ${failedCount > 0 ? `<p class="fail">✗ Провалено: ${failedCount}</p>` : ''}
+            `;
+            resultsDiv.appendChild(summaryDiv);
+        }
+
+        // Запускаем тесты при загрузке страницы
+        window.addEventListener('DOMContentLoaded', runTests);
+    </script>
+</body>
+</html>
