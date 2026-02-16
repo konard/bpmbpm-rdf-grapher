@@ -165,10 +165,13 @@ async function populateProcessConceptsWithDouble() {
             );
 
             // Добавляем опции в select
+            // issue #410: Используем formatDropdownDisplayText для отображения "id (label)"
             concepts.forEach(concept => {
                 const option = document.createElement('option');
                 option.value = concept.uri;
-                option.textContent = concept.label || concept.uri;
+                option.textContent = typeof formatDropdownDisplayText === 'function'
+                    ? formatDropdownDisplayText(concept.uri, concept.label, currentPrefixes)
+                    : (concept.label || concept.uri);
 
                 // Помечаем disabled процессы серым
                 if (concept.disabled) {
@@ -218,10 +221,13 @@ async function populateProcessConceptsWithDouble() {
                 concepts.filter(c => c.disabled).map(c => c.uri)
             );
 
+            // issue #410: Используем formatDropdownDisplayText для отображения "id (label)"
             concepts.forEach(concept => {
                 const option = document.createElement('option');
                 option.value = concept.uri;
-                option.textContent = concept.label || concept.uri;
+                option.textContent = typeof formatDropdownDisplayText === 'function'
+                    ? formatDropdownDisplayText(concept.uri, concept.label, currentPrefixes)
+                    : (concept.label || concept.uri);
 
                 if (concept.disabled) {
                     option.disabled = true;
@@ -267,10 +273,13 @@ async function populateProcessConceptsFallback() {
                 result: `Найдено ${filteredConcepts.length} процессов без схемы`
             });
 
+            // issue #410: Используем formatDropdownDisplayText для отображения "id (label)"
             filteredConcepts.forEach(concept => {
                 const option = document.createElement('option');
                 option.value = concept.uri;
-                option.textContent = concept.label || concept.uri;
+                option.textContent = typeof formatDropdownDisplayText === 'function'
+                    ? formatDropdownDisplayText(concept.uri, concept.label, currentPrefixes)
+                    : (concept.label || concept.uri);
                 processSelect.appendChild(option);
             });
 

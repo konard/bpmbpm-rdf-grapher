@@ -624,11 +624,14 @@ function updateSubjectsBySubjectType() {
     }
 
     // Преобразуем URI в отображаемый формат
+    // issue #410: Используем formatDropdownDisplayText для отображения "id (label)"
     subjects.forEach(uri => {
         const option = document.createElement('option');
         if (typeof uri === 'object' && uri.uri) {
             option.value = uri.uri;
-            option.textContent = uri.label || getPrefixedName(uri.uri, currentPrefixes);
+            option.textContent = typeof formatDropdownDisplayText === 'function'
+                ? formatDropdownDisplayText(uri.uri, uri.label, currentPrefixes)
+                : (uri.label || getPrefixedName(uri.uri, currentPrefixes));
         } else {
             option.value = uri;
             option.textContent = getPrefixedName(uri, currentPrefixes);
