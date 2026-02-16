@@ -16,9 +16,11 @@
   - SPARQL - запрос (SELECT с подставновкой значения из текущей схемы) 
     - Результаты запроса  
 ### quadstore
+Структура:
 - concept (TypeProcess + TypeExecutor) + dia (VADProcessDia)
 - Virtual (две кнопки: virtualRDFdata + Virtual filter)
-- techtree
+- ontology + techtree
+
 Method
 - загрузить (LOAD) \ изменить (UPDATE) \ Edit
 - test (из двух окон)
