@@ -338,7 +338,7 @@ INSERT DATA {
 
 | Аспект | Традиционный подход | SPARQL-driven |
 |--------|---------------------|---------------|
-| Логика | Захардкожена в коде | Описана в SPARQL/онтологии |
+| Логика | жестко задана в коде (hard coding) | Описана в SPARQL/онтологии |
 | Изменения | Требуют правки кода | Достаточно изменить запрос |
 | Тестирование | Unit-тесты для кода | Проверка запросов в SPARQL endpoint |
 | Документация | Комментарии в коде | Самодокументируемые запросы |
@@ -365,7 +365,7 @@ INSERT DATA {
 - [Нотации для моделирования бизнес-процессов](https://fox-manager.com/notacii-dlja-modelirovanija-biznes-processov/)
 - [ARIS](https://en.wikipedia.org/wiki/Architecture_of_Integrated_Information_Systems)
 
-### Неоторые проектные решения / исследования 
+### Некоторые проектные решения / исследования 
 - [Предложения по соответствию ARIS ToolSet и методологии ARIS из ver8tree/doc/aris-alignment-proposals.md](https://github.com/bpmbpm/rdf-grapher/blob/main/ver8tree/doc/aris-alignment-proposals.md) (архивное)
 - [Concept vs Individ в разных системах, например, ARIS различает Definition (определение объекта) vs Occurrence (вхождение на диаграмме)](https://github.com/bpmbpm/rdf-grapher/blob/main/ver9d/analysis/new_individ_process.md) 
 ---
