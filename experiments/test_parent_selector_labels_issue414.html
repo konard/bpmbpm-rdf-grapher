@@ -1,0 +1,257 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Test Parent Selector Labels - Issue #414</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            max-width: 900px;
+            margin: 50px auto;
+            padding: 20px;
+        }
+        .test-case {
+            margin: 20px 0;
+            padding: 15px;
+            border: 1px solid #ddd;
+            border-radius: 5px;
+        }
+        .test-case h3 {
+            margin-top: 0;
+        }
+        .pass {
+            background-color: #d4edda;
+            border-color: #c3e6cb;
+        }
+        .fail {
+            background-color: #f8d7da;
+            border-color: #f5c6cb;
+        }
+        .code {
+            background-color: #f5f5f5;
+            padding: 10px;
+            margin: 10px 0;
+            border-radius: 3px;
+            font-family: monospace;
+            white-space: pre-wrap;
+        }
+        select {
+            width: 100%;
+            padding: 8px;
+            margin: 10px 0;
+            font-size: 14px;
+        }
+        .description {
+            color: #666;
+            font-size: 14px;
+            margin-bottom: 15px;
+        }
+    </style>
+</head>
+<body>
+    <h1>Test Parent Selector Labels - Issue #414</h1>
+
+    <div class="description">
+        <p><strong>Issue:</strong> <a href="https://github.com/bpmbpm/rdf-grapher/issues/414">#414</a></p>
+        <p><strong>Problem:</strong> PR #413 fixed label display for root options (vad:ptree, vad:rtree),
+        but other items in the vad:hasParentObj dropdown still showed only ID without label.</p>
+        <p><strong>Root Cause:</strong> The <code>funSPARQLvalues</code> function strips OPTIONAL blocks
+        from SPARQL queries, so <code>rdfs:label</code> is never returned in query results.</p>
+        <p><strong>Solution:</strong> Added <code>enrichResultsWithLabels()</code> function that fetches
+        rdfs:label from RDF store after SPARQL query execution.</p>
+    </div>
+
+    <div id="test-results"></div>
+
+    <script>
+        // Simulate the formatDropdownDisplayText function
+        function formatDropdownDisplayText(uri, label, prefixes) {
+            const getPrefixedName = (uri, prefixes) => {
+                if (!prefixes) return uri;
+                for (const [prefix, baseUri] of Object.entries(prefixes)) {
+                    if (uri.startsWith(baseUri)) {
+                        return prefix + ':' + uri.substring(baseUri.length);
+                    }
+                }
+                return uri;
+            };
+
+            const id = getPrefixedName(uri, prefixes);
+            if (!label || label === id || label === uri) {
+                return id;
+            }
+            return `${id} (${label})`;
+        }
+
+        // Simulate the enrichResultsWithLabels function (the fix)
+        function enrichResultsWithLabels(results, labelMap) {
+            if (results.length === 0) {
+                return results;
+            }
+
+            return results.map(obj => {
+                const realLabel = labelMap.get(obj.uri);
+                if (realLabel) {
+                    return { uri: obj.uri, label: realLabel };
+                }
+                return obj;
+            });
+        }
+
+        // Test prefixes
+        const currentPrefixes = {
+            'vad': 'http://example.org/vad#',
+            'rdfs': 'http://www.w3.org/2000/01/rdf-schema#',
+            'rdf': 'http://www.w3.org/1999/02/22-rdf-syntax-ns#'
+        };
+
+        // Simulate RDF store labels (what would be in currentStore)
+        const rdfStoreLabelMap = new Map([
+            ['http://example.org/vad#ptree', 'Дерево процессов'],
+            ['http://example.org/vad#rtree', 'Дерево исполнителей'],
+            ['http://example.org/vad#p1', 'Процесс согласования'],
+            ['http://example.org/vad#p2', 'Процесс утверждения'],
+            ['http://example.org/vad#p3', 'Процесс контроля'],
+            ['http://example.org/vad#r1', 'Руководитель отдела'],
+            ['http://example.org/vad#r2', 'Главный бухгалтер']
+        ]);
+
+        // Simulate results from funSPARQLvalues (BEFORE fix)
+        // Note: labels are just prefixed names because OPTIONAL is stripped
+        const sparqlResultsBeforeFix = [
+            { uri: 'http://example.org/vad#p1', label: 'vad:p1' },
+            { uri: 'http://example.org/vad#p2', label: 'vad:p2' },
+            { uri: 'http://example.org/vad#p3', label: 'vad:p3' }
+        ];
+
+        // Test cases
+        const testCases = [
+            {
+                name: 'Before fix: Child objects show only ID',
+                description: 'funSPARQLvalues strips OPTIONAL, so labels are just prefixed names',
+                results: sparqlResultsBeforeFix,
+                applyFix: false,
+                expectedLabels: ['vad:p1', 'vad:p2', 'vad:p3'],
+                shouldPass: true // This is expected behavior BEFORE fix
+            },
+            {
+                name: 'After fix: Child objects show ID (label)',
+                description: 'enrichResultsWithLabels fetches real labels from RDF store',
+                results: sparqlResultsBeforeFix,
+                applyFix: true,
+                expectedLabels: [
+                    'vad:p1 (Процесс согласования)',
+                    'vad:p2 (Процесс утверждения)',
+                    'vad:p3 (Процесс контроля)'
+                ],
+                shouldPass: true
+            },
+            {
+                name: 'Object without label in store shows only ID',
+                description: 'If rdfs:label is not in RDF store, show only the ID',
+                results: [{ uri: 'http://example.org/vad#p_unknown', label: 'vad:p_unknown' }],
+                applyFix: true,
+                expectedLabels: ['vad:p_unknown'],
+                shouldPass: true
+            }
+        ];
+
+        // Run tests
+        let passCount = 0;
+        let failCount = 0;
+        const resultsDiv = document.getElementById('test-results');
+
+        testCases.forEach((testCase, index) => {
+            // Apply fix if needed
+            let processedResults = testCase.results;
+            if (testCase.applyFix) {
+                processedResults = enrichResultsWithLabels(testCase.results, rdfStoreLabelMap);
+            }
+
+            // Format for dropdown display
+            const displayTexts = processedResults.map(r =>
+                formatDropdownDisplayText(r.uri, r.label, currentPrefixes)
+            );
+
+            // Check results
+            const allMatch = displayTexts.every((text, i) => text === testCase.expectedLabels[i]);
+            const passed = allMatch === testCase.shouldPass;
+
+            if (passed) passCount++;
+            else failCount++;
+
+            const testDiv = document.createElement('div');
+            testDiv.className = `test-case ${passed ? 'pass' : 'fail'}`;
+            testDiv.innerHTML = `
+                <h3>Test ${index + 1}: ${testCase.name} ${passed ? '✓' : '✗'}</h3>
+                <p>${testCase.description}</p>
+                <div class="code">
+Input results (from funSPARQLvalues):
+${testCase.results.map(r => `  { uri: "${r.uri}", label: "${r.label}" }`).join('\n')}
+
+Apply fix (enrichResultsWithLabels): ${testCase.applyFix ? 'YES' : 'NO'}
+
+After processing:
+${processedResults.map(r => `  { uri: "${r.uri}", label: "${r.label}" }`).join('\n')}
+
+Dropdown display text:
+${displayTexts.map(t => `  "${t}"`).join('\n')}
+
+Expected:
+${testCase.expectedLabels.map(t => `  "${t}"`).join('\n')}
+
+Match: ${allMatch ? 'YES ✓' : 'NO ✗'}
+                </div>
+            `;
+            resultsDiv.appendChild(testDiv);
+        });
+
+        // Summary
+        const summaryDiv = document.createElement('div');
+        summaryDiv.className = `test-case ${failCount === 0 ? 'pass' : 'fail'}`;
+        summaryDiv.innerHTML = `
+            <h3>Summary</h3>
+            <p>
+                <strong>Total tests:</strong> ${testCases.length}<br>
+                <strong>Passed:</strong> ${passCount} ✓<br>
+                <strong>Failed:</strong> ${failCount} ✗
+            </p>
+        `;
+        resultsDiv.insertBefore(summaryDiv, resultsDiv.firstChild);
+
+        // Demo dropdown
+        const demoDiv = document.createElement('div');
+        demoDiv.className = 'test-case';
+        demoDiv.innerHTML = `
+            <h3>Demo: vad:hasParentObj Dropdown (After Fix)</h3>
+            <p>This shows how the dropdown should look with the fix applied:</p>
+            <select id="demo-dropdown">
+                <option value="">-- Выберите родительский элемент --</option>
+            </select>
+        `;
+        resultsDiv.appendChild(demoDiv);
+
+        const demoDropdown = document.getElementById('demo-dropdown');
+
+        // Add root option (vad:ptree)
+        const rootOption = document.createElement('option');
+        rootOption.value = 'http://example.org/vad#ptree';
+        rootOption.textContent = formatDropdownDisplayText(
+            'http://example.org/vad#ptree',
+            rdfStoreLabelMap.get('http://example.org/vad#ptree'),
+            currentPrefixes
+        );
+        demoDropdown.appendChild(rootOption);
+
+        // Add child options (processes) with fix applied
+        const childResults = enrichResultsWithLabels(sparqlResultsBeforeFix, rdfStoreLabelMap);
+        childResults.forEach(obj => {
+            const option = document.createElement('option');
+            option.value = obj.uri;
+            option.textContent = formatDropdownDisplayText(obj.uri, obj.label, currentPrefixes);
+            demoDropdown.appendChild(option);
+        });
+    </script>
+</body>
+</html>

@@ -2,6 +2,7 @@
 
 **Ссылка на issue:** [#410](https://github.com/bpmbpm/rdf-grapher/issues/410) pull https://github.com/bpmbpm/rdf-grapher/pull/411
 **Ссылка на issue:** [#412](https://github.com/bpmbpm/rdf-grapher/issues/412) pull https://github.com/bpmbpm/rdf-grapher/pull/413
+**Ссылка на issue:** [#414](https://github.com/bpmbpm/rdf-grapher/issues/414) pull https://github.com/bpmbpm/rdf-grapher/pull/416
 
 ## Описание задачи
 
@@ -112,10 +113,48 @@ option.textContent = typeof formatDropdownDisplayText === 'function'
     : (rootLabel || rootOption);
 ```
 
+**Изменение для получения rdfs:label дочерних объектов (issue #414):**
+
+Issue #413 исправил отображение label для корневых элементов, но не исправил
+проблему для остальных объектов в справочнике. Причина: функция `funSPARQLvalues`
+не поддерживает `OPTIONAL`-блоки в SPARQL, поэтому `rdfs:label` не возвращается
+в результатах запроса.
+
+```javascript
+// Добавлена функция enrichResultsWithLabels в 3_sd_create_new_concept_logic.js
+function enrichResultsWithLabels(results) {
+    if (!currentStore || results.length === 0) {
+        return results;
+    }
+
+    const rdfsLabelUri = 'http://www.w3.org/2000/01/rdf-schema#label';
+
+    // Создаём карту uri -> rdfs:label из RDF store
+    const labelMap = new Map();
+    const quads = currentStore.getQuads(null, rdfsLabelUri, null, null);
+    quads.forEach(quad => {
+        labelMap.set(quad.subject.value, quad.object.value);
+    });
+
+    // Обновляем label для каждого результата
+    return results.map(obj => {
+        const realLabel = labelMap.get(obj.uri);
+        if (realLabel) {
+            return { uri: obj.uri, label: realLabel };
+        }
+        return obj;
+    });
+}
+```
+
+Эта функция вызывается в `getObjectsForParentSelector` после получения результатов
+SPARQL-запроса, чтобы обогатить их реальными `rdfs:label` из RDF store.
+
 **Применяется к:**
 - Выпадающий список `vad:hasParentObj` при создании концепта процесса
 - Выпадающий список `vad:hasParentObj` при создании концепта исполнителя
 - Корневые элементы `vad:ptree` и `vad:rtree` (issue #412)
+- Все дочерние объекты в справочнике (issue #414)
 
 #### 2.2. Создание индивида (`3_sd_create_new_individ_ui.js`)
 
