@@ -1,0 +1,113 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+    <meta charset="UTF-8">
+    <title>Демо: funSPARQLvaluesComunica (полноценный SPARQL)</title>
+    <!-- Подключаем N3.js -->
+    <script src="https://cdn.jsdelivr.net/npm/n3@1.16.2/browser/n3.min.js"></script>
+    <!-- Подключаем Comunica (браузерная версия) -->
+    <script src="https://cdn.jsdelivr.net/npm/@comunica/actor-init-query@2.6.6/dist/query-init.js"></script>
+    <!-- Подключаем vadlib_sparql.js -->
+    <script src="vadlib_sparql.js"></script>
+</head>
+<body>
+    <h1>Демонстрация функции funSPARQLvaluesComunica</h1>
+    <p>Асинхронное выполнение SPARQL SELECT с полной поддержкой языка через Comunica.</p>
+    <hr>
+    <h2>Исходные данные в хранилище (N3.Store)</h2>
+    <pre id="data"></pre>
+    <h2>SPARQL запрос (с OPTIONAL)</h2>
+    <pre id="query"></pre>
+    <h2>Результат</h2>
+    <pre id="result"></pre>
+
+    <script>
+        (async function() {
+            // 1. Создаём и наполняем store теми же данными, что и в первом примере
+            const store = new N3.Store();
+
+            // Граф <http://example.org/graph1>
+            store.addQuad(
+                N3.DataFactory.namedNode('http://example.org/Person/Alice'),
+                N3.DataFactory.namedNode('http://www.w3.org/1999/02/22-rdf-syntax-ns#type'),
+                N3.DataFactory.namedNode('http://example.org/class/Person'),
+                N3.DataFactory.namedNode('http://example.org/graph1')
+            );
+            store.addQuad(
+                N3.DataFactory.namedNode('http://example.org/Person/Alice'),
+                N3.DataFactory.namedNode('http://www.w3.org/2000/01/rdf-schema#label'),
+                N3.DataFactory.literal('Alice'),
+                N3.DataFactory.namedNode('http://example.org/graph1')
+            );
+            // Добавим для Alice возраст (не у всех)
+            store.addQuad(
+                N3.DataFactory.namedNode('http://example.org/Person/Alice'),
+                N3.DataFactory.namedNode('http://example.org/property/age'),
+                N3.DataFactory.literal('30'),
+                N3.DataFactory.namedNode('http://example.org/graph1')
+            );
+
+            // Граф <http://example.org/graph2>
+            store.addQuad(
+                N3.DataFactory.namedNode('http://example.org/Person/Bob'),
+                N3.DataFactory.namedNode('http://www.w3.org/1999/02/22-rdf-syntax-ns#type'),
+                N3.DataFactory.namedNode('http://example.org/class/Person'),
+                N3.DataFactory.namedNode('http://example.org/graph2')
+            );
+            store.addQuad(
+                N3.DataFactory.namedNode('http://example.org/Person/Bob'),
+                N3.DataFactory.namedNode('http://www.w3.org/2000/01/rdf-schema#label'),
+                N3.DataFactory.literal('Bob'),
+                N3.DataFactory.namedNode('http://example.org/graph2')
+            );
+            // У Bob нет возраста
+
+            // Charlie без графа
+            store.addQuad(
+                N3.DataFactory.namedNode('http://example.org/Person/Charlie'),
+                N3.DataFactory.namedNode('http://www.w3.org/1999/02/22-rdf-syntax-ns#type'),
+                N3.DataFactory.namedNode('http://example.org/class/Person')
+            );
+
+            window.currentStore = store;
+            window.currentPrefixes = {
+                'rdf': 'http://www.w3.org/1999/02/22-rdf-syntax-ns#',
+                'rdfs': 'http://www.w3.org/2000/01/rdf-schema#',
+                'ex': 'http://example.org/'
+            };
+
+            // Отображаем данные
+            const quads = store.getQuads(null, null, null, null);
+            document.getElementById('data').textContent = 
+                quads.map(q => `${q.subject.value} ${q.predicate.value} ${q.object.value} ${q.graph.value ? 'GRAPH ' + q.graph.value : ''}`).join('\n');
+
+            // 2. Запрос с OPTIONAL – демонстрация возможностей Comunica
+            const sparqlQuery = `
+                PREFIX rdf: <http://www.w3.org/1999/02/22-rdf-syntax-ns#>
+                PREFIX rdfs: <http://www.w3.org/2000/01/rdf-schema#>
+                PREFIX ex: <http://example.org/>
+                SELECT ?person ?label ?age WHERE {
+                    ?person rdf:type ex:class/Person .
+                    ?person rdfs:label ?label .
+                    OPTIONAL { ?person ex:property/age ?age }
+                }
+            `;
+
+            document.getElementById('query').textContent = sparqlQuery;
+
+            try {
+                // 3. Вызываем асинхронную функцию. Второй параметр – имя основной переменной (person)
+                const results = await funSPARQLvaluesComunica(sparqlQuery, 'person');
+
+                // 4. Выводим результат (теперь каждый объект содержит person, label, age, а также uri и label для обратной совместимости)
+                document.getElementById('result').textContent = 
+                    results.length === 0 ? 'Нет результатов' : JSON.stringify(results, null, 2);
+            } catch (e) {
+                document.getElementById('result').textContent = 'Ошибка: ' + e.message;
+            }
+        })();
+    </script>
+    <hr>
+    <p><strong>Особенности:</strong> Благодаря Comunica запрос содержит OPTIONAL. В результате для Alice появится возраст, для Bob – возраст отсутствует (поле <code>age</code> не включено в объект). Функция возвращает все переменные SELECT, а также дублирует основную переменную в поле <code>uri</code> и пытается добавить <code>label</code> из префиксов.</p>
+</body>
+</html>

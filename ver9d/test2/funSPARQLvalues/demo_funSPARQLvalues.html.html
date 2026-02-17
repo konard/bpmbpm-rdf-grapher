@@ -1,0 +1,104 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+    <meta charset="UTF-8">
+    <title>Демо: funSPARQLvalues (простой SPARQL)</title>
+    <!-- Подключаем N3.js для работы с RDF -->
+    <script src="https://cdn.jsdelivr.net/npm/n3@1.16.2/browser/n3.min.js"></script>
+    <!-- Подключаем сам файл с функциями (предполагается, что он лежит рядом) -->
+    <script src="vadlib_sparql.js"></script>
+</head>
+<body>
+    <h1>Демонстрация функции funSPARQLvalues</h1>
+    <p>Синхронное выполнение простого SELECT-запроса без использования Comunica.</p>
+    <hr>
+    <h2>Исходные данные в хранилище (N3.Store)</h2>
+    <pre id="data"></pre>
+    <h2>SPARQL запрос</h2>
+    <pre id="query"></pre>
+    <h2>Результат</h2>
+    <pre id="result"></pre>
+
+    <script>
+        (async function() {
+            // 1. Инициализируем хранилище N3.Store и наполняем тестовыми данными
+            const store = new N3.Store();
+
+            // Добавим несколько триплетов (в разных графах)
+            // Граф <http://example.org/graph1>
+            store.addQuad(
+                N3.DataFactory.namedNode('http://example.org/Person/Alice'),
+                N3.DataFactory.namedNode('http://www.w3.org/1999/02/22-rdf-syntax-ns#type'),
+                N3.DataFactory.namedNode('http://example.org/class/Person'),
+                N3.DataFactory.namedNode('http://example.org/graph1')
+            );
+            store.addQuad(
+                N3.DataFactory.namedNode('http://example.org/Person/Alice'),
+                N3.DataFactory.namedNode('http://www.w3.org/2000/01/rdf-schema#label'),
+                N3.DataFactory.literal('Alice'),
+                N3.DataFactory.namedNode('http://example.org/graph1')
+            );
+
+            // Граф <http://example.org/graph2>
+            store.addQuad(
+                N3.DataFactory.namedNode('http://example.org/Person/Bob'),
+                N3.DataFactory.namedNode('http://www.w3.org/1999/02/22-rdf-syntax-ns#type'),
+                N3.DataFactory.namedNode('http://example.org/class/Person'),
+                N3.DataFactory.namedNode('http://example.org/graph2')
+            );
+            store.addQuad(
+                N3.DataFactory.namedNode('http://example.org/Person/Bob'),
+                N3.DataFactory.namedNode('http://www.w3.org/2000/01/rdf-schema#label'),
+                N3.DataFactory.literal('Bob'),
+                N3.DataFactory.namedNode('http://example.org/graph2')
+            );
+
+            // Дополнительный триплет без графа (default graph)
+            store.addQuad(
+                N3.DataFactory.namedNode('http://example.org/Person/Charlie'),
+                N3.DataFactory.namedNode('http://www.w3.org/1999/02/22-rdf-syntax-ns#type'),
+                N3.DataFactory.namedNode('http://example.org/class/Person')
+            );
+
+            // 2. Устанавливаем глобальные переменные, необходимые для vadlib_sparql.js
+            window.currentStore = store;
+            window.currentPrefixes = {
+                'rdf': 'http://www.w3.org/1999/02/22-rdf-syntax-ns#',
+                'rdfs': 'http://www.w3.org/2000/01/rdf-schema#',
+                'ex': 'http://example.org/'
+            };
+
+            // Отображаем исходные данные (для наглядности)
+            const quads = store.getQuads(null, null, null, null);
+            document.getElementById('data').textContent = 
+                quads.map(q => `${q.subject.value} ${q.predicate.value} ${q.object.value} ${q.graph.value ? 'GRAPH ' + q.graph.value : ''}`).join('\n');
+
+            // 3. Определяем простой SPARQL SELECT запрос (только тройные паттерны)
+            const sparqlQuery = `
+                SELECT ?person ?label WHERE {
+                    GRAPH ?g {
+                        ?person rdf:type ex:class/Person .
+                        ?person rdfs:label ?label .
+                    }
+                }
+            `;
+
+            document.getElementById('query').textContent = sparqlQuery;
+
+            try {
+                // 4. Вызываем funSPARQLvalues (синхронно)
+                //    Передаём имя переменной, которую будем использовать как основную для uri (по умолчанию 'value', но здесь 'person')
+                const results = funSPARQLvalues(sparqlQuery, 'person');
+
+                // 5. Выводим результат
+                document.getElementById('result').textContent = 
+                    results.length === 0 ? 'Нет результатов' : JSON.stringify(results, null, 2);
+            } catch (e) {
+                document.getElementById('result').textContent = 'Ошибка: ' + e.message;
+            }
+        })();
+    </script>
+    <hr>
+    <p><strong>Особенности:</strong> Функция <code>funSPARQLvalues</code> работает синхронно и поддерживает только базовые паттерны. В запросе выше используется GRAPH, который она умеет обрабатывать. Однако, если добавить OPTIONAL или FILTER, результат будет пустым или некорректным.</p>
+</body>
+</html>
