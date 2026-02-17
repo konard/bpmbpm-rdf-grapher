@@ -21,6 +21,8 @@ Waiting (pisition #5) - пятый в очереди
 ```
 --tool agent --model opencode/big-pickle
 ```
+### MODELS
+- https://github.com/link-assistant/hive-mind/blob/main/docs/FREE_MODELS.md
 
 ### also
 - https://github.com/bpmbpm/doc/blob/main/AI/dev/hivemind/readme.md
