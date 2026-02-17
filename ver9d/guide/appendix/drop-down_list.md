@@ -8,7 +8,7 @@
 В нем должны отображаться все элементы дерева ptree. Причем в формате: id и в скобках label.  
 
 1 Для формирования справочника используем функцию funSPARQLvalues.  
-Описание функции funSPARQLvalues приведено в https://github.com/bpmbpm/rdf-grapher/blob/main/ver9d/doc/common/important_functions.md возвращаемые параметры:
+Описание функции funSPARQLvalues приведено в https://github.com/bpmbpm/rdf-grapher/blob/main/ver9d/doc/common/important_functions.md 
 
 #### Параметры
 
@@ -37,4 +37,5 @@ const processes = funSPARQLvalues(`
 // Результат: [{uri: "http://example.org/vad#pGA", label: "Процесс ГА"}, ...]
 ```
 
+возвращаемые параметры:
 Array<{uri: string, label: string}> — массив объектов с URI и меткой каждого результата.
