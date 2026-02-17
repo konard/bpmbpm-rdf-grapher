@@ -242,3 +242,23 @@ typeof formatDropdownDisplayText === 'function'
 - Функция не изменяет значение `value` элемента `<option>` (остаётся полный URI)
 - Изменяется только `textContent` (отображаемый текст)
 - Это позволяет сохранить все существующие механизмы обработки выбора и генерации SPARQL
+
+---
+## Comment (my)
+https://github.com/bpmbpm/rdf-grapher/blob/main/ver9d/doc/common/important_functions.md
+https://github.com/bpmbpm/rdf-grapher/blob/main/ver9d/doc/algorithm/id_label_v1.md
+создан https://github.com/bpmbpm/rdf-grapher/pull/413
+
+текущий проект https://github.com/bpmbpm/rdf-grapher/tree/main/ver9d
+
+Описание функции funSPARQLvalues приведено в https://github.com/bpmbpm/rdf-grapher/blob/main/ver9d/doc/common/important_functions.md
+возвращаемые параметры как раз:   
+`Array<{uri: string, label: string}>` — массив объектов с URI и меткой каждого результата.   
+это как раз то, что требуется при заполнении справочника. 
+Не стал:  
+Возвращаемое значение funSPARQLvalues это id (uri) и label (в скобках). Непонятно зачем нужна "OPTIONAL-блоки SPARQL". Не нужно обогащать результаты, выполни заполнение справочника через штатную функцию funSPARQLvalues причем единообразно как для vad:ptree (Дерево процессов), так и для дочерних элементов.   
+
+1 не делаю merge https://github.com/bpmbpm/rdf-grapher/pull/416 
+Fixes #414
+Исправление бага после PR #413: в выпадающем справочнике vad:hasParentObj label отображался только для корневых элементов (vad:ptree, vad:rtree), но НЕ для остальных дочерних объектов.  
+2 Также:  https://github.com/bpmbpm/rdf-grapher/pull/413
