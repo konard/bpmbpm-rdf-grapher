@@ -15,5 +15,6 @@
 - dsl https://github.com/bpmbpm/rdf-grapher/blob/main/ver8tree/requirements/dsl-concepts.md
 - macro-functions https://github.com/bpmbpm/rdf-grapher/blob/main/ver8tree/requirements/macro-functions.md
 - графический?
+  
 New
 - https://github.com/bpmbpm/rdf-grapher/blob/main/ver9d/analysis/dsl/dsl_v1.md
