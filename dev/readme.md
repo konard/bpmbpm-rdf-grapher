@@ -22,13 +22,14 @@ agent
 ```
 --tool agent --model opencode/big-pickle
 ```
-### MODELS
+### models
 - https://github.com/link-assistant/hive-mind/blob/main/docs/FREE_MODELS.md
 
 ### limits
 /limits
 
 Waiting (pisition #5) - пятый в очереди
+
 
 
 
