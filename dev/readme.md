@@ -25,10 +25,12 @@ agent
 ### models
 - https://github.com/link-assistant/hive-mind/blob/main/docs/FREE_MODELS.md
 
+### pisition 
+Waiting (pisition #5) - пятый в очереди
 ### limits
 /limits
 
-Waiting (pisition #5) - пятый в очереди
+
 
 
 
@@ -41,4 +43,4 @@ Request-URI Too Long (125 строк пролезает) + по умолчани
 ### tools
 - [calculator](https://link-assistant.github.io/calculator/?q=KGV4cHJlc3Npb24lMjAlMjIoRmViJTIwNiUyQyUyMDQlM0E1OXBtJTIwVVRDKSUyMC0lMjAoRmViJTIwMyUyQyUyMDUlM0EzNHBtJTIwVVRDKSUyMik)
 
-### monitor
+
