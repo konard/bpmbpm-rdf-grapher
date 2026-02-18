@@ -28,34 +28,34 @@ Waiting (pisition #5) - пятый в очереди
 
 Current time: Feb 18, 7:15pm UTC
 
-CPU
+CPU  
 ▓░░░░░░░░░░░░░░░░░░░│░░░░░░░░░ 3% used  
 0.18/6 CPU cores
 
-RAM
+RAM  
 ▓▓▓▓▓▓▓▓▓▓░░░░░░░░░░│░░░░░░░░░ 32% used  
 3.8/11.7 GB used
 
-Disk space
+Disk space  
 ▓▓▓▓▓▓▓▓▓▓▓▓▓░░░░░░░░░░░░░░│░░ 44% used  
 41.8/95.8 GB used
 
-GitHub API
+GitHub API  
 ░░░░░░░░░░░░░░░░░░░░░░░│░░░░░░ 1% used  
 41/5000 requests
 Resets in 58m (Feb 18, 8:11pm UTC)
 
-Claude 5 hour session
+Claude 5 hour session  
 ▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓░░░░ 85% passed  
 ▓▓▓▓▓▓▓░░░░░░░░░░░░░│░░░░░░░░░ 24% used  
 Resets in 0h 44m (Feb 18, 8:00pm UTC)
 
-Current week (all models)
+Current week (all models)  
 ▓▓▓▓░░░░░░░░░░░░░░░░░░░░░░░░░░ 14% passed  
 ▓▓▓▓▓░░░░░░░░░░░░░░░░░░░░░░░░│ 16% used  
 Resets in 5d 23h 44m (Feb 24, 7:00pm UTC)
 
-Current week (Sonnet only)
+Current week (Sonnet only)  
 ▓░░░░░░░░░░░░░░░░░░░░░░░░░░░░░ 2% passed  
 ░░░░░░░░░░░░░░░░░░░░░░░░░░░░░│ 0% used  
 Resets in 6d 20h 44m (Feb 25, 4:00pm UTC)
