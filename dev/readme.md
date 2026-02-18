@@ -18,11 +18,9 @@
 ```
 --tool agent --model opencode/big-pickle
 ```
-выбор:
+выбор моделей Free:
 - https://github.com/link-assistant/hive-mind/blob/main/docs/FREE_MODELS.md
 
-### pisition 
-Waiting (pisition #5) - пятый в очереди
 ### limits
 /limits
 
@@ -65,6 +63,9 @@ claude (pending: 0, processing: 5)
 agent (pending: 0, processing: 0)  
 
 Расшифровка:  
+pending - длинна очереди, то же самое, что при старте задачи, например, 
+Waiting (pisition #5) - пятый в очереди
+
 Только недельный лимит только имеет значение. Должно быть Current week (all models): used (использовано) > passed (прошло).  
 Иначе (как на картинке) расход превышает план, т.е. расходуем быстрее чем время истекает до сброса недельного лимита.  
 
