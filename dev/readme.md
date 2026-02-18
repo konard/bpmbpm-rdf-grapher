@@ -12,7 +12,7 @@ agent
 ```
 /solve https://github.com/bpmbpm/rdf-grapher/issues/9 --tool agent
 ```
-**--tool agent** - не сработает сейчас вообще grok code больше недоступен бесплатно.
+**--tool agent** - ранее grok code был по умолчанию, но больше недоступен бесплатно.
 
 /limits
 
