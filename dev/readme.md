@@ -3,7 +3,6 @@
 ```
 /solve https://github.com/bpmbpm/rdf-grapher/issues/143 --model opus-4-5
 /solve https://github.com/bpmbpm/rdf-grapher/pull/318 --model opus-4-5
-
 ```
 теперь opus-4-5
 ```
