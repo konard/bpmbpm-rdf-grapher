@@ -1,8 +1,13 @@
 ### issues - PR 
+когда opus-4-6 был по умолчанию, то указывать:
 ```
 /solve https://github.com/bpmbpm/rdf-grapher/issues/143 --model opus-4-5
 /solve https://github.com/bpmbpm/rdf-grapher/pull/318 --model opus-4-5
 
+```
+теперь opus-4-5
+```
+/solve https://github.com/bpmbpm/rdf-grapher/issues/9 --model opus
 ```
 default
 ```
@@ -12,17 +17,20 @@ agent
 ```
 /solve https://github.com/bpmbpm/rdf-grapher/issues/9 --tool agent
 ```
-**--tool agent** - ранее grok code был по умолчанию, но больше недоступен бесплатно.
-
-/limits
-
-Waiting (pisition #5) - пятый в очереди
-
+**--tool agent** - ранее grok code был по умолчанию, но больше недоступен бесплатно.  
+Пример:
 ```
 --tool agent --model opencode/big-pickle
 ```
 ### MODELS
 - https://github.com/link-assistant/hive-mind/blob/main/docs/FREE_MODELS.md
+
+### limits
+/limits
+
+Waiting (pisition #5) - пятый в очереди
+
+
 
 ### also
 - browsec for https://www.ldf.fi/  
