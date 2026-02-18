@@ -1,5 +1,8 @@
 ## DP
 Сравнение funSPARQLvalues и funSPARQLvaluesComunica
+- https://bpmbpm.github.io/rdf-grapher/ver9d/
+- https://bpmbpm.github.io/rdf-grapher/ver9d//test2/funSPARQLvalues/demo_funSPARQLvalues.html
+- https://bpmbpm.github.io/rdf-grapher/ver9d//test2/funSPARQLvalues/demo_funSPARQLvaluesComunica.html
 
 ## 1 Сравнение функций `funSPARQLvalues` и `funSPARQLvaluesComunica`
 
