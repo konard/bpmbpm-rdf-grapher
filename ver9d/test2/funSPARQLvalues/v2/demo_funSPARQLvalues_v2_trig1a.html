@@ -1,0 +1,89 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+    <meta charset="UTF-8">
+    <title>Демо: funSPARQLvalues (простой SPARQL) с TriG</title>
+    <!-- Подключаем N3.js -->
+    <script src="https://cdn.jsdelivr.net/npm/n3@1.16.2/browser/n3.min.js"></script>
+    <!-- Подключаем сам файл с функциями -->
+    <script src="vadlib_sparql.js"></script>
+</head>
+<body>
+    <h1>Демонстрация функции funSPARQLvalues</h1>
+    <p>Синхронное выполнение простого SELECT-запроса. Данные загружены из формата TriG.</p>
+    <hr>
+    <h2>Исходные данные (TriG с префиксами)</h2>
+    <pre id="data"></pre>
+    <h2>SPARQL запрос</h2>
+    <pre id="query"></pre>
+    <h2>Результат</h2>
+    <pre id="result"></pre>
+
+    <script>
+        (async function() {
+            const store = new N3.Store();
+
+            // Данные в формате TriG с префиксами
+            const trigData = `
+                @prefix rdf: <http://www.w3.org/1999/02/22-rdf-syntax-ns#> .
+                @prefix ex: <http://example.org/> .
+
+                ex:graph1 {
+                    ex:Alice rdf:type ex:Person .
+                    ex:Alice ex:label22 "Alice" .
+                }
+
+                ex:graph2 {
+                    ex:Bob rdf:type ex:Person .
+                    ex:Bob ex:label22 "Bob" .
+                }
+
+                # Default graph
+                {
+                    ex:Charlie rdf:type ex:Person .
+                }
+            `;
+
+            // Парсинг TriG и наполнение store
+            const parser = new N3.Parser({ format: 'text/trig' });
+            parser.parse(trigData, (error, quad) => {
+                if (quad) store.addQuad(quad);
+            });
+
+            window.currentStore = store;
+            window.currentPrefixes = {
+                'rdf': 'http://www.w3.org/1999/02/22-rdf-syntax-ns#',
+                'ex': 'http://example.org/'
+            };
+
+            // Отображаем исходные данные (саму TriG-строку)
+            document.getElementById('data').textContent = trigData;
+
+            // SPARQL запрос (с использованием префиксов)
+            // Удалить @ и точку
+            const sparqlQuery = `
+               prefix rdf: <http://www.w3.org/1999/02/22-rdf-syntax-ns#> 
+               prefix ex: <http://example.org/> 
+           
+                SELECT ?person ?label WHERE {
+                    GRAPH ?g {
+                        ?person rdf:type ex:Person .
+                        ?person ex:label22 ?label .
+                    }
+                }
+            `;
+            document.getElementById('query').textContent = sparqlQuery;
+
+            try {
+                const results = funSPARQLvalues(sparqlQuery, 'person');
+                document.getElementById('result').textContent = 
+                    results.length === 0 ? 'Нет результатов' : JSON.stringify(results, null, 2);
+            } catch (e) {
+                document.getElementById('result').textContent = 'Ошибка: ' + e.message;
+            }
+        })();
+    </script>
+    <hr>
+    <p><strong>Особенности:</strong> Функция <code>funSPARQLvalues</code> работает синхронно и поддерживает базовые паттерны, включая GRAPH. Данные теперь заданы в формате TriG с префиксами, что делает их более читаемыми и удобными для поддержки.</p>
+</body>
+</html>
