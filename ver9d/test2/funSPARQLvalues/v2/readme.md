@@ -182,3 +182,6 @@ parsePromise.then(() => {
 
 ### Вывод
 Код написан логично, но из-за асинхронности парсера запрос выполняется до загрузки данных. Это типичная ошибка при работе с асинхронными операциями в JavaScript. Решение — перенести вызов функции внутрь колбэка завершения парсинга или использовать промисы.
+
+## graph
+[https://bpmbpm.github.io/rdf-grapher/ver1](https://bpmbpm.github.io/rdf-grapher/ver1/?rdf=%40prefix+rdf%3A+%3Chttp%3A%2F%2Fwww.w3.org%2F1999%2F02%2F22-rdf-syntax-ns%23%3E+.%0A%40prefix+ex%3A+%3Chttp%3A%2F%2Fexample.org%2F%3E+.%0A%0A++++++++++++++++ex%3Agraph1+%7B%0A++++++++++++++++++++ex%3AAlice+rdf%3Atype+ex%3APerson+.%0A++++++++++++++++++++ex%3AAlice+ex%3Alabel22+%22Alice%22+.%0A++++++++++++++++%7D%0A%0A++++++++++++++++ex%3Agraph2+%7B%0A++++++++++++++++++++ex%3ABob+rdf%3Atype+ex%3APerson+.%0A++++++++++++++++++++ex%3ABob+ex%3Alabel22+%22Bob%22+.%0A++++++++++++++++%7D%0A%0A++++++++++++++++%23+Default+graph%0A++++++++++++++++%7B%0A++++++++++++++++++++ex%3ACharlie+rdf%3Atype+ex%3APerson+.%0A++++++++++++++++%7D&from=trig&to=svg)
