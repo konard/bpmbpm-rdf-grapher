@@ -20,6 +20,11 @@
 - concept (TypeProcess + TypeExecutor) + dia (VADProcessDia)
 - Virtual (две кнопки: virtualRDFdata + Virtual filter)
 - ontology + techtree
+- root нахордится в vad-basic-ontology_tech_Appendix, т.е. его не нужно объявлять в VADProcessDia
+```
+vad:root
+        rdf:type vad:TechTree ;
+```
 
 Method
 - загрузить (LOAD) \ изменить (UPDATE) \ Edit
