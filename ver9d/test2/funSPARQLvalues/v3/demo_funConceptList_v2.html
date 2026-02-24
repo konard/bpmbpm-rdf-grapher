@@ -1,0 +1,216 @@
+<!DOCTYPE html>
+<!-- Ссылка на issue: https://github.com/bpmbpm/rdf-grapher/issues/425 -->
+<html lang="ru">
+<head>
+    <meta charset="UTF-8">
+    <title>Демо: funConceptList_v2 — список концептов из TriG</title>
+
+    <!-- Подключаем N3.js для парсинга TriG -->
+    <script src="https://unpkg.com/n3@1.17.2/browser/n3.min.js"></script>
+
+    <!-- Подключаем Comunica для выполнения SPARQL-запросов -->
+    <script src="https://rdf.js.org/comunica-browser/versions/v4/engines/query-sparql-rdfjs/comunica-browser.js"></script>
+
+    <!-- Подключаем модуль с funConceptList_v2 -->
+    <script src="../../../9_vadlib/vadlib_sparql_v2.js"></script>
+
+    <style>
+        body { font-family: Arial, sans-serif; max-width: 900px; margin: 20px auto; padding: 0 20px; }
+        h2 { margin-top: 30px; }
+        pre { background: #f5f5f5; padding: 10px; overflow-x: auto; }
+        select { width: 100%; padding: 6px; font-size: 14px; margin: 8px 0; }
+        .section { border: 1px solid #ddd; padding: 15px; margin: 15px 0; border-radius: 4px; }
+        .label { font-weight: bold; }
+        #status { color: #555; font-style: italic; }
+    </style>
+</head>
+<body>
+    <h1>Демонстрация функции funConceptList_v2</h1>
+    <p>
+        Асинхронное получение списка концептов из TriG через SPARQL (Comunica).
+        Данные загружаются из файла <code>rdf-data_clip.ttl</code>.
+    </p>
+    <p id="status">Загрузка данных...</p>
+    <hr>
+
+    <div class="section">
+        <h2>Данные (rdf-data_clip.ttl)</h2>
+        <pre id="trig-data">Загружается...</pre>
+    </div>
+
+    <div class="section">
+        <h2>Справочник концептов процессов (ptree, тип vad:TypeProcess)</h2>
+        <p class="label">SPARQL запрос:</p>
+        <pre id="query-ptree"></pre>
+        <p class="label">Результат (JSON):</p>
+        <pre id="result-ptree">Ожидание...</pre>
+        <p class="label">Выпадающий список:</p>
+        <select id="dropdown-ptree">
+            <option value="">-- Выберите концепт процесса --</option>
+        </select>
+    </div>
+
+    <div class="section">
+        <h2>Справочник концептов исполнителей (rtree, тип vad:TypeExecutor)</h2>
+        <p class="label">SPARQL запрос:</p>
+        <pre id="query-rtree"></pre>
+        <p class="label">Результат (JSON):</p>
+        <pre id="result-rtree">Ожидание...</pre>
+        <p class="label">Выпадающий список:</p>
+        <select id="dropdown-rtree">
+            <option value="">-- Выберите концепт исполнителя --</option>
+        </select>
+    </div>
+
+    <hr>
+    <p>
+        <strong>Особенности:</strong>
+        Функция <code>funConceptList_v2(quadstore, trig, type)</code> работает асинхронно
+        через Comunica. Источник данных — N3.Store с данными из TriG.
+        Формат отображения: <code>id label</code> (id и label через пробел).
+    </p>
+
+    <script>
+        // Префиксы для преобразования полного URI в краткую форму (vad:p1 вместо http://...)
+        var VAD_PREFIXES = {
+            'rdf':  'http://www.w3.org/1999/02/22-rdf-syntax-ns#',
+            'rdfs': 'http://www.w3.org/2000/01/rdf-schema#',
+            'vad':  'http://example.org/vad#'
+        };
+
+        /**
+         * Преобразует полный URI в сокращённую форму (prefix:local).
+         * Если префикс не найден — возвращает исходный URI.
+         */
+        function getPrefixedName(uri, prefixes) {
+            var prefix, namespace;
+            for (prefix in prefixes) {
+                if (Object.prototype.hasOwnProperty.call(prefixes, prefix)) {
+                    namespace = prefixes[prefix];
+                    if (uri.indexOf(namespace) === 0) {
+                        return prefix + ':' + uri.substring(namespace.length);
+                    }
+                }
+            }
+            return uri;
+        }
+
+        /**
+         * Заполняет выпадающий список результатами funConceptList_v2.
+         * Формат отображения: "id label" через пробел.
+         * Если label пуст — показывает только id.
+         */
+        function fillDropdown(selectElement, concepts, prefixes) {
+            var i, item, id, option;
+            for (i = 0; i < concepts.length; i++) {
+                item = concepts[i];
+                id = getPrefixedName(item.id, prefixes);
+                option = document.createElement('option');
+                option.value = item.id;
+                // Формат "id label" через пробел; если label пуст — только id
+                option.textContent = item.label ? id + ' ' + item.label : id;
+                selectElement.appendChild(option);
+            }
+        }
+
+        // Главная асинхронная функция — запускается после загрузки страницы
+        (async function() {
+            // Шаг 1: Загружаем TriG-данные из файла rdf-data_clip.ttl
+            var trigText;
+            try {
+                var response = await fetch('../../../dia/rdf-data_clip.ttl');
+                if (!response.ok) {
+                    throw new Error('HTTP ' + response.status + ' при загрузке rdf-data_clip.ttl');
+                }
+                trigText = await response.text();
+            } catch (e) {
+                document.getElementById('status').textContent = 'Ошибка загрузки данных: ' + e.message;
+                document.getElementById('trig-data').textContent = 'Ошибка: ' + e.message;
+                return;
+            }
+
+            // Показываем исходные данные
+            document.getElementById('trig-data').textContent = trigText;
+
+            // Шаг 2: Парсим TriG в N3.Store
+            var store = new N3.Store();
+            var parser = new N3.Parser({ format: 'text/trig' });
+
+            // Парсинг выполняется асинхронно через колбэк
+            // Оборачиваем в Promise, чтобы дождаться завершения парсинга
+            await new Promise(function(resolve, reject) {
+                parser.parse(trigText, function(error, quad) {
+                    if (error) {
+                        reject(error);
+                        return;
+                    }
+                    if (quad) {
+                        // Добавляем каждый квад в хранилище
+                        store.addQuad(quad);
+                    } else {
+                        // quad === null: парсинг завершён
+                        resolve();
+                    }
+                });
+            });
+
+            document.getElementById('status').textContent =
+                'Данные загружены. Квадов в store: ' + store.size;
+
+            // Шаг 3: Получаем список концептов процессов из ptree
+            var queryPtree = 'prefix rdf: <http://www.w3.org/1999/02/22-rdf-syntax-ns#>\n' +
+                'prefix rdfs: <http://www.w3.org/2000/01/rdf-schema#>\n' +
+                'prefix vad: <http://example.org/vad#>\n' +
+                'SELECT ?id_concept ?label_concept WHERE {\n' +
+                '    GRAPH vad:ptree {\n' +
+                '        ?id_concept rdf:type vad:TypeProcess .\n' +
+                '        OPTIONAL { ?id_concept rdfs:label ?label_concept . }\n' +
+                '    }\n' +
+                '}';
+            document.getElementById('query-ptree').textContent = queryPtree;
+
+            try {
+                var conceptsPtree = await funConceptList_v2(store, 'ptree', 'vad:TypeProcess');
+                document.getElementById('result-ptree').textContent =
+                    JSON.stringify(conceptsPtree, null, 2);
+                fillDropdown(
+                    document.getElementById('dropdown-ptree'),
+                    conceptsPtree,
+                    VAD_PREFIXES
+                );
+            } catch (e) {
+                document.getElementById('result-ptree').textContent = 'Ошибка: ' + e.message;
+            }
+
+            // Шаг 4: Получаем список концептов исполнителей из rtree
+            var queryRtree = 'prefix rdf: <http://www.w3.org/1999/02/22-rdf-syntax-ns#>\n' +
+                'prefix rdfs: <http://www.w3.org/2000/01/rdf-schema#>\n' +
+                'prefix vad: <http://example.org/vad#>\n' +
+                'SELECT ?id_concept ?label_concept WHERE {\n' +
+                '    GRAPH vad:rtree {\n' +
+                '        ?id_concept rdf:type vad:TypeExecutor .\n' +
+                '        OPTIONAL { ?id_concept rdfs:label ?label_concept . }\n' +
+                '    }\n' +
+                '}';
+            document.getElementById('query-rtree').textContent = queryRtree;
+
+            try {
+                var conceptsRtree = await funConceptList_v2(store, 'rtree', 'vad:TypeExecutor');
+                document.getElementById('result-rtree').textContent =
+                    JSON.stringify(conceptsRtree, null, 2);
+                fillDropdown(
+                    document.getElementById('dropdown-rtree'),
+                    conceptsRtree,
+                    VAD_PREFIXES
+                );
+            } catch (e) {
+                document.getElementById('result-rtree').textContent = 'Ошибка: ' + e.message;
+            }
+
+            document.getElementById('status').textContent =
+                'Готово. ptree: ' + (document.getElementById('dropdown-ptree').options.length - 1) +
+                ' концептов, rtree: ' + (document.getElementById('dropdown-rtree').options.length - 1) + ' концептов.';
+        })();
+    </script>
+</body>
+</html>
