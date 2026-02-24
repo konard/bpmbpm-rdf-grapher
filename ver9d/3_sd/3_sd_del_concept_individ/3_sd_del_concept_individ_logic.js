@@ -593,61 +593,33 @@ function checkExecutorUsage(executorUri) {
  * Получает все TriG типа VADProcessDia
  * issue #372: SPARQL-Driven подход
  * issue #431: Добавлен manual fallback через currentStore.getQuads()
- * @returns {Array<{uri: string, label: string}>} Массив TriG
+ * issue #433: Заменяем fallback на funTrigNameList_v2 из vadlib_sparql_v2.js
+ * @returns {Promise<Array<{uri: string, label: string}>>} Массив TriG
  */
-function getAllTrigs() {
+async function getAllTrigs() {
     const sparqlQuery = DEL_CONCEPT_SPARQL.GET_ALL_TRIGS;
 
     let trigs = [];
 
-    // Пробуем funSPARQLvalues если доступна
-    if (typeof funSPARQLvalues === 'function') {
-        const results = funSPARQLvalues(sparqlQuery, 'trig');
-        trigs = results.map(r => ({
-            uri: r.uri,
-            label: r.label || (typeof getPrefixedName === 'function'
-                ? getPrefixedName(r.uri, currentPrefixes)
-                : r.uri)
-        }));
-    }
-
-    // issue #431: Manual fallback через currentStore.getQuads() когда funSPARQLvalues недоступна
-    if (trigs.length === 0 && currentStore) {
-        const rdfTypeUri = 'http://www.w3.org/1999/02/22-rdf-syntax-ns#type';
-        const vadProcessDiaUri = 'http://example.org/vad#VADProcessDia';
-        const rdfsLabelUri = 'http://www.w3.org/2000/01/rdf-schema#label';
-
-        const quads = currentStore.getQuads(null, null, null, null);
-        const trigUris = new Set();
-
-        quads.forEach(function(quad) {
-            if (quad.predicate.value === rdfTypeUri &&
-                quad.object.value === vadProcessDiaUri) {
-                trigUris.add(quad.subject.value);
-            }
+    // issue #433: Используем funTrigNameList_v2 с полными URI вместо funSPARQLvalues и fallback
+    if (typeof funTrigNameList_v2 === 'function') {
+        const raw = await funTrigNameList_v2(currentStore, 'http://example.org/vad#VADProcessDia');
+        // funTrigNameList_v2 возвращает [{id, label}], приводим к [{uri, label}]
+        trigs = raw.map(function(item) {
+            return {
+                uri: item.id,
+                label: item.label || (typeof getPrefixedName === 'function'
+                    ? getPrefixedName(item.id, currentPrefixes)
+                    : item.id)
+            };
         });
-
-        trigUris.forEach(function(uri) {
-            let label = typeof getPrefixedName === 'function'
-                ? getPrefixedName(uri, currentPrefixes)
-                : uri;
-
-            // Ищем label внутри графа TriG
-            quads.forEach(function(quad) {
-                if (quad.subject.value === uri &&
-                    quad.predicate.value === rdfsLabelUri &&
-                    quad.graph && quad.graph.value === uri) {
-                    label = quad.object.value;
-                }
-            });
-
-            trigs.push({ uri: uri, label: label });
-        });
+    } else {
+        console.error('getAllTrigs: funTrigNameList_v2 not available');
     }
 
     delIntermediateSparqlQueries.push({
-        description: 'Получение всех TriG типа VADProcessDia',
-        query: sparqlQuery,
+        description: 'Получение всех TriG типа VADProcessDia (funTrigNameList_v2)',
+        query: 'funTrigNameList_v2(currentStore, "http://example.org/vad#VADProcessDia")',
         result: trigs.length > 0
             ? `Найдено ${trigs.length} TriG: ${trigs.map(t => t.label).join(', ')}`
             : 'TriG не найдены'
