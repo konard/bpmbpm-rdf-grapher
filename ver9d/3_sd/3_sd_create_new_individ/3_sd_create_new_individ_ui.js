@@ -239,8 +239,9 @@ async function onHasNextModeChange() {
 /**
  * issue #309: Обработчик выбора индивида процесса (для создания исполнителя)
  * Автоматически разрешает ExecutorGroup через vad:hasExecutor
+ * issue #429: Сделан async для обновления справочника исполнителей с disabled-состоянием
  */
-function onNewIndividProcessIndividChange() {
+async function onNewIndividProcessIndividChange() {
     const select = document.getElementById('new-individ-process-individ');
     const processIndividUri = select ? select.value : null;
 
@@ -275,6 +276,11 @@ function onNewIndividProcessIndividChange() {
                 ),
                 result: `Найдена ExecutorGroup: ${egLabel}`
             });
+
+            // issue #429: Обновляем справочник исполнителей с disabled-состоянием
+            // (аналог funSPARQLvaluesDoubleSync: весь список исполнителей отображается,
+            //  но уже привязанные к ExecutorGroup отмечаются как недоступные)
+            await fillNewIndividExecutorDropdown(executorGroupUri, newIndividState.selectedTrig);
         } else {
             if (egDisplay) {
                 egDisplay.textContent = 'ExecutorGroup не найдена для данного индивида процесса';
@@ -574,8 +580,13 @@ function fillNewIndividProcessIndividDropdown(trigUri) {
 /**
  * Заполняет dropdown исполнителей
  * issue #427: Используем funConceptList_v2 с полными URI вместо funSPARQLvalues
+ * issue #429: Поддержка disabled-состояния для уже привязанных исполнителей
+ *             (аналог funSPARQLvaluesDoubleSync: весь список исполнителей отображается,
+ *              но уже привязанные к ExecutorGroup отмечаются как недоступные)
+ * @param {string} [executorGroupUri] - URI ExecutorGroup для проверки уже привязанных исполнителей
+ * @param {string} [trigUri] - URI TriG графа для поиска привязанных исполнителей
  */
-async function fillNewIndividExecutorDropdown() {
+async function fillNewIndividExecutorDropdown(executorGroupUri, trigUri) {
     const select = document.getElementById('new-individ-executor');
     if (!select) return;
 
@@ -595,6 +606,30 @@ async function fillNewIndividExecutorDropdown() {
         );
     }
 
+    // issue #429: Получаем уже привязанных исполнителей (аналог funSPARQLvaluesDoubleSync)
+    // Весь список отображается, но уже привязанные к ExecutorGroup отмечены как disabled
+    const boundExecutorUris = new Set();
+    if (executorGroupUri && trigUri && currentStore) {
+        const sparqlQueryBound = NEW_INDIVID_SPARQL.GET_BOUND_EXECUTORS_FOR_GROUP(executorGroupUri, trigUri);
+
+        // Получаем привязанных исполнителей напрямую из store (синхронно, аналог funSPARQLvaluesDoubleSync)
+        const includesUri = 'http://example.org/vad#includes';
+        const quads = currentStore.getQuads(executorGroupUri, includesUri, null, trigUri);
+        quads.forEach(function(quad) {
+            boundExecutorUris.add(quad.object.value);
+        });
+
+        newIndividIntermediateSparqlQueries.push({
+            description: 'issue #429: Получение уже привязанных исполнителей ExecutorGroup (аналог funSPARQLvaluesDoubleSync)',
+            query: sparqlQueryBound,
+            result: boundExecutorUris.size > 0
+                ? `Привязано ${boundExecutorUris.size} исполнителей: ${Array.from(boundExecutorUris).map(function(u) {
+                    return typeof getPrefixedName === 'function' ? getPrefixedName(u, currentPrefixes) : u;
+                }).join(', ')}`
+                : 'Нет привязанных исполнителей'
+        });
+    }
+
     newIndividIntermediateSparqlQueries.push({
         description: 'Получение концептов исполнителей из rtree (funConceptList_v2)',
         query: 'funConceptList_v2(currentStore, "http://example.org/vad#rtree", "http://example.org/vad#TypeExecutor")',
@@ -604,12 +639,21 @@ async function fillNewIndividExecutorDropdown() {
     });
 
     // issue #410: Используем formatDropdownDisplayText для отображения "id (label)"
-    concepts.forEach(concept => {
+    // issue #429: Помечаем уже привязанных исполнителей как disabled
+    concepts.forEach(function(concept) {
         const option = document.createElement('option');
         option.value = concept.uri;
-        option.textContent = typeof formatDropdownDisplayText === 'function'
+        const displayText = typeof formatDropdownDisplayText === 'function'
             ? formatDropdownDisplayText(concept.uri, concept.label, currentPrefixes)
             : (concept.label || concept.uri);
+
+        if (boundExecutorUris.has(concept.uri)) {
+            // issue #429: Исполнитель уже привязан — отображаем как недоступный
+            option.textContent = displayText + ' (уже привязан)';
+            option.disabled = true;
+        } else {
+            option.textContent = displayText;
+        }
         select.appendChild(option);
     });
 
