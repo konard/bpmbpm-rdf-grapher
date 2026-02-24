@@ -1,4 +1,5 @@
 // Ссылка на issue: https://github.com/bpmbpm/rdf-grapher/issues/425
+// Ссылка на issue: https://github.com/bpmbpm/rdf-grapher/issues/427
 // vadlib_sparql_v2.js — модуль с функциями, добавляемыми по прямому указанию.
 //
 // Зависимости:
@@ -12,6 +13,7 @@
 // ==============================================================================
 // funConceptList_v2 — список доступных концептов в указанном TriG
 // Ссылка на issue: https://github.com/bpmbpm/rdf-grapher/issues/425
+// Ссылка на issue: https://github.com/bpmbpm/rdf-grapher/issues/427
 // ==============================================================================
 
 /**
@@ -23,13 +25,18 @@
  * @param {Object} quadstore1  — N3.Store (квадстор) с загруженными данными.
  *                               Передаётся явно, чтобы поддерживать несколько квадсторов
  *                               в будущем.
- * @param {string} trig1       — Имя TriG-графа: например 'ptree' или 'rtree'.
- *                               Используется для подстановки в запрос (GRAPH vad:<trig1>).
- * @param {string} type1       — Полный URI типа концепта в угловых скобках или в виде
- *                               curie, например '<http://example.org/vad#TypeProcess>'
- *                               или 'vad:TypeProcess'.
- *                               Для ptree: vad:TypeProcess
- *                               Для rtree: vad:TypeExecutor
+ * @param {string} trig1       — URI TriG-графа в любом формате:
+ *                               - Полный URI: 'http://example.org/vad#ptree'
+ *                               - Полный URI в угловых скобках: '<http://example.org/vad#ptree>'
+ *                               - Короткое curie: 'vad:ptree'
+ *                               - Короткое имя (устаревший формат): 'ptree' — будет дополнено vad:
+ *                               issue #427: Теперь принимает полные URI для универсальности.
+ * @param {string} type1       — URI типа концепта в любом формате:
+ *                               - Полный URI: 'http://example.org/vad#TypeProcess'
+ *                               - Полный URI в угловых скобках: '<http://example.org/vad#TypeProcess>'
+ *                               - Curie: 'vad:TypeProcess'
+ *                               Для ptree: 'http://example.org/vad#TypeProcess'
+ *                               Для rtree: 'http://example.org/vad#TypeExecutor'
  *
  * @returns {Promise<Array<{id: string, label: string}>>}
  *   Массив объектов {id, label}, где:
@@ -37,13 +44,13 @@
  *   - label — значение rdfs:label, или пустая строка если label отсутствует
  *
  * @example
- *   // Получить список концептов процессов из ptree
- *   var items = await funConceptList_v2(currentStore, 'ptree', 'vad:TypeProcess');
+ *   // Получить список концептов процессов из ptree (полный URI — рекомендуемый способ)
+ *   var items = await funConceptList_v2(currentStore, 'http://example.org/vad#ptree', 'http://example.org/vad#TypeProcess');
  *   // Результат: [{id: 'http://example.org/vad#p1', label: 'Процесс 1'}, ...]
  *
  * @example
- *   // Получить список концептов исполнителей из rtree
- *   var items = await funConceptList_v2(currentStore, 'rtree', 'vad:TypeExecutor');
+ *   // Получить список концептов исполнителей из rtree (полный URI — рекомендуемый способ)
+ *   var items = await funConceptList_v2(currentStore, 'http://example.org/vad#rtree', 'http://example.org/vad#TypeExecutor');
  */
 async function funConceptList_v2(quadstore1, trig1, type1) {
 
@@ -78,21 +85,53 @@ async function funConceptList_v2(quadstore1, trig1, type1) {
         return results;
     }
 
-    // Формируем URI графа вида vad:ptree или vad:rtree
-    // trig1 — это короткое имя ('ptree' или 'rtree'), добавляем префикс vad:
-    var graphUri = 'vad:' + trig1;
+    // issue #427: Нормализуем URI графа для подстановки в SPARQL.
+    // Поддерживаются форматы:
+    //   - Полный URI без скобок: 'http://example.org/vad#ptree' → '<http://example.org/vad#ptree>'
+    //   - Полный URI в угловых скобках: '<http://example.org/vad#ptree>' → оставляем как есть
+    //   - Curie: 'vad:ptree' → оставляем как есть (префикс определён в запросе)
+    //   - Короткое имя (устаревший формат): 'ptree' → 'vad:ptree' (добавляем префикс vad:)
+    var graphUri;
+    if (trig1.startsWith('<') && trig1.endsWith('>')) {
+        // Уже в угловых скобках
+        graphUri = trig1;
+    } else if (trig1.startsWith('http://') || trig1.startsWith('https://')) {
+        // Полный URI без скобок — оборачиваем
+        graphUri = '<' + trig1 + '>';
+    } else if (trig1.indexOf(':') !== -1) {
+        // Curie вида 'vad:ptree' — оставляем как есть
+        graphUri = trig1;
+    } else {
+        // Короткое имя без двоеточия (устаревший формат 'ptree') — добавляем префикс vad:
+        graphUri = 'vad:' + trig1;
+    }
+
+    // issue #427: Нормализуем URI типа концепта для подстановки в SPARQL.
+    // Поддерживаются форматы:
+    //   - Полный URI без скобок: 'http://example.org/vad#TypeProcess' → '<http://example.org/vad#TypeProcess>'
+    //   - Полный URI в угловых скобках: '<http://example.org/vad#TypeProcess>' → оставляем как есть
+    //   - Curie: 'vad:TypeProcess' → оставляем как есть (префикс определён в запросе)
+    var typeUri;
+    if (type1.startsWith('<') && type1.endsWith('>')) {
+        // Уже в угловых скобках
+        typeUri = type1;
+    } else if (type1.startsWith('http://') || type1.startsWith('https://')) {
+        // Полный URI без скобок — оборачиваем
+        typeUri = '<' + type1 + '>';
+    } else {
+        // Curie вида 'vad:TypeProcess' — оставляем как есть
+        typeUri = type1;
+    }
 
     // Формируем SPARQL-запрос.
-    // type1 подставляется напрямую в текст запроса — это может быть:
-    //   - curie вида 'vad:TypeProcess' (префикс задан в SPARQL-заголовке)
-    //   - полный URI в угловых скобках '<http://example.org/vad#TypeProcess>'
+    // graphUri и typeUri подставляются напрямую в текст запроса.
     // OPTIONAL позволяет вернуть концепт даже если rdfs:label отсутствует.
     var sparqlQuery = 'prefix rdf: <http://www.w3.org/1999/02/22-rdf-syntax-ns#>\n' +
         'prefix rdfs: <http://www.w3.org/2000/01/rdf-schema#>\n' +
         'prefix vad: <http://example.org/vad#>\n' +
         'SELECT ?id_concept ?label_concept WHERE {\n' +
         '    GRAPH ' + graphUri + ' {\n' +
-        '        ?id_concept rdf:type ' + type1 + ' .\n' +
+        '        ?id_concept rdf:type ' + typeUri + ' .\n' +
         '        OPTIONAL { ?id_concept rdfs:label ?label_concept . }\n' +
         '    }\n' +
         '}';

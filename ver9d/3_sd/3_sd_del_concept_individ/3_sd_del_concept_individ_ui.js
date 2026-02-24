@@ -84,7 +84,8 @@ function openDelConceptModal() {
  * @param {string} prefixedTrigUri - Prefixed URI схемы (TriG), например 'vad:t_p1'
  * @param {string} prefixedIndividUri - Prefixed URI индивида, например 'vad:p1.1'
  */
-function openDeleteModal(type, prefixedTrigUri, prefixedIndividUri) {
+// issue #427: Сделана async для поддержки await initializeDelDropdowns
+async function openDeleteModal(type, prefixedTrigUri, prefixedIndividUri) {
     // Проверяем наличие данных
     if (!currentStore || currentStore.size === 0) {
         alert('Данные quadstore пусты. Загрузите пример данных.\n\nQuadstore is empty. Load example data.');
@@ -143,10 +144,10 @@ function openDeleteModal(type, prefixedTrigUri, prefixedIndividUri) {
 
     // Строим форму для выбранной операции
     const config = DEL_CONCEPT_CONFIG[operationType];
-    buildDelConceptForm(config, operationType);
+    // issue #427: await для async функции
+    await buildDelConceptForm(config, operationType);
 
-    // Инициализируем dropdowns
-    initializeDelDropdowns(operationType);
+    // initializeDelDropdowns уже вызвана внутри buildDelConceptForm
 
     // После рендеринга формы — заполняем dropdowns предустановленными значениями
     setTimeout(() => {
@@ -236,8 +237,9 @@ function resetDelConceptForm() {
 
 /**
  * Обработчик изменения типа операции
+ * issue #427: Сделан async для поддержки await buildDelConceptForm
  */
-function onDelOperationChange() {
+async function onDelOperationChange() {
     const operationSelect = document.getElementById('del-concept-operation');
     const selectedOperation = operationSelect ? operationSelect.value : null;
 
@@ -254,7 +256,8 @@ function onDelOperationChange() {
 
     const config = DEL_CONCEPT_CONFIG[selectedOperation];
 
-    buildDelConceptForm(config, selectedOperation);
+    // issue #427: await для async функции
+    await buildDelConceptForm(config, selectedOperation);
     displayDelIntermediateSparql();
     updateDelButtonsState();
 }
@@ -450,7 +453,8 @@ function onDelIndividInSchemaSelect() {
  * @param {Object} config - Конфигурация операции
  * @param {string} operationType - Тип операции
  */
-function buildDelConceptForm(config, operationType) {
+// issue #427: Сделана async для поддержки await initializeDelDropdowns
+async function buildDelConceptForm(config, operationType) {
     const fieldsContainer = document.getElementById('del-concept-fields-container');
     if (!fieldsContainer) return;
 
@@ -498,7 +502,8 @@ function buildDelConceptForm(config, operationType) {
     fieldsContainer.innerHTML = html;
 
     // Инициализируем dropdown после построения формы
-    initializeDelDropdowns(operationType);
+    // issue #427: await для async функции
+    await initializeDelDropdowns(operationType);
 }
 
 /**
@@ -591,17 +596,20 @@ function fillTrigDropdownForIndivid() {
 /**
  * Инициализирует dropdowns для выбранной операции
  * @param {string} operationType - Тип операции
+ * issue #427: Сделана async для поддержки await fillConceptDropdown
  */
-function initializeDelDropdowns(operationType) {
+async function initializeDelDropdowns(operationType) {
     switch (operationType) {
         case DEL_OPERATION_TYPES.CONCEPT_PROCESS:
         case DEL_OPERATION_TYPES.INDIVID_PROCESS:
-            fillConceptDropdown('process');
+            // issue #427: await для async функции
+            await fillConceptDropdown('process');
             break;
 
         case DEL_OPERATION_TYPES.CONCEPT_EXECUTOR:
         case DEL_OPERATION_TYPES.INDIVID_EXECUTOR:
-            fillConceptDropdown('executor');
+            // issue #427: await для async функции
+            await fillConceptDropdown('executor');
             break;
 
         case DEL_OPERATION_TYPES.TRIG_SCHEMA:
@@ -621,14 +629,16 @@ function initializeDelDropdowns(operationType) {
 /**
  * Заполняет dropdown концептов
  * @param {string} type - Тип: 'process' или 'executor'
+ * issue #427: Сделана async для поддержки await getProcessConceptsForDeletion/getExecutorConceptsForDeletion
  */
-function fillConceptDropdown(type) {
+async function fillConceptDropdown(type) {
     const select = document.getElementById('del-concept-select');
     if (!select) return;
 
+    // issue #427: await для async функций
     const concepts = type === 'process'
-        ? getProcessConceptsForDeletion()
-        : getExecutorConceptsForDeletion();
+        ? await getProcessConceptsForDeletion()
+        : await getExecutorConceptsForDeletion();
 
     // issue #410: Используем formatDropdownDisplayText для отображения "id (label)"
     concepts.forEach(concept => {

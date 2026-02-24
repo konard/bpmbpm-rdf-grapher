@@ -145,8 +145,9 @@ function onNewIndividTypeChange() {
 
 /**
  * Обработчик выбора TriG
+ * issue #427: Сделан async для поддержки await fillNewIndividConceptDropdown/fillNewIndividExecutorDropdown
  */
-function onNewIndividTrigChange() {
+async function onNewIndividTrigChange() {
     const select = document.getElementById('new-individ-trig');
     const trigUri = select ? select.value : null;
 
@@ -164,14 +165,16 @@ function onNewIndividTrigChange() {
 
     if (individType === NEW_INDIVID_TYPES.PROCESS) {
         // Заполняем концепты процессов
-        fillNewIndividConceptDropdown();
+        // issue #427: await для async функции
+        await fillNewIndividConceptDropdown();
         // Заполняем справочник hasNext (из концептов процессов)
-        fillNewIndividHasNextCheckboxes();
+        await fillNewIndividHasNextCheckboxes();
     } else if (individType === NEW_INDIVID_TYPES.EXECUTOR) {
         // issue #309: Заполняем связанный справочник индивидов процесса в выбранном TriG
         fillNewIndividProcessIndividDropdown(trigUri);
         // Заполняем концепты исполнителей из rtree
-        fillNewIndividExecutorDropdown();
+        // issue #427: await для async функции
+        await fillNewIndividExecutorDropdown();
         // Сбрасываем ExecutorGroup info
         newIndividState.selectedProcessIndivid = null;
         newIndividState.selectedExecutorGroup = null;
@@ -221,13 +224,15 @@ function onNewIndividHasNextChange() {
  * issue #313: Обработчик переключения режима vad:hasNext
  * Переключает между "на существующий" (индивиды в TriG) и "на любой" (концепты из ptree)
  */
-function onHasNextModeChange() {
+// issue #427: Сделана async для поддержки await fillNewIndividHasNextCheckboxes
+async function onHasNextModeChange() {
     const modeRadio = document.querySelector('input[name="hasnext-mode"]:checked');
     newIndividState.hasNextMode = modeRadio ? modeRadio.value : 'existing';
     newIndividState.selectedHasNext = [];
 
     // Перезаполняем checkboxes с учётом нового режима
-    fillNewIndividHasNextCheckboxes();
+    // issue #427: await для async функции
+    await fillNewIndividHasNextCheckboxes();
     updateNewIndividCreateButtonState();
 }
 
@@ -426,18 +431,20 @@ function fillNewIndividTrigDropdown() {
 
 /**
  * Заполняет dropdown концептов процессов
+ * issue #427: Используем funConceptList_v2 с полными URI вместо funSPARQLvalues
  */
-function fillNewIndividConceptDropdown() {
+async function fillNewIndividConceptDropdown() {
     const select = document.getElementById('new-individ-concept');
     if (!select) return;
 
     select.innerHTML = '<option value="">-- Выберите концепт --</option>';
 
-    const sparqlQuery = NEW_INDIVID_SPARQL.GET_PROCESS_CONCEPTS;
+    // issue #427: Заменяем funSPARQLvalues на funConceptList_v2 с полными URI
     let concepts = [];
-
-    if (typeof funSPARQLvalues === 'function') {
-        concepts = funSPARQLvalues(sparqlQuery, 'concept');
+    if (typeof funConceptList_v2 === 'function') {
+        const raw = await funConceptList_v2(currentStore, 'http://example.org/vad#ptree', 'http://example.org/vad#TypeProcess');
+        // funConceptList_v2 возвращает [{id, label}], приводим к [{uri, label}]
+        concepts = raw.map(function(item) { return { uri: item.id, label: item.label }; });
     }
     if (concepts.length === 0) {
         concepts = getConceptsForIndividManual(
@@ -447,8 +454,8 @@ function fillNewIndividConceptDropdown() {
     }
 
     newIndividIntermediateSparqlQueries.push({
-        description: 'Получение концептов процессов из ptree',
-        query: sparqlQuery,
+        description: 'Получение концептов процессов из ptree (funConceptList_v2)',
+        query: 'funConceptList_v2(currentStore, "http://example.org/vad#ptree", "http://example.org/vad#TypeProcess")',
         result: concepts.length > 0
             ? `Найдено ${concepts.length} концептов: ${concepts.map(c => c.label || c.uri).join(', ')}`
             : '(нет результатов)'
@@ -472,8 +479,9 @@ function fillNewIndividConceptDropdown() {
  * issue #313: Поддержка двух режимов:
  * - 'existing': индивиды процесса из выбранного TriG
  * - 'any': все концепты процессов из ptree
+ * issue #427: Сделана async для поддержки await getProcessConceptsForHasNext
  */
-function fillNewIndividHasNextCheckboxes() {
+async function fillNewIndividHasNextCheckboxes() {
     const container = document.getElementById('new-individ-hasnext-container');
     if (!container) return;
 
@@ -498,7 +506,8 @@ function fillNewIndividHasNextCheckboxes() {
         });
     } else {
         // Режим "vad:hasNext на любой" — все концепты процессов из ptree
-        items = getProcessConceptsForHasNext();
+        // issue #427: await для async функции
+        items = await getProcessConceptsForHasNext();
     }
 
     if (items.length === 0) {
@@ -564,18 +573,20 @@ function fillNewIndividProcessIndividDropdown(trigUri) {
 
 /**
  * Заполняет dropdown исполнителей
+ * issue #427: Используем funConceptList_v2 с полными URI вместо funSPARQLvalues
  */
-function fillNewIndividExecutorDropdown() {
+async function fillNewIndividExecutorDropdown() {
     const select = document.getElementById('new-individ-executor');
     if (!select) return;
 
     select.innerHTML = '<option value="">-- Выберите исполнителя --</option>';
 
-    const sparqlQuery = NEW_INDIVID_SPARQL.GET_EXECUTOR_CONCEPTS;
+    // issue #427: Заменяем funSPARQLvalues на funConceptList_v2 с полными URI
     let concepts = [];
-
-    if (typeof funSPARQLvalues === 'function') {
-        concepts = funSPARQLvalues(sparqlQuery, 'concept');
+    if (typeof funConceptList_v2 === 'function') {
+        const raw = await funConceptList_v2(currentStore, 'http://example.org/vad#rtree', 'http://example.org/vad#TypeExecutor');
+        // funConceptList_v2 возвращает [{id, label}], приводим к [{uri, label}]
+        concepts = raw.map(function(item) { return { uri: item.id, label: item.label }; });
     }
     if (concepts.length === 0) {
         concepts = getConceptsForIndividManual(
@@ -585,8 +596,8 @@ function fillNewIndividExecutorDropdown() {
     }
 
     newIndividIntermediateSparqlQueries.push({
-        description: 'Получение концептов исполнителей из rtree',
-        query: sparqlQuery,
+        description: 'Получение концептов исполнителей из rtree (funConceptList_v2)',
+        query: 'funConceptList_v2(currentStore, "http://example.org/vad#rtree", "http://example.org/vad#TypeExecutor")',
         result: concepts.length > 0
             ? `Найдено ${concepts.length} исполнителей`
             : '(нет результатов)'

@@ -187,23 +187,24 @@ let delIntermediateSparqlQueries = [];
 /**
  * Получает концепты процессов из ptree для dropdown
  * issue #372: SPARQL-Driven подход — без JavaScript fallback
- * @returns {Array<{uri: string, label: string}>} Массив концептов
+ * issue #427: Заменяем funSPARQLvalues на funConceptList_v2 с полными URI
+ * @returns {Promise<Array<{uri: string, label: string}>>} Массив концептов
  */
-function getProcessConceptsForDeletion() {
-    const sparqlQuery = DEL_CONCEPT_SPARQL.GET_PROCESS_CONCEPTS;
-
+async function getProcessConceptsForDeletion() {
     let concepts = [];
 
-    // issue #372: SPARQL-Driven подход — используем только funSPARQLvalues
-    if (typeof funSPARQLvalues === 'function') {
-        concepts = funSPARQLvalues(sparqlQuery, 'concept');
+    // issue #427: Используем funConceptList_v2 с полными URI вместо funSPARQLvalues
+    if (typeof funConceptList_v2 === 'function') {
+        const raw = await funConceptList_v2(currentStore, 'http://example.org/vad#ptree', 'http://example.org/vad#TypeProcess');
+        // funConceptList_v2 возвращает [{id, label}], приводим к [{uri, label}]
+        concepts = raw.map(function(item) { return { uri: item.id, label: item.label }; });
     } else {
-        console.error('getProcessConceptsForDeletion: funSPARQLvalues not available');
+        console.error('getProcessConceptsForDeletion: funConceptList_v2 not available');
     }
 
     delIntermediateSparqlQueries.push({
-        description: 'Получение концептов процессов из ptree',
-        query: sparqlQuery,
+        description: 'Получение концептов процессов из ptree (funConceptList_v2)',
+        query: 'funConceptList_v2(currentStore, "http://example.org/vad#ptree", "http://example.org/vad#TypeProcess")',
         result: concepts.length > 0
             ? concepts.map(c => c.label || c.uri).join(', ')
             : '(нет результатов)'
@@ -215,23 +216,24 @@ function getProcessConceptsForDeletion() {
 /**
  * Получает концепты исполнителей из rtree для dropdown
  * issue #372: SPARQL-Driven подход — без JavaScript fallback
- * @returns {Array<{uri: string, label: string}>} Массив концептов
+ * issue #427: Заменяем funSPARQLvalues на funConceptList_v2 с полными URI
+ * @returns {Promise<Array<{uri: string, label: string}>>} Массив концептов
  */
-function getExecutorConceptsForDeletion() {
-    const sparqlQuery = DEL_CONCEPT_SPARQL.GET_EXECUTOR_CONCEPTS;
-
+async function getExecutorConceptsForDeletion() {
     let concepts = [];
 
-    // issue #372: SPARQL-Driven подход — используем только funSPARQLvalues
-    if (typeof funSPARQLvalues === 'function') {
-        concepts = funSPARQLvalues(sparqlQuery, 'concept');
+    // issue #427: Используем funConceptList_v2 с полными URI вместо funSPARQLvalues
+    if (typeof funConceptList_v2 === 'function') {
+        const raw = await funConceptList_v2(currentStore, 'http://example.org/vad#rtree', 'http://example.org/vad#TypeExecutor');
+        // funConceptList_v2 возвращает [{id, label}], приводим к [{uri, label}]
+        concepts = raw.map(function(item) { return { uri: item.id, label: item.label }; });
     } else {
-        console.error('getExecutorConceptsForDeletion: funSPARQLvalues not available');
+        console.error('getExecutorConceptsForDeletion: funConceptList_v2 not available');
     }
 
     delIntermediateSparqlQueries.push({
-        description: 'Получение концептов исполнителей из rtree',
-        query: sparqlQuery,
+        description: 'Получение концептов исполнителей из rtree (funConceptList_v2)',
+        query: 'funConceptList_v2(currentStore, "http://example.org/vad#rtree", "http://example.org/vad#TypeExecutor")',
         result: concepts.length > 0
             ? concepts.map(c => c.label || c.uri).join(', ')
             : '(нет результатов)'
