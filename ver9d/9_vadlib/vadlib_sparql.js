@@ -6,6 +6,12 @@ if (typeof comunicaEngine === 'undefined') {
     var comunicaEngine = null;
 }
 
+        // ==============================================================================
+        // TODO к удалению: funSPARQLvalues
+        // issue #427: Функция помечена к удалению. Заменяется на funConceptList_v2.
+        // Все вызовы для получения концептов из ptree/rtree заменены на funConceptList_v2.
+        // ==============================================================================
+        /*
         function funSPARQLvalues(sparqlQuery, variableName = 'value') {
             const results = [];
 
@@ -85,6 +91,7 @@ if (typeof comunicaEngine === 'undefined') {
 
             return results;
         }
+        */
 
         /**
          * Разбивает строку SPARQL triple patterns по символу '.' (конец триплета),

@@ -259,14 +259,17 @@ function getIndividsInTrig(trigUri) {
 /**
  * Получает концепты процессов для справочника hasNext
  * Возвращает все концепты процессов из ptree
- * @returns {Array<{uri: string, label: string}>}
+ * issue #427: Заменяем funSPARQLvalues на funConceptList_v2 с полными URI
+ * @returns {Promise<Array<{uri: string, label: string}>>}
  */
-function getProcessConceptsForHasNext() {
-    const sparqlQuery = NEW_INDIVID_SPARQL.GET_PROCESS_CONCEPTS;
+async function getProcessConceptsForHasNext() {
     let concepts = [];
 
-    if (typeof funSPARQLvalues === 'function') {
-        concepts = funSPARQLvalues(sparqlQuery, 'concept');
+    // issue #427: Используем funConceptList_v2 с полными URI вместо funSPARQLvalues
+    if (typeof funConceptList_v2 === 'function') {
+        const raw = await funConceptList_v2(currentStore, 'http://example.org/vad#ptree', 'http://example.org/vad#TypeProcess');
+        // funConceptList_v2 возвращает [{id, label}], приводим к [{uri, label}]
+        concepts = raw.map(function(item) { return { uri: item.id, label: item.label }; });
     }
 
     if (concepts.length === 0) {
@@ -277,8 +280,8 @@ function getProcessConceptsForHasNext() {
     }
 
     newIndividIntermediateSparqlQueries.push({
-        description: 'Получение концептов процессов для справочника hasNext',
-        query: sparqlQuery,
+        description: 'Получение концептов процессов для справочника hasNext (funConceptList_v2)',
+        query: 'funConceptList_v2(currentStore, "http://example.org/vad#ptree", "http://example.org/vad#TypeProcess")',
         result: concepts.length > 0
             ? `Найдено ${concepts.length} концептов`
             : '(нет результатов)'

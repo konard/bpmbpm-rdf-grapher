@@ -609,8 +609,9 @@ async function updateSubjectsBySubjectType() {
     if (selectedType === 'vad:TypeProcess') {
         if (trigContext === 'ptree') {
             // issue #425: В ptree показываем концепты процессов через funConceptList_v2
+            // issue #427: Передаём полные URI для универсальности
             // Формат отображения: "id label" (id и label через пробел)
-            const concepts = await funConceptList_v2(currentStore, 'ptree', 'vad:TypeProcess');
+            const concepts = await funConceptList_v2(currentStore, 'http://example.org/vad#ptree', 'http://example.org/vad#TypeProcess');
             concepts.forEach(function(item) {
                 const option = document.createElement('option');
                 option.value = item.id;
@@ -654,8 +655,9 @@ async function updateSubjectsBySubjectType() {
         });
     } else if (selectedType === 'vad:TypeExecutor') {
         // issue #425: Концепты исполнителей из rtree через funConceptList_v2
+        // issue #427: Передаём полные URI для универсальности
         // Формат отображения: "id label" (id и label через пробел)
-        const concepts = await funConceptList_v2(currentStore, 'rtree', 'vad:TypeExecutor');
+        const concepts = await funConceptList_v2(currentStore, 'http://example.org/vad#rtree', 'http://example.org/vad#TypeExecutor');
         concepts.forEach(function(item) {
             const option = document.createElement('option');
             option.value = item.id;
@@ -1096,7 +1098,8 @@ function updatePredicateBySubjectTypeWithAutoGen() {
 function getProcessIndividualsInTriG(trigUri) {
     // Используем SPARQL запрос для получения индивидов
     const query = SPARQL_QUERIES.PROCESS_INDIVIDUALS_IN_TRIG(trigUri);
-    const results = funSPARQLvalues(query, 'process');
+    // issue #427: funSPARQLvalues помечена к удалению; guard для обратной совместимости
+    const results = typeof funSPARQLvalues === 'function' ? funSPARQLvalues(query, 'process') : [];
 
     // Если SPARQL не вернул результатов, пробуем прямой поиск по квадам
     if (results.length === 0) {
@@ -1146,7 +1149,8 @@ function getProcessIndividualsInTriG(trigUri) {
 function getExecutorGroupsInTriG(trigUri) {
     // Используем SPARQL запрос
     const query = SPARQL_QUERIES.EXECUTOR_GROUPS_IN_TRIG(trigUri);
-    const results = funSPARQLvalues(query, 'group');
+    // issue #427: funSPARQLvalues помечена к удалению; guard для обратной совместимости
+    const results = typeof funSPARQLvalues === 'function' ? funSPARQLvalues(query, 'group') : [];
 
     // Если SPARQL не вернул результатов, пробуем прямой поиск по квадам
     if (results.length === 0) {

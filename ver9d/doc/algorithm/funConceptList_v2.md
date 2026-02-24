@@ -1,5 +1,7 @@
 <!-- Ссылка на issue: https://github.com/bpmbpm/rdf-grapher/issues/425 -->
+<!-- Ссылка на issue: https://github.com/bpmbpm/rdf-grapher/issues/427 -->
 <!-- Pull Request: https://github.com/bpmbpm/rdf-grapher/pull/426 -->
+<!-- Pull Request: https://github.com/bpmbpm/rdf-grapher/pull/428 -->
 <!-- Дата: 2026-02-24 -->
 
 # funConceptList_v2 — список концептов из TriG
@@ -21,8 +23,8 @@ async function funConceptList_v2(quadstore1, trig1, type1)
 | Параметр    | Тип      | Описание |
 |-------------|----------|----------|
 | `quadstore1` | `N3.Store` | Квадстор с загруженными RDF-данными. Передаётся явно для поддержки нескольких квадсторов в будущем. |
-| `trig1`     | `string` | Короткое имя TriG-графа: `'ptree'` или `'rtree'` (может быть расширено). Используется как `vad:<trig1>` в SPARQL-запросе. |
-| `type1`     | `string` | URI типа концепта в формате curie (`vad:TypeProcess`, `vad:TypeExecutor`) или полного URI (`<http://example.org/vad#TypeProcess>`). |
+| `trig1`     | `string` | URI TriG-графа в любом формате: полный URI (`'http://example.org/vad#ptree'`), полный URI в угловых скобках (`'<http://example.org/vad#ptree>'`), curie (`'vad:ptree'`), или короткое имя (`'ptree'`). **issue #427**: Рекомендуется передавать полный URI для универсальности применения. |
+| `type1`     | `string` | URI типа концепта в любом формате: полный URI (`'http://example.org/vad#TypeProcess'`), полный URI в угловых скобках (`'<http://example.org/vad#TypeProcess>'`), или curie (`'vad:TypeProcess'`). **issue #427**: Рекомендуется передавать полный URI. |
 
 ### Возвращаемое значение
 
@@ -64,21 +66,27 @@ ver9d/9_vadlib/vadlib_sparql_v2.js
 ## Пример использования
 
 ```javascript
+// issue #427: Рекомендуемый способ — передавать полные URI
 // Список концептов процессов из ptree
-var items = await funConceptList_v2(currentStore, 'ptree', 'vad:TypeProcess');
+var items = await funConceptList_v2(currentStore, 'http://example.org/vad#ptree', 'http://example.org/vad#TypeProcess');
 // Результат: [{id: 'http://example.org/vad#p1', label: 'Процесс 1'}, ...]
 
 // Список концептов исполнителей из rtree
-var items = await funConceptList_v2(currentStore, 'rtree', 'vad:TypeExecutor');
+var items = await funConceptList_v2(currentStore, 'http://example.org/vad#rtree', 'http://example.org/vad#TypeExecutor');
 // Результат: [{id: 'http://example.org/vad#Executor1', label: 'Исполнитель 1'}, ...]
+
+// Устаревший формат (curie/короткое имя) — по-прежнему работает, но не рекомендуется
+// var items = await funConceptList_v2(currentStore, 'ptree', 'vad:TypeProcess');
 ```
 
 ## Соответствие trig1 и type1
 
-| `trig1` | `type1` | Описание |
-|---------|---------|----------|
-| `'ptree'` | `vad:TypeProcess` | Концепты процессов из дерева процессов |
-| `'rtree'` | `vad:TypeExecutor` | Концепты исполнителей из дерева исполнителей |
+| `trig1` (рекомендуемый полный URI) | `type1` (рекомендуемый полный URI) | Описание |
+|------------------------------------|-------------------------------------|----------|
+| `'http://example.org/vad#ptree'` | `'http://example.org/vad#TypeProcess'` | Концепты процессов из дерева процессов |
+| `'http://example.org/vad#rtree'` | `'http://example.org/vad#TypeExecutor'` | Концепты исполнителей из дерева исполнителей |
+
+Функция принимает URI в любом формате (полный URI, полный URI в угловых скобках, curie, короткое имя). Рекомендуется использовать полные URI для максимальной универсальности (issue #427).
 
 Номенклатура TriG может быть расширена в будущем без изменения сигнатуры функции.
 
@@ -86,47 +94,49 @@ var items = await funConceptList_v2(currentStore, 'rtree', 'vad:TypeExecutor');
 
 ## Замены funSPARQLvalues → funConceptList_v2
 
-### Выполненные замены
+### Выполненные замены (PR #426, issue #425)
 
 В файле `ver9d/3_sd/3_sd_ui.js`, функция `updateSubjectsBySubjectType()`:
 
 | № | Было | Стало | Комментарий |
 |---|------|-------|-------------|
-| 1 | `funSPARQLvalues(SPARQL_QUERIES.PROCESS_CONCEPTS_IN_PTREE, 'process')` | `await funConceptList_v2(currentStore, 'ptree', 'vad:TypeProcess')` | Для `ptree` в блоке `selectedType === 'vad:TypeProcess'` |
-| 2 | `funSPARQLvalues(SPARQL_QUERIES.EXECUTOR_CONCEPTS_IN_RTREE, 'executor')` | `await funConceptList_v2(currentStore, 'rtree', 'vad:TypeExecutor')` | Для `rtree` в блоке `selectedType === 'vad:TypeExecutor'` |
+| 1 | `funSPARQLvalues(SPARQL_QUERIES.PROCESS_CONCEPTS_IN_PTREE, 'process')` | `await funConceptList_v2(currentStore, 'http://example.org/vad#ptree', 'http://example.org/vad#TypeProcess')` | Для `ptree` в блоке `selectedType === 'vad:TypeProcess'` |
+| 2 | `funSPARQLvalues(SPARQL_QUERIES.EXECUTOR_CONCEPTS_IN_RTREE, 'executor')` | `await funConceptList_v2(currentStore, 'http://example.org/vad#rtree', 'http://example.org/vad#TypeExecutor')` | Для `rtree` в блоке `selectedType === 'vad:TypeExecutor'` |
 
-Дополнительно:
-- Функция `updateSubjectsBySubjectType()` стала `async` для поддержки `await`
-- Формат отображения изменён с `"id (label)"` на `"id label"` (через пробел) для ptree и rtree
+### Выполненные замены (PR #428, issue #427)
+
+**issue #427**: Изменён формат передачи параметров — теперь используются полные URI.
+Добавлены замены для создания и удаления концептов/индивидов:
+
+| № | Файл | Функция | Замена |
+|---|------|---------|--------|
+| 3 | `ver9d/3_sd/3_sd_create_new_individ/3_sd_create_new_individ_ui.js` | `fillNewIndividConceptDropdown()` | `funSPARQLvalues` → `funConceptList_v2` (ptree, TypeProcess) |
+| 4 | `ver9d/3_sd/3_sd_create_new_individ/3_sd_create_new_individ_ui.js` | `fillNewIndividExecutorDropdown()` | `funSPARQLvalues` → `funConceptList_v2` (rtree, TypeExecutor) |
+| 5 | `ver9d/3_sd/3_sd_create_new_individ/3_sd_create_new_individ_logic.js` | `getProcessConceptsForHasNext()` | `funSPARQLvalues` → `funConceptList_v2` (ptree, TypeProcess) |
+| 6 | `ver9d/3_sd/3_sd_del_concept_individ/3_sd_del_concept_individ_logic.js` | `getProcessConceptsForDeletion()` | `funSPARQLvalues` → `funConceptList_v2` (ptree, TypeProcess) |
+| 7 | `ver9d/3_sd/3_sd_del_concept_individ/3_sd_del_concept_individ_logic.js` | `getExecutorConceptsForDeletion()` | `funSPARQLvalues` → `funConceptList_v2` (rtree, TypeExecutor) |
+
+Дополнительно (issue #427):
+- Функции `fillNewIndividConceptDropdown`, `fillNewIndividExecutorDropdown`, `getProcessConceptsForHasNext`, `fillNewIndividHasNextCheckboxes`, `onNewIndividTrigChange`, `onHasNextModeChange` стали `async`
+- Функции `getProcessConceptsForDeletion`, `getExecutorConceptsForDeletion`, `fillConceptDropdown`, `initializeDelDropdowns`, `buildDelConceptForm`, `openDeleteModal`, `onDelOperationChange` стали `async`
 
 ### Формат отображения в справочнике
 
 **Было:** `id (label)` — через `formatDropdownDisplayText()`, использует скобки
-**Стало:** `id label` — через пробел, без скобок
+**Стало:** `id label` — через пробел, без скобок (для ptree/rtree в `updateSubjectsBySubjectType`)
+**Без изменений:** другие справочники используют `formatDropdownDisplayText`
 
-Пример:
-- Было: `vad:p1 (Процесс 1 Изготовление скрепки)`
-- Стало: `vad:p1 Процесс 1 Изготовление скрепки`
+### funSPARQLvalues — статус (issue #427)
 
-### Где funSPARQLvalues используется ещё
+Функция `funSPARQLvalues` **помечена к удалению** и закомментирована в `ver9d/9_vadlib/vadlib_sparql.js`.
 
-Функция `funSPARQLvalues` по-прежнему используется в следующих местах:
+Оставшиеся вызовы, защищённые guard-ом `typeof funSPARQLvalues === 'function'`:
+- `ver9d/3_sd/3_sd_ui.js`: `getProcessIndividualsInTriG()`, `getExecutorGroupsInTriG()` — используют fallback на direct quad search
+- `ver9d/3_sd/3_sd_create_new_concept/3_sd_create_new_concept_logic.js` — запросы предикатов/объектов с fallback на ручной разбор
+- `ver9d/3_sd/3_sd_del_concept_individ/3_sd_del_concept_individ_logic.js` — проверки trig/children с fallback
+- `ver9d/3_sd/3_sd_create_new_individ/3_sd_create_new_individ_logic.js` — получение TriG с fallback на quad search
 
-| Файл | Контекст | Запрос |
-|------|----------|--------|
-| `ver9d/3_sd/3_sd_ui.js` | `getProcessConceptsForHasNext()` | `SPARQL_QUERIES.PROCESS_CONCEPTS_IN_PTREE` |
-| `ver9d/3_sd/3_sd_ui.js` | Другие справочники (не ptree/rtree) | Различные `SPARQL_QUERIES.*` |
-| `ver9d/9_vadlib/vadlib_sparql.js` | Базовый синхронный движок | — |
-
-### Варианты замены оставшихся вызовов funSPARQLvalues
-
-По аналогии с выполненными заменами, другие вызовы `funSPARQLvalues` для получения концептов из именованных графов могут быть заменены на `funConceptList_v2`:
-
-- Для концептов в ptree: `funConceptList_v2(currentStore, 'ptree', 'vad:TypeProcess')`
-- Для концептов в rtree: `funConceptList_v2(currentStore, 'rtree', 'vad:TypeExecutor')`
-- Для концептов в других графах: `funConceptList_v2(currentStore, '<trig_name>', '<type_uri>')`
-
-Основная цель — максимальная простота кода и использование библиотечных функций SPARQL-обработки (Comunica).
+Все оставшиеся вызовы имеют fallback-механизмы и не сломаются при удалённой `funSPARQLvalues`.
 
 ---
 
@@ -145,3 +155,4 @@ ver9d/test2/funSPARQLvalues/v3/demo_funConceptList_v2.html
 ---
 
 *Документ создан в рамках PR #426 по issue #425*
+*Обновлён в рамках PR #428 по issue #427*
