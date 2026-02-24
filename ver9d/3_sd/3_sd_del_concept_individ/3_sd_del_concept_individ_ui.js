@@ -575,12 +575,14 @@ function buildTrigSelectorForIndivid(type) {
 
 /**
  * issue #311 п.3, п.4: Заполняет dropdown TriG для операций «в схеме»
+ * issue #433: Сделана async для поддержки await getAllTrigs
  */
-function fillTrigDropdownForIndivid() {
+async function fillTrigDropdownForIndivid() {
     const select = document.getElementById('del-trig-select');
     if (!select) return;
 
-    const trigs = getAllTrigs();
+    // issue #433: await для async getAllTrigs
+    const trigs = await getAllTrigs();
 
     // issue #410: Используем formatDropdownDisplayText для отображения "id (label)"
     trigs.forEach(trig => {
@@ -613,13 +615,15 @@ async function initializeDelDropdowns(operationType) {
             break;
 
         case DEL_OPERATION_TYPES.TRIG_SCHEMA:
-            fillTrigDropdown();
+            // issue #433: await для async функции
+            await fillTrigDropdown();
             break;
 
         // issue #311 п.3, п.4: Заполняем dropdown TriG для «в схеме»
         case DEL_OPERATION_TYPES.INDIVID_PROCESS_IN_SCHEMA:
         case DEL_OPERATION_TYPES.INDIVID_EXECUTOR_IN_SCHEMA:
-            fillTrigDropdownForIndivid();
+            // issue #433: await для async функции
+            await fillTrigDropdownForIndivid();
             break;
     }
 
@@ -653,12 +657,14 @@ async function fillConceptDropdown(type) {
 
 /**
  * Заполняет dropdown TriG
+ * issue #433: Сделана async для поддержки await getAllTrigs
  */
-function fillTrigDropdown() {
+async function fillTrigDropdown() {
     const select = document.getElementById('del-trig-select');
     if (!select) return;
 
-    const trigs = getAllTrigs();
+    // issue #433: await для async getAllTrigs
+    const trigs = await getAllTrigs();
 
     // issue #410: Используем formatDropdownDisplayText для отображения "id (label)"
     trigs.forEach(trig => {
