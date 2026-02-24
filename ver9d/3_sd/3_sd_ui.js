@@ -580,8 +580,11 @@ function getSubjectsByType(typeValue) {
 /**
  * Обновляет содержимое выпадающего списка Subject на основе выбранного Subject Type
  * в режиме Filter (smartDesignMode === 'filtered')
+ *
+ * issue #425: Для ptree и rtree используется funConceptList_v2 из vadlib_sparql_v2.js
+ * вместо funSPARQLvalues. Формат отображения: "id label" (через пробел).
  */
-function updateSubjectsBySubjectType() {
+async function updateSubjectsBySubjectType() {
     const subjectSelect = document.getElementById('smart-design-subject');
     const subjectTypeSelect = document.getElementById('smart-design-subject-type');
     const trigSelect = document.getElementById('smart-design-trig');
@@ -602,45 +605,85 @@ function updateSubjectsBySubjectType() {
     // Используем SPARQL-based подход для заполнения субъектов
     // в зависимости от выбранного типа и контекста TriG
     const trigContext = getTrigContext(trigUri);
-    let subjects = [];
 
     if (selectedType === 'vad:TypeProcess') {
         if (trigContext === 'ptree') {
-            // В ptree показываем концепты процессов (Process rdf:type vad:TypeProcess)
-            subjects = funSPARQLvalues(SPARQL_QUERIES.PROCESS_CONCEPTS_IN_PTREE, 'process');
+            // issue #425: В ptree показываем концепты процессов через funConceptList_v2
+            // Формат отображения: "id label" (id и label через пробел)
+            const concepts = await funConceptList_v2(currentStore, 'ptree', 'vad:TypeProcess');
+            concepts.forEach(function(item) {
+                const option = document.createElement('option');
+                option.value = item.id;
+                const id = getPrefixedName(item.id, currentPrefixes);
+                // Формат "id label" через пробел; если label пуст — только id
+                option.textContent = item.label ? id + ' ' + item.label : id;
+                subjectSelect.appendChild(option);
+            });
         } else {
             // В VADProcessDia показываем индивиды процессов из текущего TriG
-            subjects = getProcessIndividualsInTriG(trigUri);
+            const subjects = getProcessIndividualsInTriG(trigUri);
+            subjects.forEach(function(uri) {
+                const option = document.createElement('option');
+                if (typeof uri === 'object' && uri.uri) {
+                    option.value = uri.uri;
+                    option.textContent = typeof formatDropdownDisplayText === 'function'
+                        ? formatDropdownDisplayText(uri.uri, uri.label, currentPrefixes)
+                        : (uri.label || getPrefixedName(uri.uri, currentPrefixes));
+                } else {
+                    option.value = uri;
+                    option.textContent = getPrefixedName(uri, currentPrefixes);
+                }
+                subjectSelect.appendChild(option);
+            });
         }
     } else if (selectedType === 'vad:ExecutorGroup') {
         // Группы исполнителей из текущего TriG
-        subjects = getExecutorGroupsInTriG(trigUri);
+        const subjects = getExecutorGroupsInTriG(trigUri);
+        subjects.forEach(function(uri) {
+            const option = document.createElement('option');
+            if (typeof uri === 'object' && uri.uri) {
+                option.value = uri.uri;
+                option.textContent = typeof formatDropdownDisplayText === 'function'
+                    ? formatDropdownDisplayText(uri.uri, uri.label, currentPrefixes)
+                    : (uri.label || getPrefixedName(uri.uri, currentPrefixes));
+            } else {
+                option.value = uri;
+                option.textContent = getPrefixedName(uri, currentPrefixes);
+            }
+            subjectSelect.appendChild(option);
+        });
     } else if (selectedType === 'vad:TypeExecutor') {
-        // Концепты исполнителей из rtree
-        subjects = funSPARQLvalues(SPARQL_QUERIES.EXECUTOR_CONCEPTS_IN_RTREE, 'executor');
+        // issue #425: Концепты исполнителей из rtree через funConceptList_v2
+        // Формат отображения: "id label" (id и label через пробел)
+        const concepts = await funConceptList_v2(currentStore, 'rtree', 'vad:TypeExecutor');
+        concepts.forEach(function(item) {
+            const option = document.createElement('option');
+            option.value = item.id;
+            const id = getPrefixedName(item.id, currentPrefixes);
+            // Формат "id label" через пробел; если label пуст — только id
+            option.textContent = item.label ? id + ' ' + item.label : id;
+            subjectSelect.appendChild(option);
+        });
     } else if (selectedType === 'vad:ProcessTree' || selectedType === 'vad:ExecutorTree' || selectedType === 'vad:VADProcessDia') {
         // Для структурных типов используем старый подход
-        subjects = getSubjectsByType(selectedType);
+        const subjects = getSubjectsByType(selectedType);
+        subjects.forEach(function(uri) {
+            const option = document.createElement('option');
+            if (typeof uri === 'object' && uri.uri) {
+                option.value = uri.uri;
+                option.textContent = typeof formatDropdownDisplayText === 'function'
+                    ? formatDropdownDisplayText(uri.uri, uri.label, currentPrefixes)
+                    : (uri.label || getPrefixedName(uri.uri, currentPrefixes));
+            } else {
+                option.value = uri;
+                option.textContent = getPrefixedName(uri, currentPrefixes);
+            }
+            subjectSelect.appendChild(option);
+        });
     }
 
-    // Преобразуем URI в отображаемый формат
-    // issue #410: Используем formatDropdownDisplayText для отображения "id (label)"
-    subjects.forEach(uri => {
-        const option = document.createElement('option');
-        if (typeof uri === 'object' && uri.uri) {
-            option.value = uri.uri;
-            option.textContent = typeof formatDropdownDisplayText === 'function'
-                ? formatDropdownDisplayText(uri.uri, uri.label, currentPrefixes)
-                : (uri.label || getPrefixedName(uri.uri, currentPrefixes));
-        } else {
-            option.value = uri;
-            option.textContent = getPrefixedName(uri, currentPrefixes);
-        }
-        subjectSelect.appendChild(option);
-    });
-
     // Восстанавливаем выбор если значение все еще доступно
-    if (currentSubjectValue && Array.from(subjectSelect.options).some(o => o.value === currentSubjectValue)) {
+    if (currentSubjectValue && Array.from(subjectSelect.options).some(function(o) { return o.value === currentSubjectValue; })) {
         subjectSelect.value = currentSubjectValue;
     } else {
         subjectSelect.value = '';
