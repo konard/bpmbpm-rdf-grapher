@@ -206,5 +206,22 @@ SELECT ?executorGroup WHERE {
     GRAPH <${trigUri}> {
         <${processIndividUri}> vad:hasExecutor ?executorGroup .
     }
+}`,
+
+    /**
+     * issue #429: Получение уже привязанных исполнителей для ExecutorGroup в TriG
+     * Используется для формирования списка недоступных значений в справочнике исполнителей
+     * (через funSPARQLvaluesDoubleSync — исполнители, уже входящие в ExecutorGroup, отображаются
+     * серым и недоступны для повторного выбора)
+     * @param {string} executorGroupUri - URI ExecutorGroup
+     * @param {string} trigUri - URI TriG графа
+     */
+    GET_BOUND_EXECUTORS_FOR_GROUP: (executorGroupUri, trigUri) => `
+PREFIX vad: <http://example.org/vad#>
+
+SELECT ?executor WHERE {
+    GRAPH <${trigUri}> {
+        <${executorGroupUri}> vad:includes ?executor .
+    }
 }`
 };
