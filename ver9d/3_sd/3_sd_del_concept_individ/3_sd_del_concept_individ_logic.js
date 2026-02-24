@@ -591,7 +591,8 @@ function checkExecutorUsage(executorUri) {
 
 /**
  * Получает все TriG типа VADProcessDia
- * issue #372: SPARQL-Driven подход — без JavaScript fallback
+ * issue #372: SPARQL-Driven подход
+ * issue #431: Добавлен manual fallback через currentStore.getQuads()
  * @returns {Array<{uri: string, label: string}>} Массив TriG
  */
 function getAllTrigs() {
@@ -599,7 +600,7 @@ function getAllTrigs() {
 
     let trigs = [];
 
-    // issue #372: SPARQL-Driven подход — используем только funSPARQLvalues
+    // Пробуем funSPARQLvalues если доступна
     if (typeof funSPARQLvalues === 'function') {
         const results = funSPARQLvalues(sparqlQuery, 'trig');
         trigs = results.map(r => ({
@@ -608,8 +609,40 @@ function getAllTrigs() {
                 ? getPrefixedName(r.uri, currentPrefixes)
                 : r.uri)
         }));
-    } else {
-        console.error('getAllTrigs: funSPARQLvalues not available');
+    }
+
+    // issue #431: Manual fallback через currentStore.getQuads() когда funSPARQLvalues недоступна
+    if (trigs.length === 0 && currentStore) {
+        const rdfTypeUri = 'http://www.w3.org/1999/02/22-rdf-syntax-ns#type';
+        const vadProcessDiaUri = 'http://example.org/vad#VADProcessDia';
+        const rdfsLabelUri = 'http://www.w3.org/2000/01/rdf-schema#label';
+
+        const quads = currentStore.getQuads(null, null, null, null);
+        const trigUris = new Set();
+
+        quads.forEach(function(quad) {
+            if (quad.predicate.value === rdfTypeUri &&
+                quad.object.value === vadProcessDiaUri) {
+                trigUris.add(quad.subject.value);
+            }
+        });
+
+        trigUris.forEach(function(uri) {
+            let label = typeof getPrefixedName === 'function'
+                ? getPrefixedName(uri, currentPrefixes)
+                : uri;
+
+            // Ищем label внутри графа TriG
+            quads.forEach(function(quad) {
+                if (quad.subject.value === uri &&
+                    quad.predicate.value === rdfsLabelUri &&
+                    quad.graph && quad.graph.value === uri) {
+                    label = quad.object.value;
+                }
+            });
+
+            trigs.push({ uri: uri, label: label });
+        });
     }
 
     delIntermediateSparqlQueries.push({

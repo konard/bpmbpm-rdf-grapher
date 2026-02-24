@@ -649,7 +649,9 @@ async function fillNewIndividExecutorDropdown(executorGroupUri, trigUri) {
 
         if (boundExecutorUris.has(concept.uri)) {
             // issue #429: Исполнитель уже привязан — отображаем как недоступный
-            option.textContent = displayText + ' (уже привязан)';
+            // issue #431: "(уже привязан)" не добавляется в текст опции,
+            // недоступность показывается только через атрибут disabled
+            option.textContent = displayText;
             option.disabled = true;
         } else {
             option.textContent = displayText;
