@@ -1,5 +1,6 @@
 // Ссылка на issue: https://github.com/bpmbpm/rdf-grapher/issues/232
 // Ссылка на issue: https://github.com/bpmbpm/rdf-grapher/issues/260
+// Ссылка на issue: https://github.com/bpmbpm/rdf-grapher/issues/435
 // 2_triplestore_ui.js - UI функции для работы с RDF данными (ввод, сохранение, загрузка)
 
 /**
@@ -55,7 +56,15 @@ function updateQuadstoreDisplay() {
                 console.error('Error serializing quads:', error);
                 return;
             }
-            rdfInput.value = result;
+            // issue #435: Применяем replaceFullUrisWithPrefixes для корректного отображения
+            // Cyrillic и других не-ASCII символов в ID. N3.Writer выводит такие ID как
+            // полные URI (<http://example.org/vad#яяя22>), но после постобработки
+            // они приводятся к сокращённой форме (vad:яяя22).
+            if (typeof replaceFullUrisWithPrefixes === 'function') {
+                rdfInput.value = replaceFullUrisWithPrefixes(result, currentPrefixes);
+            } else {
+                rdfInput.value = result;
+            }
         });
     } catch (error) {
         console.error('Error updating quadstore display:', error);
@@ -102,7 +111,13 @@ function saveAsFile() {
                 return;
             }
 
-            if (!result || !result.trim()) {
+            // issue #435: Применяем replaceFullUrisWithPrefixes для корректного отображения
+            // Cyrillic символов в сохраняемом файле (аналогично updateQuadstoreDisplay)
+            const processedResult = typeof replaceFullUrisWithPrefixes === 'function'
+                ? replaceFullUrisWithPrefixes(result, currentPrefixes)
+                : result;
+
+            if (!processedResult || !processedResult.trim()) {
                 alert('Нет данных для сохранения');
                 return;
             }
@@ -113,7 +128,7 @@ function saveAsFile() {
             else if (format === 'n-quads') extension = 'nq';
             else if (format === 'trig') extension = 'trig';
 
-            const blob = new Blob([result], { type: 'text/plain' });
+            const blob = new Blob([processedResult], { type: 'text/plain' });
             const url = URL.createObjectURL(blob);
             const a = document.createElement('a');
             a.href = url;
