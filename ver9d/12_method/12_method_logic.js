@@ -270,6 +270,7 @@
          * Удаляет все предикаты vad:includes для ExecutorGroup из указанного TriG
          * issue #336: Реализация метода Delete Individ Executor
          * issue #372: Переработан на SPARQL-Driven подход (без JavaScript fallback)
+         * issue #441: Передаём URI исполнителя (концепта), а не ExecutorGroup
          *
          * Алгоритм работы (аналогично deleteIndividProcessFromTrig):
          * 1. Вызывается окно «Удалить индивид исполнителя в схеме» (openDeleteModal)
@@ -281,7 +282,21 @@
          */
         function deleteIndividExecutorFromTrig(executorGroupUri, trigUri) {
             // issue #372: SPARQL-Driven подход — всегда используем модальное окно
-            const prefixedUri = getPrefixedName(executorGroupUri, currentPrefixes);
+            // issue #441: Находим URI исполнителя (концепта из rtree) через vad:includes
+            // Выпадающий список «Выберите индивид для удаления:» содержит URI исполнителей (объектов vad:includes),
+            // а не URI ExecutorGroup, поэтому передаём именно URI исполнителя
+            const includesUri = 'http://example.org/vad#includes';
+            let executorConceptUri = null;
+            if (currentStore) {
+                const includesQuads = currentStore.getQuads(executorGroupUri, includesUri, null, trigUri);
+                if (includesQuads.length > 0) {
+                    executorConceptUri = includesQuads[0].object.value;
+                }
+            }
+
+            const prefixedUri = executorConceptUri
+                ? getPrefixedName(executorConceptUri, currentPrefixes)
+                : getPrefixedName(executorGroupUri, currentPrefixes);
             const prefixedTrigUri = getPrefixedName(trigUri, currentPrefixes);
 
             // Вызываем окно удаления индивида исполнителя в схеме с предустановленными значениями
