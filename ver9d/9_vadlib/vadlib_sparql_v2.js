@@ -1,6 +1,7 @@
 // Ссылка на issue: https://github.com/bpmbpm/rdf-grapher/issues/425
 // Ссылка на issue: https://github.com/bpmbpm/rdf-grapher/issues/427
 // Ссылка на issue: https://github.com/bpmbpm/rdf-grapher/issues/433
+// Ссылка на issue: https://github.com/bpmbpm/rdf-grapher/issues/435
 // vadlib_sparql_v2.js — модуль с функциями, добавляемыми по прямому указанию.
 //
 // Зависимости:
@@ -270,12 +271,17 @@ async function funTrigNameList_v2(quadstore1, type_trig1) {
     // ?id_trig — субъект триплета rdf:type (URI TriG-графа, объявленного как субъект),
     // ?label_trig — значение rdfs:label TriG-графа (если есть).
     // OPTIONAL позволяет вернуть TriG даже если rdfs:label отсутствует.
+    // issue #435: Используем GRAPH ?id_trig { ... }, так как тип TriG объявлен внутри
+    // именованного графа (например: vad:t_p1 { vad:t_p1 rdf:type vad:VADProcessDia }),
+    // а не в default graph. Запрос без GRAPH-клаузы ничего не находил.
     var sparqlQuery = 'prefix rdf: <http://www.w3.org/1999/02/22-rdf-syntax-ns#>\n' +
         'prefix rdfs: <http://www.w3.org/2000/01/rdf-schema#>\n' +
         'prefix vad: <http://example.org/vad#>\n' +
         'SELECT ?id_trig ?label_trig WHERE {\n' +
-        '    ?id_trig rdf:type ' + typeTrigUri + ' .\n' +
-        '    OPTIONAL { ?id_trig rdfs:label ?label_trig . }\n' +
+        '    GRAPH ?id_trig {\n' +
+        '        ?id_trig rdf:type ' + typeTrigUri + ' .\n' +
+        '        OPTIONAL { ?id_trig rdfs:label ?label_trig . }\n' +
+        '    }\n' +
         '}';
 
     console.log('funTrigNameList_v2: выполняем запрос для type_trig1=' + type_trig1);
