@@ -125,11 +125,12 @@ SELECT ?child ?label WHERE {
 PREFIX vad: <http://example.org/vad#>
 PREFIX rdf: <http://www.w3.org/1999/02/22-rdf-syntax-ns#>
 
+# issue #439: rdf:type VADProcessDia is stored inside named graphs, not in the default graph
 SELECT DISTINCT ?trig ?processIndivid WHERE {
     GRAPH ?trig {
+        ?trig rdf:type vad:VADProcessDia .
         ?processIndivid vad:includes <${executorUri}> .
     }
-    ?trig rdf:type vad:VADProcessDia .
 }`,
 
     /**
@@ -140,9 +141,12 @@ PREFIX rdf: <http://www.w3.org/1999/02/22-rdf-syntax-ns#>
 PREFIX rdfs: <http://www.w3.org/2000/01/rdf-schema#>
 PREFIX vad: <http://example.org/vad#>
 
+# issue #439: rdf:type VADProcessDia is stored inside named graphs, not in the default graph
 SELECT ?trig ?label WHERE {
-    ?trig rdf:type vad:VADProcessDia .
-    OPTIONAL { ?trig rdfs:label ?label }
+    GRAPH ?trig {
+        ?trig rdf:type vad:VADProcessDia .
+        OPTIONAL { ?trig rdfs:label ?label }
+    }
 }`,
 
     /**
@@ -160,12 +164,11 @@ PREFIX rdfs: <http://www.w3.org/2000/01/rdf-schema#>
 PREFIX vad: <http://example.org/vad#>
 
 # Issue #221 Fix #2: Ищем использования концепта как индивида во всех TriG типа VADProcessDia
+# issue #439: rdf:type VADProcessDia is stored inside named graphs, not in the default graph
 SELECT ?individ ?trig ?label WHERE {
-    # Находим TriG типа VADProcessDia
-    ?trig rdf:type vad:VADProcessDia .
-
-    # Ищем данный концепт как индивид (подпроцесс) в этих TriG
+    # Находим TriG типа VADProcessDia и ищем концепт как индивид (подпроцесс)
     GRAPH ?trig {
+        ?trig rdf:type vad:VADProcessDia .
         <${conceptUri}> vad:isSubprocessTrig ?trig .
     }
 
@@ -188,11 +191,12 @@ SELECT ?individ ?trig ?label WHERE {
 PREFIX rdf: <http://www.w3.org/1999/02/22-rdf-syntax-ns#>
 PREFIX vad: <http://example.org/vad#>
 
+# issue #439: rdf:type VADProcessDia is stored inside named graphs, not in the default graph
 SELECT DISTINCT ?trig ?processIndivid WHERE {
     GRAPH ?trig {
+        ?trig rdf:type vad:VADProcessDia .
         ?processIndivid vad:includes <${executorUri}> .
     }
-    ?trig rdf:type vad:VADProcessDia .
 }`,
 
     /**
