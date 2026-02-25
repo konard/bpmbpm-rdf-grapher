@@ -264,8 +264,9 @@ async function onDelOperationChange() {
 
 /**
  * Обработчик выбора концепта
+ * issue #437: Сделан async для поддержки await performValidationChecks
  */
-function onDelConceptSelect() {
+async function onDelConceptSelect() {
     const select = document.getElementById('del-concept-select');
     const conceptUri = select ? select.value : null;
 
@@ -281,7 +282,8 @@ function onDelConceptSelect() {
     delConceptState.foundIndividuals = [];
 
     // Выполняем проверки в зависимости от типа операции
-    performValidationChecks();
+    // issue #437: await для async performValidationChecks
+    await performValidationChecks();
     displayDelIntermediateSparql();
     updateDelButtonsState();
 }
@@ -683,8 +685,9 @@ async function fillTrigDropdown() {
 
 /**
  * Выполняет проверки перед удалением
+ * issue #437: Сделана async для поддержки await checkProcessSchema, checkChildrenElements, checkExecutorUsage
  */
-function performValidationChecks() {
+async function performValidationChecks() {
     const operationType = delConceptState.selectedOperation;
     const conceptUri = delConceptState.selectedConcept;
     const config = DEL_CONCEPT_CONFIG[operationType];
@@ -723,7 +726,8 @@ function performValidationChecks() {
             }
 
             // Проверка схемы
-            const schemas = checkProcessSchema(conceptUri);
+            // issue #437: await для async checkProcessSchema
+            const schemas = await checkProcessSchema(conceptUri);
             if (schemas.length > 0) {
                 delConceptState.validationErrors.push({
                     type: 'schema',
@@ -733,7 +737,8 @@ function performValidationChecks() {
             }
 
             // Проверка дочерних элементов
-            const children = checkChildrenElements(conceptUri, config.targetGraphUri);
+            // issue #437: await для async checkChildrenElements
+            const children = await checkChildrenElements(conceptUri, config.targetGraphUri);
             if (children.length > 0) {
                 delConceptState.validationErrors.push({
                     type: 'children',
@@ -744,8 +749,9 @@ function performValidationChecks() {
             break;
 
         case DEL_OPERATION_TYPES.CONCEPT_EXECUTOR:
-            // Проверка использования в TriG
-            const usages = checkExecutorUsage(conceptUri);
+            // Проверка использования в TriG (наличие индивидов исполнителя)
+            // issue #437: await для async checkExecutorUsage — восстановлена проверка наличия индивидов исполнителя
+            const usages = await checkExecutorUsage(conceptUri);
             if (usages.length > 0) {
                 delConceptState.validationErrors.push({
                     type: 'usedInTrigs',
@@ -755,7 +761,8 @@ function performValidationChecks() {
             }
 
             // Проверка дочерних исполнителей
-            const childExecutors = checkChildrenElements(conceptUri, config.targetGraphUri);
+            // issue #437: await для async checkChildrenElements
+            const childExecutors = await checkChildrenElements(conceptUri, config.targetGraphUri);
             if (childExecutors.length > 0) {
                 delConceptState.validationErrors.push({
                     type: 'children',
@@ -789,7 +796,8 @@ function performValidationChecks() {
 
         case DEL_OPERATION_TYPES.INDIVID_EXECUTOR:
             // Для индивидов исполнителя показываем использования
-            const executorUsages = checkExecutorUsage(conceptUri);
+            // issue #437: await для async checkExecutorUsage
+            const executorUsages = await checkExecutorUsage(conceptUri);
             delConceptState.foundIndividuals = executorUsages.map(u => ({
                 uri: u.processIndivid,
                 trig: u.trig,
@@ -973,8 +981,9 @@ function updateDelButtonsState() {
 /**
  * Обработчик кнопки "Показать индивиды"
  * Issue #221 Fix #2: Обновлена логика для корректного поиска индивидов процесса
+ * issue #437: Сделана async для поддержки await checkExecutorUsage
  */
-function showIndividuals() {
+async function showIndividuals() {
     const operationType = delConceptState.selectedOperation;
     const conceptUri = delConceptState.selectedConcept;
 
@@ -1003,7 +1012,8 @@ function showIndividuals() {
                 : 'Индивиды не найдены'
         });
     } else if (operationType === DEL_OPERATION_TYPES.INDIVID_EXECUTOR) {
-        const usages = checkExecutorUsage(conceptUri);
+        // issue #437: await для async checkExecutorUsage
+        const usages = await checkExecutorUsage(conceptUri);
         delConceptState.foundIndividuals = usages.map(u => ({
             uri: u.processIndivid,
             trig: u.trig,

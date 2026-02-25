@@ -490,20 +490,21 @@ function findConceptAsIndividualInTrigs(conceptUri) {
 /**
  * Проверяет наличие схемы (hasTrig) для концепта
  * Issue #252: Обновлён — сначала пробует funSPARQLvalues, затем manual fallback
+ * issue #437: Заменяем funSPARQLvalues на funSPARQLvaluesComunica
  * @param {string} conceptUri - URI концепта
- * @returns {Array<string>} URI найденных TriG
+ * @returns {Promise<Array<string>>} URI найденных TriG
  */
-function checkProcessSchema(conceptUri) {
+async function checkProcessSchema(conceptUri) {
     const sparqlQuery = DEL_CONCEPT_SPARQL.CHECK_PROCESS_SCHEMA(conceptUri);
 
     let trigs = [];
 
-    // issue #372: SPARQL-Driven подход — используем только funSPARQLvalues
-    if (typeof funSPARQLvalues === 'function') {
-        const results = funSPARQLvalues(sparqlQuery, 'trig');
-        trigs = results.map(r => r.uri);
+    // issue #437: Заменяем funSPARQLvalues на funSPARQLvaluesComunica
+    if (typeof funSPARQLvaluesComunica === 'function') {
+        const results = await funSPARQLvaluesComunica(sparqlQuery, 'trig');
+        trigs = results.map(r => r.uri || r.trig);
     } else {
-        console.error('checkProcessSchema: funSPARQLvalues not available');
+        console.error('checkProcessSchema: funSPARQLvaluesComunica not available');
     }
 
     delIntermediateSparqlQueries.push({
@@ -520,11 +521,12 @@ function checkProcessSchema(conceptUri) {
 /**
  * Проверяет наличие дочерних элементов
  * issue #372: SPARQL-Driven подход — без JavaScript fallback
+ * issue #437: Заменяем funSPARQLvalues на funSPARQLvaluesComunica
  * @param {string} conceptUri - URI родительского концепта
  * @param {string} graphUri - URI графа (ptree или rtree)
- * @returns {Array<{uri: string, label: string}>} Найденные дочерние элементы
+ * @returns {Promise<Array<{uri: string, label: string}>>} Найденные дочерние элементы
  */
-function checkChildrenElements(conceptUri, graphUri) {
+async function checkChildrenElements(conceptUri, graphUri) {
     const isProcess = graphUri.includes('ptree');
     const sparqlQuery = isProcess
         ? DEL_CONCEPT_SPARQL.CHECK_CHILDREN_PROCESSES(conceptUri)
@@ -532,17 +534,17 @@ function checkChildrenElements(conceptUri, graphUri) {
 
     let children = [];
 
-    // issue #372: SPARQL-Driven подход — используем только funSPARQLvalues
-    if (typeof funSPARQLvalues === 'function') {
-        const results = funSPARQLvalues(sparqlQuery, 'child');
+    // issue #437: Заменяем funSPARQLvalues на funSPARQLvaluesComunica
+    if (typeof funSPARQLvaluesComunica === 'function') {
+        const results = await funSPARQLvaluesComunica(sparqlQuery, 'child');
         children = results.map(r => ({
-            uri: r.uri,
+            uri: r.uri || r.child,
             label: r.label || (typeof getPrefixedName === 'function'
-                ? getPrefixedName(r.uri, currentPrefixes)
-                : r.uri)
+                ? getPrefixedName(r.uri || r.child, currentPrefixes)
+                : (r.uri || r.child))
         }));
     } else {
-        console.error('checkChildrenElements: funSPARQLvalues not available');
+        console.error('checkChildrenElements: funSPARQLvaluesComunica not available');
     }
 
     delIntermediateSparqlQueries.push({
@@ -559,31 +561,32 @@ function checkChildrenElements(conceptUri, graphUri) {
 /**
  * Проверяет использование исполнителя в TriG
  * issue #372: SPARQL-Driven подход — без JavaScript fallback
+ * issue #437: Заменяем funSPARQLvalues на funSPARQLvaluesComunica
  * @param {string} executorUri - URI исполнителя
- * @returns {Array<{trig: string, processIndivid: string}>} Найденные использования
+ * @returns {Promise<Array<{trig: string, processIndivid: string}>>} Найденные использования
  */
-function checkExecutorUsage(executorUri) {
+async function checkExecutorUsage(executorUri) {
     const sparqlQuery = DEL_CONCEPT_SPARQL.CHECK_EXECUTOR_USAGE(executorUri);
 
     let usages = [];
 
-    // issue #372: SPARQL-Driven подход — используем только funSPARQLvalues
-    if (typeof funSPARQLvalues === 'function') {
-        const results = funSPARQLvalues(sparqlQuery, 'trig');
+    // issue #437: Заменяем funSPARQLvalues на funSPARQLvaluesComunica
+    if (typeof funSPARQLvaluesComunica === 'function') {
+        const results = await funSPARQLvaluesComunica(sparqlQuery, 'trig');
         usages = results.map(r => ({
-            trig: r.uri,
-            processIndivid: r.label || r.uri
+            trig: r.uri || r.trig,
+            processIndivid: r.processIndivid || r.label || r.uri || r.trig
         }));
     } else {
-        console.error('checkExecutorUsage: funSPARQLvalues not available');
+        console.error('checkExecutorUsage: funSPARQLvaluesComunica not available');
     }
 
     delIntermediateSparqlQueries.push({
-        description: 'Проверка использования исполнителя в TriG',
+        description: 'Проверка использования исполнителя в TriG (наличие индивидов исполнителя)',
         query: sparqlQuery,
         result: usages.length > 0
             ? `Найдено ${usages.length} использований в TriG: ${usages.map(u => typeof getPrefixedName === 'function' ? getPrefixedName(u.trig, currentPrefixes) : u.trig).join(', ')}`
-            : 'Исполнитель не используется'
+            : 'Исполнитель не используется в схемах'
     });
 
     return usages;
