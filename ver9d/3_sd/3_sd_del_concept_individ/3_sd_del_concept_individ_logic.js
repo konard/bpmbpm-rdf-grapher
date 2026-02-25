@@ -340,6 +340,7 @@ SELECT ?trig WHERE {
 
 /**
  * Issue #221 Fix #2: Ручной поиск индивидов процесса для операции "Удалить индивид процесса"
+ * issue #443: Добавлен поиск rdfs:label из ptree для отображения "id (label)"
  *
  * Индивид процесса - это использование концепта процесса (из ptree) в схеме процесса (TriG типа VADProcessDia).
  * Индивид идентифицируется по предикату vad:isSubprocessTrig в TriG типа VADProcessDia.
@@ -355,6 +356,8 @@ function findProcessIndividualsManual(conceptUri) {
     const isSubprocessTrigUri = 'http://example.org/vad#isSubprocessTrig';
     const rdfTypeUri = 'http://www.w3.org/1999/02/22-rdf-syntax-ns#type';
     const vadProcessDiaUri = 'http://example.org/vad#VADProcessDia';
+    const rdfsLabelUri = 'http://www.w3.org/2000/01/rdf-schema#label';
+    const ptreeUri = 'http://example.org/vad#ptree';
 
     // Issue #221 Fix #2: Отладочная информация (отключена по умолчанию)
     const DEBUG_INDIVID_SEARCH = false;
@@ -401,12 +404,24 @@ function findProcessIndividualsManual(conceptUri) {
 
             // Проверяем, что граф является TriG типа VADProcessDia
             if (quad.graph && vadProcessDiaTrigs.has(quad.graph.value)) {
+                // issue #443: Используем prefixed ID как базовый label, затем ищем rdfs:label из ptree
+                let label = typeof getPrefixedName === 'function'
+                    ? getPrefixedName(quad.subject.value, currentPrefixes)
+                    : quad.subject.value;
+
+                // Ищем rdfs:label из ptree для отображения "id (label)" как в других справочниках
+                quads.forEach(q2 => {
+                    if (q2.subject.value === quad.subject.value &&
+                        q2.predicate.value === rdfsLabelUri &&
+                        q2.graph && q2.graph.value === ptreeUri) {
+                        label = q2.object.value;
+                    }
+                });
+
                 individuals.push({
                     uri: quad.subject.value,
                     trig: quad.graph.value,
-                    label: typeof getPrefixedName === 'function'
-                        ? getPrefixedName(quad.subject.value, currentPrefixes)
-                        : quad.subject.value
+                    label: label
                 });
 
                 if (DEBUG_INDIVID_SEARCH) {
@@ -428,12 +443,15 @@ function findProcessIndividualsManual(conceptUri) {
  * в каких-либо TriG схемах (vad:isSubprocessTrig).
  * Это проверка для операции "Удаление концепта" - нельзя удалить концепт,
  * если он используется как индивид в схемах процессов.
+ * issue #443: Добавлен поиск rdfs:label из ptree для отображения "id (label)"
  * @param {string} conceptUri - URI концепта процесса
  * @returns {Array} Найденные использования концепта как индивида
  */
 function findConceptAsIndividualInTrigs(conceptUri) {
     const usages = [];
     const isSubprocessTrigUri = 'http://example.org/vad#isSubprocessTrig';
+    const rdfsLabelUri = 'http://www.w3.org/2000/01/rdf-schema#label';
+    const ptreeUri = 'http://example.org/vad#ptree';
 
     // Issue #219 Fix #1: Отладочная информация (отключена по умолчанию)
     const DEBUG_INDIVID_DETECTION = false;
@@ -445,6 +463,18 @@ function findConceptAsIndividualInTrigs(conceptUri) {
             console.log(`[findConceptAsIndividualInTrigs] Поиск для концепта: ${conceptUri}`);
             console.log(`[findConceptAsIndividualInTrigs] Всего квадов: ${quads.length}`);
         }
+
+        // issue #443: Ищем rdfs:label концепта из ptree один раз перед перебором квадов
+        let conceptLabel = typeof getPrefixedName === 'function'
+            ? getPrefixedName(conceptUri, currentPrefixes)
+            : conceptUri;
+        quads.forEach(q2 => {
+            if (q2.subject.value === conceptUri &&
+                q2.predicate.value === rdfsLabelUri &&
+                q2.graph && q2.graph.value === ptreeUri) {
+                conceptLabel = q2.object.value;
+            }
+        });
 
         // Ищем все случаи, где данный концепт используется как индивид (subject с isSubprocessTrig)
         quads.forEach(quad => {
@@ -464,9 +494,7 @@ function findConceptAsIndividualInTrigs(conceptUri) {
                 usages.push({
                     uri: conceptUri,
                     trig: quad.graph.value,
-                    label: typeof getPrefixedName === 'function'
-                        ? getPrefixedName(conceptUri, currentPrefixes)
-                        : conceptUri
+                    label: conceptLabel
                 });
 
                 if (DEBUG_INDIVID_DETECTION) {
@@ -705,12 +733,15 @@ function findProcessIndividualsInTrig(trigUri) {
 
 /**
  * issue #311 п.4: Находит индивидов исполнителей (концепты из rtree, которые используются через vad:includes) в конкретном TriG
+ * issue #443: Добавлен поиск rdfs:label из rtree для отображения "id (label)"
  * @param {string} trigUri - URI TriG
  * @returns {Array<{uri: string, label: string}>} Массив исполнителей
  */
 function findExecutorIndividualsInTrig(trigUri) {
     const executors = [];
     const includesUri = 'http://example.org/vad#includes';
+    const rdfsLabelUri = 'http://www.w3.org/2000/01/rdf-schema#label';
+    const rtreeUri = 'http://example.org/vad#rtree';
     const seen = new Set();
 
     // issue #326: Используем currentStore.getQuads() вместо currentQuads
@@ -722,11 +753,24 @@ function findExecutorIndividualsInTrig(trigUri) {
 
             if (predicateMatches && quad.graph && quad.graph.value === trigUri && !seen.has(quad.object.value)) {
                 seen.add(quad.object.value);
+
+                // issue #443: Используем prefixed ID как базовый label, затем ищем rdfs:label из rtree
+                let label = typeof getPrefixedName === 'function'
+                    ? getPrefixedName(quad.object.value, currentPrefixes)
+                    : quad.object.value;
+
+                // Ищем rdfs:label из rtree для отображения "id (label)" как в других справочниках
+                quads.forEach(q2 => {
+                    if (q2.subject.value === quad.object.value &&
+                        q2.predicate.value === rdfsLabelUri &&
+                        q2.graph && q2.graph.value === rtreeUri) {
+                        label = q2.object.value;
+                    }
+                });
+
                 executors.push({
                     uri: quad.object.value,
-                    label: typeof getPrefixedName === 'function'
-                        ? getPrefixedName(quad.object.value, currentPrefixes)
-                        : quad.object.value
+                    label: label
                 });
             }
         });
