@@ -657,12 +657,15 @@ function findConceptForTrig(trigUri) {
 
 /**
  * issue #311 п.3: Находит индивидов процесса в конкретном TriG
+ * issue #441: Добавлен поиск rdfs:label из ptree для отображения "id (label)"
  * @param {string} trigUri - URI TriG
  * @returns {Array<{uri: string, label: string}>} Массив индивидов
  */
 function findProcessIndividualsInTrig(trigUri) {
     const individuals = [];
     const isSubprocessTrigUri = 'http://example.org/vad#isSubprocessTrig';
+    const rdfsLabelUri = 'http://www.w3.org/2000/01/rdf-schema#label';
+    const ptreeUri = 'http://example.org/vad#ptree';
     const seen = new Set();
 
     // issue #326: Используем currentStore.getQuads() вместо currentQuads
@@ -674,11 +677,24 @@ function findProcessIndividualsInTrig(trigUri) {
 
             if (predicateMatches && quad.graph && quad.graph.value === trigUri && !seen.has(quad.subject.value)) {
                 seen.add(quad.subject.value);
+
+                // issue #441: Используем prefixed ID как базовый label, затем ищем rdfs:label из ptree
+                let label = typeof getPrefixedName === 'function'
+                    ? getPrefixedName(quad.subject.value, currentPrefixes)
+                    : quad.subject.value;
+
+                // Ищем rdfs:label из ptree для отображения "id (label)" как в других справочниках
+                quads.forEach(q2 => {
+                    if (q2.subject.value === quad.subject.value &&
+                        q2.predicate.value === rdfsLabelUri &&
+                        q2.graph && q2.graph.value === ptreeUri) {
+                        label = q2.object.value;
+                    }
+                });
+
                 individuals.push({
                     uri: quad.subject.value,
-                    label: typeof getPrefixedName === 'function'
-                        ? getPrefixedName(quad.subject.value, currentPrefixes)
-                        : quad.subject.value
+                    label: label
                 });
             }
         });
